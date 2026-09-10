@@ -27,8 +27,8 @@ ROOT = Path(__file__).parent
 ASOF = date(2026, 9, 3)  # 1·2단계 공통 기준일 (기존 09-07/09-03 불일치 해소)
 
 DB_MASTER_CSV = ROOT / "db" / "csv" / "02_자재_정본.csv"
-DOG_DIR = ROOT.parent / "DOG Type" / "Dummy Data"
-CORE_SPARE_CSV = ROOT.parent / "DOG Type" / "Core Spare Parts" / "core_spare_parts.csv"
+DOG_DIR = ROOT / "DOG Type" / "Dummy Data"
+CORE_SPARE_CSV = ROOT / "DOG Type" / "Core Spare Parts" / "core_spare_parts.csv"
 TXN_HISTORY_CSV = ROOT / "txn_history.csv"
 MAINTENANCE_CSV = ROOT / "maintenance.csv"
 ENGINE_PY = ROOT / "engine.py"
