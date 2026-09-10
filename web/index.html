@@ -10,6 +10,10 @@
   :root{
     --bg:#f4f5f7; --panel:#fff; --ink:#16181d; --muted:#6b7280; --line:#e3e6ea;
     --accent:#00539b; --accent-soft:#e8f0f8; --warn:#8a5a00; --warn-bg:#fff6e5;
+    /* 차트/흐름도 엔진(viz.js) 렌더용 — 대시보드와 동일한 검증된 팔레트 */
+    --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a; --series-4:#eda100;
+    --series-5:#e87ba4; --series-6:#008300;
+    --surface-2:#f0efec; --axis:#c3c2b7; --grid:#e1e0d9;
   }
   *{box-sizing:border-box}
   body{margin:0;font:15px/1.65 "Malgun Gothic","Segoe UI",system-ui,sans-serif;
@@ -84,6 +88,48 @@
   #new{background:none;color:var(--muted);border:1px solid var(--line);
        padding:5px 12px;font-size:12px;font-weight:400}
   #new:hover{color:var(--accent);border-color:#bcd6ea}
+
+  /* ---- 자동 시각화 (viz.js 차트 + 흐름도) ---- */
+  .viz-card{background:#fbfbfd;border:1px solid var(--line);border-radius:10px;
+            padding:13px 15px;margin-top:14px}
+  .viz-title{font-size:13px;font-weight:700;margin-bottom:1px}
+  .viz-source{font-size:11.5px;color:var(--muted);margin-bottom:9px}
+  .viz-caption{font-size:12.5px;color:var(--muted);margin-top:9px;
+               border-top:1px dashed var(--line);padding-top:8px}
+  .viz-legend{display:flex;gap:11px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:7px}
+  .viz-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;
+                margin-right:4px;vertical-align:-1px}
+  .flowwrap{overflow-x:auto}
+  .flowwrap svg{min-width:520px}
+  svg.chart{width:100%;height:auto;display:block;overflow:visible}
+  text{font:11px "Malgun Gothic","Segoe UI",system-ui,sans-serif}
+  line.grid{stroke:var(--grid);stroke-width:1}
+  .refline{stroke:var(--axis);stroke-width:1;stroke-dasharray:3 3}
+  .plotbg{fill:var(--surface-2);fill-opacity:.45}
+  text.lbl{fill:var(--muted)}
+  text.ax{fill:var(--muted);font-size:10.5px}
+  text.val{fill:var(--ink);font-weight:600;font-size:11px}
+  text.inbar{fill:#fff;font-weight:700;font-size:10.5px}
+  text.incell{fill:var(--ink);font-size:10px}
+  text.note{fill:var(--muted);font-size:10.5px;font-weight:600}
+  text.quad{fill:var(--muted);font-size:11px;font-weight:600}
+  path.lineMark{fill:none;stroke:var(--series-1);stroke-width:2;stroke-linejoin:round}
+  path.areafill{fill:var(--series-1);fill-opacity:.12}
+  path.areaseg{fill-opacity:.85;stroke:var(--panel);stroke-width:2}
+  circle.dot{fill:var(--series-1);stroke:var(--panel);stroke-width:2}
+  circle.pt{stroke:var(--panel);stroke-width:1}
+  line.stem{stroke:var(--axis);stroke-width:2}
+  rect.mark{stroke:var(--panel);stroke-width:0}
+  .fbox{fill:var(--bg);stroke:var(--axis);stroke-width:1}
+  .fbox.accent{fill:var(--accent);stroke:none}
+  .fbox.warn{fill:#fff3e0;stroke:none}
+  .ftext{fill:var(--ink);font-size:11.5px}
+  .ftext.on{fill:#fff;font-weight:600}
+  .farrow{stroke:var(--axis);stroke-width:1.6;fill:none}
+  .fnote{fill:var(--muted);font-size:10.5px}
+  .viz-tip{position:fixed;z-index:99;pointer-events:none;display:none;max-width:280px;
+           background:var(--ink);color:#fff;font-size:12px;line-height:1.5;
+           padding:7px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.22)}
 </style>
 </head>
 <body>
@@ -115,6 +161,7 @@
   </div>
 </footer>
 
+<script src="/web/viz.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const chat = $('#chat'), tok = $('#tok');
@@ -122,11 +169,11 @@ tok.value = localStorage.getItem('ragToken') || '';
 tok.addEventListener('change', () => localStorage.setItem('ragToken', tok.value.trim()));
 
 const EXAMPLES = [
-  '자재 입하 검수 절차를 알려주세요',
-  '표준하도급계약서의 지체상금 기준은?',
-  'VMI 자재 증량 요청은 어떻게 하나요?',
-  'Q1000108 지금 몇 개 있어?',                       // 정형 경로
-  '속성별 재고 금액 알려줘',                          // 정형 경로
+  '표준하도급계약서의 지체상금 기준은?',               // 줄글 답변 (시각화 없음)
+  '자재 입하 검수 절차를 알려주세요',                  // 자동 흐름도
+  'POS-Appia 물품등록 절차를 알려주세요',              // 자동 흐름도
+  '자재 수요 패턴을 확인해주세요',                     // 자동 차트
+  'Q1000108 지금 몇 개 있어?',                       // 정형 경로 (표)
   'Q1000108 재고 알려주고 발주 신청 절차도 알려줘',    // 하이브리드
   '우주선 부품 재고를 알려주세요',                     // 무응답 정책
 ];
@@ -215,6 +262,33 @@ $('#new').onclick = () => {
   [...chat.children].slice(1).forEach(el => el.remove());
 };
 
+/* 자동 시각화 — 서버가 질문 내용으로 판정해 붙여준 흐름도/차트를 그린다.
+ * 사용자가 "시각화해줘"라고 요청하지 않아도, 절차형 질문에는 흐름도가,
+ * 집계형 질문에는 차트가 답변과 함께 온다(src/visuals.py 참고). */
+function renderVisual(v){
+  if (!v || !window.VIZ) return '';
+  let inner;
+  if (v.kind === 'flow'){
+    inner = '<div class="flowwrap">' + VIZ.flowSvg(v.nodes, v.edges, v.w, v.h, v.notes).outerHTML + '</div>';
+  } else if (v.kind === 'chart'){
+    if (v.chart === 'hbar'){
+      inner = VIZ.hbar(v.data, {labelW: 150}).outerHTML;
+    } else {
+      inner = VIZ.stackbar(v.data).outerHTML + VIZ.legend(
+        v.data.map((d, i) => esc(d.label) + ' ' + d.value)
+      ).outerHTML;
+    }
+  } else {
+    return '';
+  }
+  return '<div class="viz-card">' +
+    '<div class="viz-title">' + esc(v.title || '') + '</div>' +
+    (v.source ? '<div class="viz-source">' + esc(v.source) + '</div>' : '') +
+    inner +
+    (v.caption ? '<div class="viz-caption">' + esc(v.caption) + '</div>' : '') +
+    '</div>';
+}
+
 const STAGES = ['질의 분석', '사내 문서 검색', '근거 정밀 선별', '답변 작성'];
 const STAGES_SQL = ['질의 분석', '사내 데이터 조회', '-', '답변 작성'];
 
@@ -292,6 +366,7 @@ async function send(){
     if (d.route) route = d.route;
     let html = head() + md(d.answer);
     if (d.no_answer) box.className = 'a noans';
+    if (d.visual) html += renderVisual(d.visual);
     if (d.citations.length){
       html += '<div class="sources">' + d.citations.map(c =>
         '<div class="src" id="src-' + c.index + '">' +

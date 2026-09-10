@@ -16,6 +16,7 @@ import answer as answer_mod
 import router
 import intent
 import structured
+import visuals
 
 STAGES = ["질의 분석", "사내 문서 검색", "근거 정밀 선별", "답변 작성"]
 NL = "\n"
@@ -42,6 +43,12 @@ def event_stream(state, question, history, log):
             if search_q != q:
                 trace.append("rewrite")
                 yield _line({"type": "rewrite", "question": search_q})
+        # 자동 시각화 판정 — 사용자가 요청하지 않아도 흐름형·집계형 질문에는 붙인다.
+        # search_q 만으로 판정하는 규칙(정규식)이지만, 결국 근거를 못 찾아 무응답으로
+        # 끝날 수도 있으므로 여기서는 계산만 해 두고 이벤트는 최종 result 에서만 보낸다
+        # (미리 보여줬다가 무응답으로 뒤집히면 화면이 어색해진다).
+        visual = visuals.detect(search_q)
+
         # 경로 판정 (8-5) — 규칙으로 확정되면 LLM 을 부르지 않는다
         decision = router.route(search_q)
         route_name = decision["route"]
@@ -94,7 +101,7 @@ def event_stream(state, question, history, log):
                              "rewritten_question": (search_q if search_q != q else None),
                              "answer": res["answer"], "no_answer": res["no_answer"],
                              "citations": [], "metrics": metrics, "route": "sql",
-                             "route_reason": decision, "trace": trace})
+                             "route_reason": decision, "trace": trace, "visual": visual})
                 return
 
         # (2) 사내 문서 검색 — dense 문서게이트 + 로컬 BM25 → RRF → 하이드레이션
@@ -112,7 +119,7 @@ def event_stream(state, question, history, log):
                          "answer": cfg.get("workflow.no_answer_message"),
                          "no_answer": True, "citations": [], "metrics": metrics,
                          "route": route_name, "route_reason": decision,
-                         "trace": trace})
+                         "trace": trace, "visual": None})
             return
 
         # (3) 근거 정밀 선별 — Cross-Encoder 리랭킹
@@ -155,11 +162,13 @@ def event_stream(state, question, history, log):
         if not cfg.get("security.log_raw_query"):
             log.info("chat/stream 완료 %sms 인용 %d건",
                      metrics["total_ms"], len(res["citations"]))
+        # 근거를 못 찾아 거절한 답변에는 붙이지 않는다 — 없는 내용을 그림으로 꾸며 보여주면 안 된다.
+        out_visual = visual if not res["no_answer"] else None
         yield _line({"type": "result", "question": q, "rewritten_question":
                      (search_q if search_q != q else None), "answer": res["answer"],
                      "no_answer": res["no_answer"], "citations": res["citations"],
                      "metrics": metrics, "route": route_name,
-                     "route_reason": decision, "trace": trace})
+                     "route_reason": decision, "trace": trace, "visual": out_visual})
     except Exception as e:  # 스트림 도중 예외는 이벤트로 알린다(연결만 끊기면 원인을 모른다)
         log.exception("chat/stream 실패")
         yield _line({"type": "error", "message": f"{type(e).__name__}: {e}"})

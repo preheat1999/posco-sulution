@@ -389,5 +389,48 @@ function table(cols, rows) {
   return t;
 }
 
-window.VIZ = { hbar, vbar, gbar, stackbar, line, curve, stackarea, heatmap, scatter, lollipop, dumbbell, meter, table, fmt, pct, CAT, el, txt, seq };
+/* ---- 흐름도 (업무 프로세스). 마커 id 는 여러 흐름도가 한 페이지에 함께 떠도
+ * 충돌하지 않도록 매번 새로 만든다 (챗봇 대화창에 여러 건이 쌓일 수 있어서). ---- */
+let _flowSeq = 0;
+function flowSvg(nodes, edges, w, h, notes) {
+  const mid = 'ah' + (_flowSeq++);
+  const s = el('svg', { viewBox: `0 0 ${w} ${h}`, class: 'chart flowchart', role: 'img' });
+  const marker = el('marker', {
+    id: mid, viewBox: '0 0 10 10', refX: 9, refY: 5,
+    markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse'
+  }, el('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--axis)' }));
+  s.appendChild(el('defs', {}, marker));
+  edges.forEach(e => {
+    const p = el('path', { d: e.d, class: 'farrow', 'marker-end': `url(#${mid})` });
+    if (e.dash) p.setAttribute('stroke-dasharray', '4 3');
+    s.appendChild(p);
+    if (e.label) s.appendChild(txt(e.label, { x: e.lx, y: e.ly, class: 'fnote', 'text-anchor': 'middle' }));
+  });
+  nodes.forEach(n => {
+    const nw = n.w || 132, nh = n.h || 40;
+    s.appendChild(el('rect', {
+      x: n.x, y: n.y, width: nw, height: nh, rx: 8,
+      class: 'fbox' + (n.k ? ' ' + n.k : '')
+    }));
+    n.t.split('\n').forEach((ln, i, arr) => {
+      s.appendChild(txt(ln, {
+        x: n.x + nw / 2, y: n.y + nh / 2 + 4 + (i - (arr.length - 1) / 2) * 13,
+        'text-anchor': 'middle', class: 'ftext' + (n.k === 'accent' ? ' on' : '')
+      }));
+    });
+  });
+  (notes || []).forEach(n => s.appendChild(txt(n.t, { x: n.x, y: n.y, class: 'fnote' })));
+  return s;
+}
+
+/* ---- 범례 (HTML, SVG 밖에 그린다) ---- */
+function legend(items) {
+  const d = document.createElement('div');
+  d.className = 'viz-legend';
+  d.innerHTML = items.map((t, i) =>
+    `<span><i style="background:${CAT[i % CAT.length]}"></i>${t}</span>`).join('');
+  return d;
+}
+
+window.VIZ = { hbar, vbar, gbar, stackbar, line, curve, stackarea, heatmap, scatter, lollipop, dumbbell, meter, table, flowSvg, legend, fmt, pct, CAT, el, txt, seq };
 })();

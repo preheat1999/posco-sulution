@@ -16,6 +16,7 @@ import stream_api
 import router
 import intent
 import structured
+import visuals
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("api")
@@ -197,6 +198,10 @@ def chat(request: Request, req: ChatRequest,
     trace.append("route")
     route_name = decision["route"]
 
+    # 자동 시각화 판정 — 사용자가 요청하지 않아도 흐름형·집계형 질문에는 붙인다.
+    # 규칙(정규식) 판정만 하므로 LLM 호출이 늘지 않는다.
+    visual = visuals.detect(search_q)
+
     sql_result = None
     if route_name in ("sql", "hybrid"):
         t = time.time()
@@ -224,7 +229,7 @@ def chat(request: Request, req: ChatRequest,
                     "rewritten_question": (search_q if search_q != q else None),
                     "answer": res["answer"], "no_answer": res["no_answer"],
                     "citations": [], "metrics": metrics, "route": "sql",
-                    "route_reason": decision, "trace": trace}
+                    "route_reason": decision, "trace": trace, "visual": visual}
 
     qv = None
     if STATE["searcher"].mode == "hybrid" and STATE["embedder"]:
@@ -241,7 +246,7 @@ def chat(request: Request, req: ChatRequest,
         return {"question": q, "answer": cfg.get("workflow.no_answer_message"),
                 "no_answer": True, "citations": [],
                 "metrics": {**metrics, "total_ms": int((time.time() - t0) * 1000)},
-                "route": "rag", "trace": trace}
+                "route": "rag", "trace": trace, "visual": None}
 
     t = time.time()
     top = (STATE["reranker"].rerank(search_q, candidates) if STATE["reranker"]
@@ -263,8 +268,11 @@ def chat(request: Request, req: ChatRequest,
     if not cfg.get("security.log_raw_query"):
         log.info("chat 완료 %sms 경로 %s 인용 %d건",
                  metrics["total_ms"], route_name, len(res["citations"]))
+    # 근거를 못 찾아 거절한 답변에는 붙이지 않는다 — 없는 내용을 그림으로 꾸며 보여주면 안 된다.
+    out_visual = visual if not res["no_answer"] else None
     return {"question": q,
             "rewritten_question": (search_q if search_q != q else None),
             "answer": res["answer"], "no_answer": res["no_answer"],
             "citations": res["citations"], "metrics": metrics,
-            "route": route_name, "route_reason": decision, "trace": trace}
+            "route": route_name, "route_reason": decision, "trace": trace,
+            "visual": out_visual}
