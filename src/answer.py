@@ -251,3 +251,56 @@ def generate(question, chunks, history=None):
     return {"answer": answer, "no_answer": no_ans,
             "citations": parse_citations(answer, chunks[:n_used]),
             "coverage": coverage, "usage": usage, "model": model}
+
+
+def _params_label(args):
+    return ", ".join(f"{k}={v}" for k, v in (args or {}).items()) or "인자 없음"
+
+
+def generate_sql(question, result):
+    """정형 경로 답변. 표는 LLM 이 그대로 옮기고, 숫자를 다시 만들지 않는다."""
+    notice = cfg.get("structured.sample_notice")
+    if not result.get("ok"):
+        return {"answer": result["message"] + "\n\n" + notice, "no_answer": True,
+                "citations": [], "coverage": 1.0, "usage": {},
+                "model": cfg.get("llm.model")}
+    table = result["table"] or "(조회 결과 없음)"
+    if result.get("truncated"):
+        table += f"\n\n(상한 {cfg.get('structured.query.max_rows')}행에 걸려 이하 생략)"
+    answer, usage, model = call_llm(
+        prompts.SQL_SYSTEM,
+        prompts.SQL_USER.format(template=result["template"],
+                                params=_params_label(result["args"]),
+                                table=table, citation=result["citation"],
+                                question=question))
+    answer = (answer or "").strip()
+    if result["citation"] not in answer:      # 출처 줄이 빠지면 우리가 붙인다
+        answer += "\n\n" + result["citation"]
+    return {"answer": answer + "\n\n" + notice,
+            "no_answer": not result["rows"], "citations": [], "coverage": 1.0,
+            "usage": usage, "model": model}
+
+
+def generate_hybrid(question, result, chunks, history=None):
+    """정형 수치 + 문서 근거를 한 답변에서 합친다. 자재-문서 조인에 의존하지 않는다."""
+    no_answer = cfg.get("workflow.no_answer_message")
+    notice = cfg.get("structured.sample_notice")
+    context, n_used = build_context(chunks)
+    table = (result.get("table") or "") if result.get("ok") else ""
+    citation = result.get("citation", "") if result.get("ok") else ""
+    if not table:
+        table = result.get("message") or "(조회 결과 없음)"
+    answer, usage, model = call_llm(
+        prompts.HYBRID_SYSTEM.format(no_answer=no_answer),
+        prompts.HYBRID_USER.format(template=result.get("template", "-"),
+                                   params=_params_label(result.get("args")),
+                                   table=table, citation=citation,
+                                   context=mask_pii(context), question=question))
+    answer = (answer or "").strip()
+    if citation and citation not in answer:
+        answer += "\n\n" + citation
+    return {"answer": answer + "\n\n" + notice,
+            "no_answer": no_answer[:20] in answer,
+            "citations": parse_citations(answer, chunks[:n_used]),
+            "coverage": sentence_citation_coverage(answer),
+            "usage": usage, "model": model}

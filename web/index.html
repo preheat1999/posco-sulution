@@ -74,6 +74,10 @@
   @keyframes p{50%{opacity:.25}}
   .cursor{display:inline-block;width:7px;height:15px;background:var(--accent);
           vertical-align:-2px;animation:p .9s steps(2) infinite}
+  .route{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;
+         padding:2px 8px;margin-bottom:9px}
+  .route.sql{color:#7a4b00;background:#fff3e0;border:1px solid #f0d9ae}
+  .route.hybrid{color:#5b3fa8;background:#f1ecfb;border:1px solid #d8cdf0}
   .rw{font-size:12px;color:var(--muted);background:#f7f8fa;border:1px solid var(--line);
       border-radius:7px;padding:6px 10px;margin-bottom:10px}
   .rw b{color:var(--ink);font-weight:600}
@@ -119,9 +123,11 @@ tok.addEventListener('change', () => localStorage.setItem('ragToken', tok.value.
 const EXAMPLES = [
   '자재 입하 검수 절차를 알려주세요',
   '표준하도급계약서의 지체상금 기준은?',
-  '컨사인먼트 자재 신청 절차 알려주세요',
   'VMI 자재 증량 요청은 어떻게 하나요?',
-  '우주선 부품 재고를 알려주세요',
+  'Q1000108 지금 몇 개 있어?',                       // 정형 경로
+  '속성별 재고 금액 알려줘',                          // 정형 경로
+  'Q1000108 재고 알려주고 발주 신청 절차도 알려줘',    // 하이브리드
+  '우주선 부품 재고를 알려주세요',                     // 무응답 정책
 ];
 EXAMPLES.forEach(t => {
   const s = document.createElement('span');
@@ -209,9 +215,11 @@ $('#new').onclick = () => {
 };
 
 const STAGES = ['질의 분석', '사내 문서 검색', '근거 정밀 선별', '답변 작성'];
+const STAGES_SQL = ['질의 분석', '사내 데이터 조회', '-', '답변 작성'];
 
-function renderSteps(cur){
-  return '<div class="steps">' + STAGES.map((s, i) => {
+function renderSteps(cur, route){
+  const names = route === 'sql' ? STAGES_SQL : STAGES;
+  return '<div class="steps">' + names.filter(n => n !== '-').map((s, i) => {
     const cls = i < cur ? 'done' : (i === cur ? 'now' : '');
     return '<span class="step ' + cls + '"><span class="dot"></span>' + s + '</span>';
   }).join('') + '</div>';
@@ -239,10 +247,12 @@ async function send(){
     if (!r.ok) throw new Error('HTTP ' + r.status);
 
     const reader = r.body.getReader(), dec = new TextDecoder();
-    let buf = '', text = '', d = null, stage = 0, rw = '';
-    const head = () => rw
-      ? '<div class="rw">앞 대화를 반영해 <b>' + esc(rw) + '</b> 로 이해하고 검색했습니다.</div>'
-      : '';
+    let buf = '', text = '', d = null, stage = 0, rw = '', route = '';
+    const ROUTE_LABEL = {sql: '사내 데이터 조회', hybrid: '데이터 + 문서'};
+    const head = () => (route && ROUTE_LABEL[route]
+        ? '<div class="route ' + route + '">' + ROUTE_LABEL[route] + '</div>' : '')
+      + (rw ? '<div class="rw">앞 대화를 반영해 <b>' + esc(rw) +
+              '</b> 로 이해하고 검색했습니다.</div>' : '');
     while (true){
       const {value, done} = await reader.read();
       if (done) break;
@@ -252,19 +262,22 @@ async function send(){
       for (const line of lines){
         if (!line.trim()) continue;
         let ev; try { ev = JSON.parse(line); } catch(_) { continue; }
-        if (ev.type === 'rewrite'){
+        if (ev.type === 'route'){
+          route = ev.route;
+          box.innerHTML = head() + renderSteps(stage, route);
+        } else if (ev.type === 'rewrite'){
           rw = ev.question;
-          box.innerHTML = head() + renderSteps(stage);
+          box.innerHTML = head() + renderSteps(stage, route);
         } else if (ev.type === 'stage'){
           if (ev.index < 4) stage = ev.index + 1;
-          if (!text) box.innerHTML = head() + renderSteps(stage);
+          if (!text) box.innerHTML = head() + renderSteps(stage, route);
         } else if (ev.type === 'delta'){
           text += ev.text;
-          box.innerHTML = head() + renderSteps(4) + md(text) + '<span class="cursor"></span>';
+          box.innerHTML = head() + renderSteps(4, route) + md(text) + '<span class="cursor"></span>';
           box.scrollIntoView({behavior:'smooth', block:'end'});
         } else if (ev.type === 'replace'){
           text = ev.answer;
-          box.innerHTML = head() + renderSteps(4) + md(text);
+          box.innerHTML = head() + renderSteps(4, route) + md(text);
         } else if (ev.type === 'error'){
           throw new Error(ev.message);
         } else if (ev.type === 'result'){
@@ -275,6 +288,7 @@ async function send(){
     if (!d) throw new Error('결과 이벤트를 받지 못했습니다');
 
     if (d.rewritten_question) rw = d.rewritten_question;
+    if (d.route) route = d.route;
     let html = head() + md(d.answer);
     if (d.no_answer) box.className = 'a noans';
     if (d.citations.length){
@@ -285,14 +299,17 @@ async function send(){
             (c.date ? ' · ' + c.date : '') + '<br>' + esc(c.snippet) + '…</span>' +
         '</div>').join('') + '</div>';
     }
-    const m = d.metrics;
-    html += '<div class="metrics">' +
-      '<span>총 ' + (m.total_ms/1000).toFixed(1) + '초</span>' +
-      '<span>검색 ' + m.retrieve_ms + 'ms</span>' +
-      '<span>선별 ' + m.rerank_ms + 'ms</span>' +
-      '<span>생성 ' + m.generate_ms + 'ms</span>' +
-      '<span>인용률 ' + ((m.citation_coverage || 0)*100).toFixed(0) + '%</span>' +
-      '<span>근거 ' + d.citations.length + '건</span></div>';
+    // 경로마다 거치는 단계가 다르므로 실제로 측정된 지표만 보여준다
+    const m = d.metrics, parts = ['총 ' + (m.total_ms/1000).toFixed(1) + '초'];
+    if (m.sql_ms != null) parts.push('조회 ' + m.sql_ms + 'ms (' + (m.sql_rows ?? 0) + '행)');
+    if (m.retrieve_ms != null) parts.push('검색 ' + m.retrieve_ms + 'ms');
+    if (m.rerank_ms != null) parts.push('선별 ' + m.rerank_ms + 'ms');
+    if (m.generate_ms != null) parts.push('생성 ' + m.generate_ms + 'ms');
+    if (d.citations.length) {
+      parts.push('인용률 ' + ((m.citation_coverage || 0)*100).toFixed(0) + '%');
+      parts.push('근거 ' + d.citations.length + '건');
+    }
+    html += '<div class="metrics">' + parts.map(p => '<span>' + p + '</span>').join('') + '</div>';
     box.innerHTML = html;
     // 근거를 못 찾은 답변은 이력에 남기지 않는다 — 뒤 질문의 맥락을 오염시킨다
     if (!d.no_answer) history.push({question: q, answer: d.answer});

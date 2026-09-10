@@ -13,6 +13,9 @@ from bm25 import BM25Index
 from search import Searcher
 import answer as answer_mod
 import stream_api
+import router
+import intent
+import structured
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("api")
@@ -121,6 +124,42 @@ def chat(req: ChatRequest, x_api_token: str | None = Header(default=None)):
         if search_q != q:
             trace.append("rewrite")
 
+    # 경로 판정 (8-5) — 규칙으로 확정되면 LLM 을 부르지 않는다
+    t = time.time()
+    decision = router.route(search_q)
+    metrics["route_ms"] = int((time.time() - t) * 1000)
+    trace.append("route")
+    route_name = decision["route"]
+
+    sql_result = None
+    if route_name in ("sql", "hybrid"):
+        t = time.time()
+        it = intent.resolve(search_q)
+        if it is None:
+            # 조회 대상을 정하지 못했다 → 문서 경로로 넘긴다.
+            # 억지로 표를 만들어 보여주는 것이 답하지 않는 것보다 나쁘다.
+            route_name = "rag"
+            decision = {**decision, "reason": decision["reason"] + " → 조회 대상 불명, 문서 경로로 전환"}
+            trace.append("sql_skipped")
+        else:
+            sql_result = structured.run(it["template"], it["args"])
+            metrics["sql_ms"] = int((time.time() - t) * 1000)
+            metrics["sql_template"] = it["template"]
+            metrics["sql_rows"] = len(sql_result.get("rows") or [])
+            trace.append("sql")
+        if route_name == "sql":
+            res = answer_mod.generate_sql(search_q, sql_result)
+            metrics["total_ms"] = int((time.time() - t0) * 1000)
+            metrics["citation_coverage"] = 1.0
+            usage = res["usage"] or {}
+            metrics["input_tokens"] = usage.get("prompt_tokens")
+            metrics["output_tokens"] = usage.get("completion_tokens")
+            return {"question": q,
+                    "rewritten_question": (search_q if search_q != q else None),
+                    "answer": res["answer"], "no_answer": res["no_answer"],
+                    "citations": [], "metrics": metrics, "route": "sql",
+                    "route_reason": decision, "trace": trace}
+
     qv = None
     if STATE["searcher"].mode == "hybrid" and STATE["embedder"]:
         t = time.time(); qv = STATE["embedder"].encode(search_q)
@@ -144,7 +183,10 @@ def chat(req: ChatRequest, x_api_token: str | None = Header(default=None)):
     metrics["rerank_ms"] = int((time.time() - t) * 1000); trace.append("rerank")
 
     t = time.time()
-    res = answer_mod.generate(search_q, top, req.history)
+    if route_name == "hybrid" and sql_result is not None:
+        res = answer_mod.generate_hybrid(search_q, sql_result, top, req.history)
+    else:
+        res = answer_mod.generate(search_q, top, req.history)
     metrics["generate_ms"] = int((time.time() - t) * 1000); trace.append("generate")
 
     usage = res["usage"] or {}
@@ -153,9 +195,10 @@ def chat(req: ChatRequest, x_api_token: str | None = Header(default=None)):
                     "input_tokens": usage.get("prompt_tokens"),
                     "output_tokens": usage.get("completion_tokens")})
     if not cfg.get("security.log_raw_query"):
-        log.info("chat 완료 %sms 인용 %d건", metrics["total_ms"], len(res["citations"]))
+        log.info("chat 완료 %sms 경로 %s 인용 %d건",
+                 metrics["total_ms"], route_name, len(res["citations"]))
     return {"question": q,
             "rewritten_question": (search_q if search_q != q else None),
             "answer": res["answer"], "no_answer": res["no_answer"],
             "citations": res["citations"], "metrics": metrics,
-            "route": "rag", "trace": trace}
+            "route": route_name, "route_reason": decision, "trace": trace}

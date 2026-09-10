@@ -98,3 +98,22 @@ paths:
   chunks_file: "data/chunks/chunks.jsonl"
   bm25_index: "data/index/bm25_index.json"
   models_cache_dir: "models"
+
+# --- 정형(SQL) 라우팅 · A안 (05_정형데이터_라우팅_프롬프트.md) ---
+# A안은 원천 CSV 4종만 적재한다. 적정재고 산출 결과는 반입하지 않았으므로
+# order_urgent · pooling_candidates 는 만들지 않고, 그 의도로 분류되면 답할 수 없음을 밝힌다.
+structured:
+  enabled: true
+  provider: "sqlite"
+  db_path: "data/structured/materials.db"
+  asof: "2026-09-03"                  # 원천 CSV 기준일. 모든 정형 답변에 명시한다
+  sample_notice: "※ 아래 수치는 연습용 샘플 데이터(자재 743종)이며 실제 사내 자재 데이터가 아닙니다."
+  router:
+    mode: "rule_then_llm"             # rule | llm | rule_then_llm
+    default_route: "rag"              # 판단 불가 시 안전한 쪽
+    rule_confidence_threshold: 0.7
+  query:
+    read_only: true
+    max_rows: 200
+    timeout_seconds: 5
+    mask_unit_cost: false             # 단가·금액은 마스킹 없이 전송(승인됨)

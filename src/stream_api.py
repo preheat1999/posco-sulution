@@ -13,6 +13,9 @@ import time
 
 from config import cfg
 import answer as answer_mod
+import router
+import intent
+import structured
 
 STAGES = ["질의 분석", "사내 문서 검색", "근거 정밀 선별", "답변 작성"]
 NL = "\n"
@@ -39,14 +42,60 @@ def event_stream(state, question, history, log):
             if search_q != q:
                 trace.append("rewrite")
                 yield _line({"type": "rewrite", "question": search_q})
+        # 경로 판정 (8-5) — 규칙으로 확정되면 LLM 을 부르지 않는다
+        decision = router.route(search_q)
+        route_name = decision["route"]
+        trace.append("route")
+        if route_name != "rag":
+            yield _line({"type": "route", "route": route_name,
+                         "source": decision["source"], "reason": decision["reason"]})
+
         t_emb = time.time()
         qv = None
-        if searcher.mode == "hybrid" and state["embedder"]:
+        if route_name != "sql" and searcher.mode == "hybrid" and state["embedder"]:
             qv = state["embedder"].encode(search_q)
         metrics["embed_ms"] = int((time.time() - t_emb) * 1000)
         trace.append("embed")
         yield _line({"type": "stage", "name": STAGES[0], "index": 0,
                      "ms": int((time.time() - t) * 1000)})
+
+        # 정형 조회 — 검색·리랭킹을 건너뛰므로 RAG 보다 빠르다
+        sql_result = None
+        if route_name in ("sql", "hybrid"):
+            t = time.time()
+            it = intent.resolve(search_q)
+            if it is None:
+                # 조회 대상을 정하지 못했다 → 문서 경로로 넘긴다.
+                # 억지로 표를 만들어 보여주는 것이 답하지 않는 것보다 나쁘다.
+                route_name = "rag"
+                decision = {**decision,
+                            "reason": decision["reason"] + " → 조회 대상 불명, 문서 경로로 전환"}
+                trace.append("sql_skipped")
+                yield _line({"type": "route", "route": "rag", "source": decision["source"],
+                             "reason": decision["reason"]})
+                if qv is None and searcher.mode == "hybrid" and state["embedder"]:
+                    qv = state["embedder"].encode(search_q)   # sql 로 보고 건너뛴 임베딩
+            else:
+                sql_result = structured.run(it["template"], it["args"])
+                metrics["sql_ms"] = int((time.time() - t) * 1000)
+                metrics["sql_template"] = it["template"]
+                metrics["sql_rows"] = len(sql_result.get("rows") or [])
+                trace.append("sql")
+                yield _line({"type": "stage", "name": "사내 데이터 조회", "index": 1,
+                             "ms": metrics["sql_ms"], "rows": metrics["sql_rows"]})
+            if route_name == "sql":
+                res = answer_mod.generate_sql(search_q, sql_result)
+                yield _line({"type": "delta", "text": res["answer"]})
+                metrics["total_ms"] = int((time.time() - t0) * 1000)
+                metrics["citation_coverage"] = 1.0
+                yield _line({"type": "stage", "name": STAGES[3], "index": 3,
+                             "ms": metrics.get("sql_ms", 0)})
+                yield _line({"type": "result", "question": q,
+                             "rewritten_question": (search_q if search_q != q else None),
+                             "answer": res["answer"], "no_answer": res["no_answer"],
+                             "citations": [], "metrics": metrics, "route": "sql",
+                             "route_reason": decision, "trace": trace})
+                return
 
         # (2) 사내 문서 검색 — dense 문서게이트 + 로컬 BM25 → RRF → 하이드레이션
         t = time.time()
@@ -62,7 +111,8 @@ def event_stream(state, question, history, log):
             yield _line({"type": "result", "question": q,
                          "answer": cfg.get("workflow.no_answer_message"),
                          "no_answer": True, "citations": [], "metrics": metrics,
-                         "route": "rag", "trace": trace})
+                         "route": route_name, "route_reason": decision,
+                         "trace": trace})
             return
 
         # (3) 근거 정밀 선별 — Cross-Encoder 리랭킹
@@ -77,7 +127,13 @@ def event_stream(state, question, history, log):
         # (4) 답변 작성 — LLM 토큰을 흘린다
         t = time.time()
         res = None
-        for kind, payload in answer_mod.generate_iter(search_q, top, history):
+        if route_name == "hybrid" and sql_result is not None:
+            hres = answer_mod.generate_hybrid(search_q, sql_result, top, history)
+            yield _line({"type": "delta", "text": hres["answer"]})
+            gen = [("result", hres)]
+        else:
+            gen = answer_mod.generate_iter(search_q, top, history)
+        for kind, payload in gen:
             if kind == "delta":
                 yield _line({"type": "delta", "text": payload})
             elif kind == "stage":
@@ -102,7 +158,8 @@ def event_stream(state, question, history, log):
         yield _line({"type": "result", "question": q, "rewritten_question":
                      (search_q if search_q != q else None), "answer": res["answer"],
                      "no_answer": res["no_answer"], "citations": res["citations"],
-                     "metrics": metrics, "route": "rag", "trace": trace})
+                     "metrics": metrics, "route": route_name,
+                     "route_reason": decision, "trace": trace})
     except Exception as e:  # 스트림 도중 예외는 이벤트로 알린다(연결만 끊기면 원인을 모른다)
         log.exception("chat/stream 실패")
         yield _line({"type": "error", "message": f"{type(e).__name__}: {e}"})
