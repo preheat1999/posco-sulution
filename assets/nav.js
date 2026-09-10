@@ -24,8 +24,10 @@
     {
       label: '분석',
       items: [
-        { key: 'attr', name: '보유목적 판단', href: 'attr.html', ico: '◐', count: 'gray' },
-        { key: 'stock', name: '적정재고 분석', href: 'stock.html', ico: '▦', count: 'order' },
+        /* 아이콘은 그 화면이 하는 일이다 · 판단은 판사봉, 적정재고는 양팔저울(보유와 목표를 견준다).
+         * 그림 글꼴을 따로 받지 않는다 · 사내망에서 막히면 아이콘이 통째로 빈칸이 된다 */
+        { key: 'attr', name: '보유목적 판단', href: 'attr.html', ico: '🔨', count: 'gray' },
+        { key: 'stock', name: '적정재고 분석', href: 'stock.html', ico: '⚖', count: 'order' },
         { key: 'report', name: '주간 리포트', href: 'report.html', ico: '✉', soon: true }
       ]
     },
