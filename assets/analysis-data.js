@@ -81,8 +81,10 @@
     { key: '보험품→계획품', label: '보험품 → 계획품', color: 'var(--plan)', act: true },
     { key: '계획품→보험품', label: '계획품 → 보험품', color: 'var(--insur)', act: true },
     { key: '현행유지', label: '현행유지', color: 'var(--core)', act: true },
-    { key: '판정일치', label: '판정일치', color: 'var(--line-2)', act: false },
-    { key: '배제', label: '배제', color: 'var(--muted)', act: false }
+    /* 손댈 필요 없는 두 조각은 네이비로 가라앉힌다.
+     * 회색으로 두면 도넛에서 이것들이 먼저 눈에 온다 · 763종 중 473종이라 면적이 크다 */
+    { key: '판정일치', label: '판정일치', color: 'var(--slate)', act: false },
+    { key: '배제', label: '배제', color: 'var(--slate-2)', act: false }
   ];
 
   function bucketOf(r) {

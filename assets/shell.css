@@ -15,35 +15,57 @@
 
 /* ---------------------------------------------------------------- 1. 토큰 */
 :root {
-  --brand: #5570F1;
-  --brand-weak: #EEF0FE;
-  --bg: #F5F5F7;            /* 흰 카드와 딱 한 단계 차이. 두 단계면 카드가 떠 보이는 대신 시끄럽다 */
-  --surface: #FFFFFF;
-  --line: #F0F0F3;
-  --line-2: #E3E3E8;
-  --text: #1C1D22;          /* 가장 진한 색. 순수 검정 #000 은 쓰지 않는다 */
-  --text-2: #4A4A50;
-  --muted: #8E8E93;         /* 대비 3.5:1 · 본문에 쓰지 않고 라벨과 설명에만 */
+  /* 색을 새로 고른 게 아니라 **개수를 줄였다.**
+   * 검정과 파랑에서 뻗어 나간 것만 쓰고, 뜻이 있는 색 셋만 예외로 둔다.
+   * 색이 아홉이면 어느 색이 무슨 뜻인지 아무도 못 외운다.
+   * 데이터 값은 전부 블루 1~5 와 슬레이트 2단계 안에서 고른다 */
+  --b1: #A9C4FF;            /* 가장 밝은 파랑 · 강조 글자 */
+  --b2: #7FA6FF;
+  --b3: #5B8CFF;            /* 메인 · 링크 · 계획품 */
+  --b4: #3A63D9;            /* 채운 버튼 (흰 글자 대비 5.3) */
+  --b5: #27408F;
+  --slate: #414C6B;         /* 손댈 필요 없는 값 · 판정일치 */
+  --slate-2: #333C55;       /* 가장 조용한 값 · 배제 */
 
-  --insur: #CC5F5F;         /* 보험품 · 마감 초과 · 부족 */
-  --insur-weak: #FBEDEE;
-  --plan: #5570F1;          /* 계획품 (주색과 같은 값) */
-  --plan-weak: #EEF0FE;
-  --core: #B26A00;          /* 주의 · 핵심설비 · 이번 주 */
-  --core-weak: #FDF3E3;
-  --ok: #32936F;            /* 정상 · 절감 · 완료 */
-  --ok-weak: #E7F4EF;
+  --brand: var(--b3);
+  --brand-weak: rgba(91, 140, 255, .16);
+  --brand-deep: var(--b4);
+
+  /* 순수 검정을 쓰지 않는다. 파랑을 조금 섞은 검정이라 파란 카드와 한 결로 붙는다.
+   * 바탕 → 카드 → 컨트롤, 밝기를 세 단으로 올려 「떠 있는」 느낌을 만든다.
+   * 다크에서는 그림자가 거의 안 보인다. 깊이는 밝기 차와 1px 선이 만든다 */
+  --bg: #090C12;
+  --surface: #141A27;
+  --surface-2: #1E2536;     /* 입력칸 · 막대 바닥 · 도넛 트랙 · 알약 */
+  --line: rgba(255, 255, 255, .07);
+  --line-2: rgba(255, 255, 255, .13);
+  --text: #F3F5F9;          /* 순수 흰색 #FFF 은 눈이 아프다 */
+  --text-2: #B3BAC9;
+  --muted: #7C859A;         /* 카드 위 대비 4.7:1 · 라벨과 설명에만 */
+  --on-accent: #090C12;     /* 밝은 색면(파랑 · 틸) 위에 얹는 글자 */
+
+  /* 뜻이 있는 색 셋. 순수 빨강 · 주황 · 초록은 네이비 위에서 튄다.
+   * 채도를 낮추고 색을 파랑 쪽으로 조금 당겨서 결을 맞췄다 */
+  --insur: #F0716F;         /* 코랄 · 보험품 · 마감 초과 · 부족 */
+  --insur-weak: rgba(240, 113, 111, .16);
+  --plan: var(--b3);        /* 계획품 (메인과 같은 값) */
+  --plan-weak: rgba(91, 140, 255, .16);
+  --core: #F2B04E;          /* 앰버 · 주의 · 핵심설비 · 이번 주 */
+  --core-weak: rgba(242, 176, 78, .16);
+  --ok: #33C48F;            /* 틸 · 정상 · 절감 · 완료 */
+  --ok-weak: rgba(51, 196, 143, .16);
 
   --radius: 20px;
-  /* 카드에서 테두리를 뺐다. 선과 그림자를 같이 쓰면 경계가 두 번 그려져 지저분하다.
-   * 그림자는 두 겹이다 · 접지(2px) 와 바닥 그늘(24px).
-   * 진하게 주고 싶으면 번지는 범위를 키우고 농도는 내린다 */
-  --shadow: 0 1px 2px rgba(28, 29, 34, .05),
-            0 8px 24px -8px rgba(28, 29, 34, .10);
+  /* 밝은 배경에서는 테두리를 뺐지만 다크에서는 다시 넣는다.
+   * 검정 위의 검은 그림자는 거의 안 보이므로, 카드 경계를 만드는 것은
+   * 1px 선과 위쪽 하이라이트다. 그림자는 바닥 그늘만 남긴다 */
+  --shadow: 0 1px 2px rgba(0, 0, 0, .45),
+            0 12px 32px -12px rgba(0, 0, 0, .7);
   /* 누를 수 있는 것만 이걸 쓴다. 못 누르는 카드가 떠오르면 눌러도 되는 줄 안다 */
-  --shadow-lift: 0 2px 6px rgba(28, 29, 34, .06),
-                 0 18px 40px -12px rgba(28, 29, 34, .16);
-  --edge: inset 0 1px 0 rgba(255, 255, 255, .85);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, .5),
+                 0 22px 48px -16px rgba(0, 0, 0, .85);
+  /* 위쪽 1px 흰 선. 빛이 위에서 온다고 알려 준다 · 다크에서 이게 깊이의 절반이다 */
+  --edge: inset 0 1px 0 rgba(255, 255, 255, .06);
   --side-w: 230px;
 }
 
@@ -63,10 +85,11 @@ body {
   line-height: 1.55;
   color: var(--text);
   /* 바탕이 완전히 균일하면 카드가 떠 보이지 않는다.
-   * 위쪽을 아주 조금 밝게 두어 아래로 갈수록 그늘이 앉게 만든다.
-   * 색은 두 개뿐이고 대비는 1% 미만이라 인쇄와 저사양 화면에서도 티가 안 난다 */
+   * 왼쪽 위에 파란 빛을 아주 옅게 깔아 카드가 그 위에 놓인 것처럼 만든다.
+   * 흰빛이 아니라 파란빛이어야 한다 · 흰빛은 회색 안개처럼 보인다 */
   background: var(--bg)
-    radial-gradient(1100px 520px at 22% -8%, #FFFFFF 0%, rgba(255, 255, 255, 0) 62%) fixed;
+    radial-gradient(1200px 620px at 16% -12%,
+      rgba(91, 140, 255, .13) 0%, rgba(91, 140, 255, 0) 62%) fixed;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -110,7 +133,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(28, 29, 34, .42);
+  background: rgba(4, 6, 12, .72);
   z-index: 40;
   display: none;
 }
@@ -119,7 +142,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* ---------------------------------------------------------------- 4. 사이드바 */
 .side {
   background: var(--surface);
-  border-right: 1px solid var(--line-2);
+  border-right: 1px solid var(--line);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -134,7 +157,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .side-logo { display: flex; align-items: center; gap: 9px; padding: 0 6px 14px; }
 .side-logo-mark {
   width: 30px; height: 30px; border-radius: 9px;
-  background: var(--brand); color: #fff;
+  background: var(--brand); color: var(--on-accent);
   display: grid; place-items: center;
   font-size: 14px; font-weight: 700; flex: none;
 }
@@ -154,12 +177,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
   text-decoration: none;
   transition: background .12s ease, color .12s ease;
 }
-.navitem:hover { background: var(--bg); text-decoration: none; }
+.navitem:hover { background: var(--surface-2); text-decoration: none; }
 .navitem.on { background: var(--brand-weak); color: var(--brand); font-weight: 700; }
 .navitem-ico { width: 18px; text-align: center; flex: none; font-size: 13px; }
 .navitem-body { min-width: 0; flex: 1; }
 .navitem-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.navitem-sub { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.navitem-sub { display: block; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
 .navcount {
   flex: none; min-width: 20px; padding: 1px 6px; border-radius: 999px;
   background: var(--insur-weak); color: var(--insur);
@@ -182,7 +205,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hamb {
   width: 36px; height: 36px; flex: none;
   border: 1px solid var(--line-2); border-radius: 10px;
-  background: var(--surface); display: none; place-items: center;
+  background: var(--surface-2); display: none; place-items: center;
   font-size: 15px; color: var(--text-2);
 }
 
@@ -201,7 +224,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pill {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 6px 11px; border-radius: 999px;
-  background: var(--surface); border: 1px solid var(--line-2);
+  background: var(--surface-2); border: 1px solid var(--line);
   font-size: 11.5px; color: var(--text-2); white-space: nowrap; flex: none;
 }
 .pill.soft { background: var(--brand-weak); border-color: transparent; color: var(--brand); font-weight: 700; }
@@ -209,7 +232,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 8px; border-radius: 7px;
-  background: var(--line); color: var(--text-2);
+  background: var(--surface-2); color: var(--text-2);
   font-size: 11px; font-weight: 700; white-space: nowrap; flex: none;
 }
 /* 배지는 반드시 -weak 배경 + 진한 글자다. 진한 배경에 흰 글자면 버튼과 헷갈린다 */
@@ -221,7 +244,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .chip {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 5px 10px; border-radius: 999px;
-  border: 1px solid var(--line-2); background: var(--surface);
+  border: 1px solid var(--line-2); background: var(--surface-2);
   font-size: 11.5px; color: var(--text-2);
   white-space: nowrap; flex: none; cursor: pointer;
 }
@@ -230,24 +253,27 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .tab {
   padding: 7px 12px; border-radius: 999px;
-  border: 1px solid var(--line-2); background: var(--surface);
+  border: 1px solid var(--line-2); background: var(--surface-2);
   font-size: 12px; color: var(--text-2);
   white-space: nowrap; flex: none; cursor: pointer;
 }
-.tab.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 700; }
+.tab.on { background: var(--brand-deep); border-color: var(--brand-deep); color: #fff; font-weight: 600; }
 
 /* ---------------------------------------------------------------- 7. 버튼 */
 /* .btn 자체가 파란 기본 버튼이다. 변형은 soft · line · sm 셋뿐이다 */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 9px 15px; border-radius: 10px;
-  border: 1px solid var(--brand); background: var(--brand); color: #fff;
+  /* 밝은 파랑(#5B8CFF)에 흰 글자는 대비가 3.2 밖에 안 된다.
+   * 채운 버튼만 한 단 깊은 파랑을 쓴다 · 흰 글자 대비 5.3.
+   * 밝은 파랑은 링크와 강조에만 남긴다 */
+  border: 1px solid var(--brand-deep); background: var(--brand-deep); color: #fff;
   font-size: 13px; font-weight: 600; white-space: nowrap;
   transition: filter .12s ease;
 }
 .btn:hover { filter: brightness(.95); text-decoration: none; }
 .btn.soft { background: var(--brand-weak); border-color: transparent; color: var(--brand); }
-.btn.line { background: var(--surface); border-color: var(--line-2); color: var(--text-2); }
+.btn.line { background: var(--surface-2); border-color: var(--line-2); color: var(--text-2); }
 .btn.sm { padding: 6px 11px; font-size: 12px; border-radius: 8px; }
 .btn.block { width: 100%; }
 .btn[disabled] { opacity: .5; cursor: not-allowed; }
@@ -255,9 +281,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* ---------------------------------------------------------------- 8. 카드 */
 .card {
   background: var(--surface);
-  border: 0;                                /* 선과 그림자를 같이 쓰지 않는다 */
+  border: 1px solid var(--line);            /* 다크에서는 이 선이 카드 경계를 만든다 */
   border-radius: var(--radius);
-  box-shadow: var(--shadow);                /* 그림자는 카드에만 쓴다 */
+  box-shadow: var(--shadow), var(--edge);   /* 그림자는 카드에만 쓴다 */
   padding: 20px 22px;
   margin-bottom: 16px;
 }
@@ -307,8 +333,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .kpigroup {
   position: relative;
-  background: var(--surface); border: 0;
-  border-radius: var(--radius); box-shadow: var(--shadow);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow), var(--edge);
   padding: 18px 20px; color: inherit; text-decoration: none;
   /* 세 묶음의 높이는 그리드가 제일 큰 것에 맞춘다.
    * block 으로 두면 내용이 짧은 묶음 아래쪽이 통째로 빈다.
@@ -317,10 +343,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease;
 }
 /* 누를 수 있는 묶음만 떠오른다. 못 누르는 것이 떠오르면 눌러도 되는 줄 안다 */
-/* 테두리를 뺐으니 뜨는 것으로만 알려 준다 */
 a.kpigroup:hover, a.kpigroup:focus-visible {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lift); text-decoration: none;
+  transform: translateY(-3px); border-color: var(--line-2);
+  box-shadow: var(--shadow-lift), var(--edge); text-decoration: none;
 }
 
 /* 담당 현황은 금액 하나와 그림 하나로 끝낸다.
@@ -428,12 +453,12 @@ td.num, th.num { text-align: right; }
 
 /* ---------------------------------------------------------------- 12. 아코디언 */
 .sect {
-  background: var(--surface); border: 0;
-  border-radius: var(--radius); box-shadow: var(--shadow);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow), var(--edge);
   margin-bottom: 12px; overflow: hidden;
   transition: box-shadow .14s ease;
 }
-.sect:hover { box-shadow: var(--shadow-lift); }
+.sect:hover { box-shadow: var(--shadow-lift), var(--edge); border-color: var(--line-2); }
 .sect-head {
   display: flex; justify-content: space-between; align-items: center;
   gap: 12px; padding: 17px 22px; cursor: pointer;
@@ -461,7 +486,7 @@ td.num, th.num { text-align: right; }
 .tag.now { background: var(--insur-weak); color: var(--insur); }
 .tag.week { background: var(--core-weak); color: var(--core); }
 .tag.chance { background: var(--ok-weak); color: var(--ok); }
-.tag.review { background: var(--line); color: var(--text-2); }
+.tag.review { background: var(--surface-2); color: var(--text-2); }
 .todo-body { min-width: 0; flex: 1; font-size: 13px; color: var(--text-2); line-height: 1.6; }
 .todo-num { font-size: 16px; font-weight: 700; }
 .todo-row.now .todo-num { color: var(--insur); }
@@ -475,8 +500,9 @@ td.num, th.num { text-align: right; }
  * 나머지 세 줄은 접어 두되, 접힌 버튼에 건수를 적어 둔다 */
 /* 지금 해야 하는 줄만 크게. 테두리도 그라데이션도 없이 옅은 색면 하나로 둔다 */
 .todo-row.hero {
-  background: var(--insur-weak); border: 0; border-radius: 14px;
-  padding: 16px 17px; align-items: flex-start;
+  background: var(--insur-weak); border: 1px solid rgba(240, 113, 111, .22);
+  border-radius: 14px;
+  padding: 18px 19px; align-items: center; flex: 1;
 }
 .todo-row.hero .todo-body { font-size: 14px; color: var(--text); }
 .todo-row.hero .todo-num {
@@ -487,12 +513,12 @@ td.num, th.num { text-align: right; }
 
 .todo-more {
   display: flex; align-items: center; gap: 8px; width: 100%;
-  background: var(--bg); border: 0; border-radius: 12px;
+  background: var(--surface-2); border: 0; border-radius: 12px;
   padding: 11px 13px; cursor: pointer; font: inherit;
   font-size: 11.5px; color: var(--text-2); text-align: left;
   transition: background .12s ease;
 }
-.todo-more:hover { background: var(--line-2); }
+.todo-more:hover { background: rgba(255, 255, 255, .09); }
 .todo-more .m-arrow { margin-left: auto; flex: none; color: var(--muted); }
 .todo-more b { font-weight: 700; }
 .todo-rest { display: flex; flex-direction: column; gap: 12px; }
@@ -546,12 +572,12 @@ td.num, th.num { text-align: right; }
 .pipe-step .pipe-name { grid-column: 2; grid-row: 2; font-size: 11px; color: var(--muted); white-space: nowrap; }
 .dot {
   width: 32px; height: 32px; border-radius: 999px; flex: none;
-  border: 1px solid var(--line-2); background: var(--surface);
+  border: 1px solid var(--line-2); background: var(--surface-2);
   display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--text-2);
   cursor: pointer;
 }
 .dot.doing { border-color: var(--brand); background: var(--brand-weak); color: var(--brand); }
-.dot.done { border-color: var(--ok); background: var(--ok); color: #fff; }
+.dot.done { border-color: var(--ok); background: var(--ok); color: var(--on-accent); }
 .pipe-step.jam .pipe-n { color: var(--insur); }
 .pipe-line { height: 1px; background: var(--line-2); margin: 16px 0 0; }
 
@@ -559,7 +585,7 @@ td.num, th.num { text-align: right; }
 .bars { display: flex; flex-direction: column; gap: 10px; }
 .bar-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; }
 .bar-label { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-track { height: 12px; border-radius: 999px; background: var(--line); overflow: hidden; display: flex; }
+.bar-track { height: 12px; border-radius: 999px; background: var(--surface-2); overflow: hidden; display: flex; }
 .bar-fill { height: 100%; background: var(--brand); }
 .bar-fill.tgt { background: var(--ok); }
 .bar-fill.over { background: var(--core); }
@@ -571,7 +597,7 @@ td.num, th.num { text-align: right; }
 /* 점수 축 · 0(계획품) <-> 100(보험품) */
 .axis { position: relative; height: 34px; margin: 10px 0 4px; }
 .axis-track { position: absolute; left: 0; right: 0; top: 14px; height: 6px; border-radius: 999px;
-  background: linear-gradient(90deg, var(--plan-weak), var(--line), var(--insur-weak)); }
+  background: linear-gradient(90deg, var(--plan-weak), var(--surface-2), var(--insur-weak)); }
 .axis-mid { position: absolute; top: 8px; width: 1px; height: 18px; background: var(--line-2); left: 50%; }
 .axis-dot { position: absolute; top: 9px; width: 16px; height: 16px; border-radius: 999px;
   border: 2px solid var(--surface); transform: translateX(-8px); }
@@ -584,7 +610,7 @@ td.num, th.num { text-align: right; }
 .field > label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 5px; }
 .input, .select, textarea.input {
   width: 100%; padding: 10px 12px; border-radius: 10px;
-  border: 1px solid var(--line-2); background: var(--surface);
+  border: 1px solid var(--line-2); background: var(--surface-2);
   font: inherit; font-size: 13px; color: var(--text);
 }
 .select { appearance: none; padding-right: 30px;
@@ -598,14 +624,15 @@ td.num, th.num { text-align: right; }
 
 /* ---------------------------------------------------------------- 18. 모달 · 팝오버 */
 .modal-back {
-  position: fixed; inset: 0; background: rgba(28, 29, 34, .42);
+  position: fixed; inset: 0; background: rgba(4, 6, 12, .72);
   z-index: 60; padding: 20px; overflow-y: auto;
   display: none; place-items: start center;
 }
 .modal-back.on { display: grid; }
 .modal {
-  background: var(--surface); border-radius: 16px; max-width: 470px; width: 100%;
-  padding: 20px 22px; box-shadow: 0 20px 60px rgba(28, 29, 34, .22); margin: auto;
+  background: var(--surface-2); border: 1px solid var(--line-2);
+  border-radius: 16px; max-width: 470px; width: 100%;
+  padding: 20px 22px; box-shadow: 0 24px 64px rgba(0, 0, 0, .7); margin: auto;
 }
 .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
 .modal-head h3 { font-size: 15px; font-weight: 700; }
@@ -614,7 +641,7 @@ td.num, th.num { text-align: right; }
 /* AI 가 정한 값 옆의 ? 버튼. 근거를 숨기지 않는 것이 이 서비스의 핵심이다 */
 .askbtn {
   width: 17px; height: 17px; border-radius: 999px; flex: none;
-  border: 1px solid var(--line-2); background: var(--surface);
+  border: 1px solid var(--line-2); background: var(--surface-2);
   color: var(--muted); font-size: 10px; font-weight: 700;
   display: inline-grid; place-items: center; padding: 0; vertical-align: middle;
 }
@@ -622,35 +649,38 @@ td.num, th.num { text-align: right; }
 
 .pop {
   position: absolute; z-index: 70; width: min(320px, calc(100vw - 24px));
-  background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px;
-  box-shadow: 0 14px 40px rgba(28, 29, 34, .18); padding: 13px 15px;
+  /* 카드 위에 뜨는 것이라 카드보다 밝아야 한다. 같은 색이면 어디까지가 팝오버인지 모른다 */
+  background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .72); padding: 13px 15px;
 }
 .pop-head { font-size: 12.5px; font-weight: 700; margin-bottom: 7px; }
-.pop-row { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5px; padding: 3px 0; }
-.pop-k { color: var(--muted); }
-.pop-v { font-weight: 700; text-align: right; }
+.pop-row { display: flex; justify-content: space-between; gap: 12px; font-size: 11.5px; padding: 3px 0; }
+/* 왼쪽 이름은 줄이지 않는다. 그냥 두면 「곡선에서 / 빠진 / 것」 으로 한 글자씩 쌓인다.
+ * 여기서 nowrap 을 쓰는 이유 · 이름은 짧고 값이 길다. 줄을 넘겨야 하는 쪽은 값이다 */
+.pop-k { color: var(--muted); white-space: nowrap; flex: none; }
+.pop-v { font-weight: 600; text-align: right; min-width: 0; flex: 1; }
 .pop-formula {
   margin-top: 8px; padding: 8px 10px; border-radius: 8px;
-  background: var(--bg); font-size: 11px; line-height: 1.7; color: var(--text-2);
+  background: rgba(0, 0, 0, .35); font-size: 11px; line-height: 1.7; color: var(--text-2);
   word-break: break-all;
 }
 
 /* ---------------------------------------------------------------- 19. 떠 있는 버튼 */
 .chatbtn, .tourbtn {
   position: fixed; bottom: 20px; z-index: 45;
-  border-radius: 999px; box-shadow: 0 8px 24px rgba(28, 29, 34, .18);
+  border-radius: 999px; box-shadow: 0 10px 28px rgba(0, 0, 0, .6);
 }
-.chatbtn { right: 20px; width: 52px; height: 52px; border: 0; background: var(--brand); color: #fff;
-  font-size: 19px; display: grid; place-items: center; }
+.chatbtn { right: 20px; width: 52px; height: 52px; border: 0; background: var(--brand);
+  color: var(--on-accent); font-size: 19px; display: grid; place-items: center; }
 .tourbtn { left: 20px; padding: 9px 14px; border: 1px solid var(--line-2);
-  background: var(--surface); color: var(--text-2); font-size: 12px; }
+  background: var(--surface-2); color: var(--text-2); font-size: 12px; }
 
 /* ---------------------------------------------------------------- 20. 로그인 (셸을 쓰지 않는다) */
 .login-wrap { max-width: 470px; margin: 0 auto; padding: 46px 18px 40px; }
 .login-head { text-align: center; margin-bottom: 22px; }
 .login-logo {
   width: 58px; height: 58px; border-radius: 17px; margin: 0 auto 13px;
-  background: var(--brand); color: #fff; display: grid; place-items: center;
+  background: var(--brand); color: var(--on-accent); display: grid; place-items: center;
   font-size: 20px; font-weight: 700;
 }
 .login-title { font-size: 22px; font-weight: 700; letter-spacing: -.4px; }
@@ -693,13 +723,13 @@ td.num, th.num { text-align: right; }
 
 /* ---------------------------------------------------------------- 22. SQL 블록 (데이터 근거) */
 .sql {
-  background: #21232B; color: #E6E7EC; border-radius: 12px;
+  background: rgba(0, 0, 0, .38); color: var(--text); border-radius: 12px;
   padding: 13px 15px; font-family: Consolas, "Courier New", monospace;
   font-size: 11.5px; line-height: 1.75; overflow-x: auto; white-space: pre;
 }
-.sql .kw { color: #9DB4FF; }
-.sql .st { color: #A8D8B9; }
-.sql .fn { color: #F3C88B; }
+.sql .kw { color: var(--b1); }
+.sql .st { color: var(--ok); }
+.sql .fn { color: var(--core); }
 .zero { background: var(--insur-weak); color: var(--insur); font-weight: 700; }
 .real-note { background: var(--core-weak); color: var(--core); border-radius: 8px;
   padding: 9px 12px; font-size: 11.5px; line-height: 1.7; margin-top: 10px; }
@@ -823,10 +853,12 @@ td.num, th.num { text-align: right; }
  * 그래서 **표지 전용 토큰을 여기서만** 두고 업무 화면 팔레트는 손대지 않는다.
  */
 .auth {
-  --auth-1: #6D4AE0;      /* 자주빛 시작 */
-  --auth-2: #A855C8;      /* 자주빛 끝 */
-  --auth-3: #4B31A8;      /* 깊은 그림자 */
-  --auth-hl: #FFD24A;     /* 노란 강조. PPT 의 「자재」 강조색 */
+  /* PPT 는 자주빛이지만 본체가 파랑이라 로그인만 자주빛이면 두 제품처럼 보인다.
+   * 인디고에서 파랑으로 옮겼다 · 노란 강조는 PPT 그대로 남긴다 */
+  --auth-1: #4F6FE0;      /* 인디고 시작 */
+  --auth-2: #6E8BFF;      /* 밝은 파랑 */
+  --auth-3: #131A3D;      /* 깊은 그림자 */
+  --auth-hl: #FFD65C;     /* 노란 강조. PPT 의 「자재」 강조색 */
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   min-height: 100vh;
@@ -837,7 +869,9 @@ td.num, th.num { text-align: right; }
 .auth-brand {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(150deg, var(--auth-1) 0%, var(--auth-2) 62%, var(--auth-1) 100%);
+  background:
+    radial-gradient(900px 560px at 18% -4%, var(--auth-2) 0%, rgba(110, 139, 255, 0) 58%),
+    linear-gradient(150deg, var(--auth-1) 0%, #2A3C9A 52%, var(--auth-3) 100%);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -855,7 +889,7 @@ td.num, th.num { text-align: right; }
   content: '';
   position: absolute; left: 0; right: 0; bottom: 0; height: 66%;
   background: linear-gradient(180deg,
-    rgba(58, 30, 110, 0) 0%, rgba(58, 30, 110, .5) 52%, rgba(51, 25, 95, .82) 100%);
+    rgba(19, 26, 61, 0) 0%, rgba(19, 26, 61, .52) 52%, rgba(9, 12, 30, .84) 100%);
   pointer-events: none;
 }
 .brand-copy { position: relative; z-index: 1; margin-top: auto; }
@@ -895,7 +929,7 @@ td.num, th.num { text-align: right; }
 .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 34px; }
 .auth-logo-mark {
   width: 34px; height: 34px; border-radius: 10px; flex: none;
-  background: linear-gradient(140deg, #6D4AE0, #A855C8);
+  background: linear-gradient(140deg, var(--b3), var(--b4));
   color: #fff; display: grid; place-items: center;
   font-size: 15px; font-weight: 800;
 }
@@ -913,7 +947,7 @@ td.num, th.num { text-align: right; }
   font-size: 13.5px; font-weight: 700;
   transition: border-color .12s ease, background .12s ease;
 }
-.sso:hover { border-color: var(--auth-1, var(--brand)); background: var(--bg); }
+.sso:hover { border-color: var(--brand); background: rgba(91, 140, 255, .10); }
 .sso[disabled] { cursor: default; color: var(--muted); }
 .sso-mark {
   width: 22px; height: 22px; border-radius: 6px; flex: none;
@@ -1048,20 +1082,21 @@ td.num, th.num { text-align: right; }
 }
 .cmp-track {
   position: relative; height: 30px; border-radius: 9px;
-  background: var(--line); overflow: hidden;
+  background: var(--surface-2); overflow: hidden;
 }
 .cmp-fill {
   position: absolute; left: 0; top: 0; bottom: 0; border-radius: 9px;
 }
-.cmp-fill.now { background: var(--brand); }
-.cmp-fill.tgt { background: #94A5F8; }
+/* 두 막대를 같은 파랑 계열의 다른 단계로 둔다. 다른 색을 쓰면 딴 값처럼 보인다 */
+.cmp-fill.now { background: var(--b3); }
+.cmp-fill.tgt { background: var(--b5); }
 /* 빗금 칸 · 목표를 넘는 몫. 여기가 비어야 돈이 남는다는 뜻이다 */
 .cmp-gap {
   position: absolute; top: 0; bottom: 0; right: 0;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 9px;
+  border-radius: 9px; border: 1px dashed rgba(242, 176, 78, .5);
   background: repeating-linear-gradient(-45deg,
-    var(--core-weak) 0 7px, #FFFFFF 7px 14px);
+    rgba(242, 176, 78, .26) 0 7px, transparent 7px 14px);
   font-size: 11px; font-weight: 600; color: var(--core); white-space: nowrap;
   overflow: hidden;
 }
@@ -1075,13 +1110,14 @@ td.num, th.num { text-align: right; }
  * 이 화면에서 사람이 가장 오래 보는 문장이라 제일 크게 둔다 */
 .fin-pill {
   display: flex; align-items: center; gap: 10px; margin-top: 14px;
-  background: var(--ok-weak); border: 0; border-radius: 14px; padding: 13px 15px;
+  background: var(--ok-weak); border: 1px solid rgba(51, 196, 143, .22);
+  border-radius: 14px; padding: 13px 15px;
   font-size: 11px; line-height: 1.45; color: var(--ok);
 }
 .fin-pill .fic {
   flex: none; width: 24px; height: 24px; border-radius: 999px;
-  background: var(--ok); color: #FFFFFF; display: grid; place-items: center;
-  font-size: 12px; font-weight: 600;
+  background: var(--ok); color: var(--on-accent); display: grid; place-items: center;
+  font-size: 12px; font-weight: 700;
 }
 .fin-pill b { display: block; font-size: 19px; font-weight: 600; letter-spacing: -.7px; white-space: nowrap; }
 /* 한 줄에 세 묶음이 나란히 서면 높이는 제일 큰 것에 맞춰진다.
