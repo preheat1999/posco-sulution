@@ -27,8 +27,8 @@
       </div>
     </div>
 
-    <!-- 값 네 개를 한 줄에. 카드 네 개를 쓰면 화면이 카드로 도배된다 -->
-    <div class="statrow" id="stat"></div>
+    <!-- 값 네 개를 한 카드 안에 나란히. 가운데(전수 743)가 이 화면의 모집단이라 크게 둔다 -->
+    <section class="card kpistrip"><div class="kpistrip-in" id="stat"></div></section>
 
     <!-- 계산 순서를 그대로 단계로 둔다. 첫 단계만 열려 있다 -->
     <div id="steps"></div>
@@ -71,18 +71,28 @@
   // ------------------------------------------------------------ 머리 숫자
   function paintStat() {
     var w = A.money(), s = A.summary(), c = S.stockCounts();
+    /* 왼쪽에 회수 · 감축, 가운데에 모집단, 오른쪽에 발주.
+     * 빼는 쪽(-)과 더하는 쪽(+)을 가운데 기준으로 나눠 놓으면 방향이 보인다 */
     el('stat').innerHTML =
-      cell(UI.num(c.all), '품목', '분석 대상', '전수 분석 완료') +
-      cell(UI.num(c.order), '품목', '발주 필요', '즉시 ' + UI.num(s.signal.red || 0) + '건', 'core') +
-      cell(UI.num(c.cut), '품목', '감축 가능', UI.won(w.cutAmt) + ' 감축분', 'ok') +
-      cell(UI.wonShort(s.poolAmt), UI.wonShortUnit(s.poolAmt), '공용화 회수',
-           UI.num(s.poolItems) + '품목 정체', 'plan');
+      box('ok', '−', '공용화 회수', UI.wonShort(s.poolAmt), UI.wonShortUnit(s.poolAmt),
+          UI.num(s.poolItems) + '품목 정체', '즉시공용화 · 권장') +
+      box('ok', '−', '감축 가능', UI.num(c.cut), '품목', UI.won(w.cutAmt) + ' 감축분',
+          '목표를 넘는 몫') +
+      box('hero', '', '분석 대상', UI.num(c.all), '품목', '전수 분석 완료',
+          UI.num(c.all) + ' / ' + UI.num(c.all) + ' 계산') +
+      box('core', '+', '발주 필요', UI.num(c.order), '품목',
+          '즉시 ' + UI.num(s.signal.red || 0) + '건', '리드타임 고려');
   }
 
-  function cell(v, unit, k, x, cls) {
-    return '<div><div class="sv' + (cls ? ' ' + cls : '') + '">' + v +
-      (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
-      '<div class="sk">' + k + '</div><div class="sx">' + x + '</div></div>';
+  function box(cls, sign, k, v, unit, x, right) {
+    return '<div class="kpibox ' + cls + '">' +
+      '<div class="kb-top">' +
+        '<span class="kb-k">' + (sign ? '<i>' + sign + '</i>' : '') + UI.esc(k) + '</span>' +
+        '<span class="kb-r">' + UI.esc(right) + '</span>' +
+      '</div>' +
+      '<div class="kb-v">' + v + (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
+      '<div class="kb-x">' + UI.esc(x) + '</div>' +
+      '</div>';
   }
 
   // ------------------------------------------------------------ 단계
@@ -92,9 +102,9 @@
       return '<section class="sect' + (st.open ? ' open' : '') + '" id="s-' + st.n + '">' +
         '<div class="sect-head" role="button" tabindex="0" aria-expanded="' +
           (st.open ? 'true' : 'false') + '">' +
-          '<div class="sect-title">' +
-            '<h2><span style="color:var(--muted);font-weight:600">' + st.n + '</span> &nbsp;' +
-              UI.esc(st.title) + '</h2>' +
+          '<div class="sect-title" style="display:flex;align-items:center;gap:12px">' +
+            '<span class="stepno">' + st.n + '</span>' +
+            '<h2>' + UI.esc(st.title) + '</h2>' +
           '</div>' +
           '<div class="card-tools">' +
             '<span class="sect-n">' + UI.esc(st.right) + '</span>' +
@@ -254,9 +264,11 @@
   function poolBody(st) {
     return '<div class="dashrow c2" style="margin-bottom:0">' +
       '<div class="fbox">' +
-        '<div class="statrow" style="box-shadow:none;border:0;padding:0;margin:0;background:none">' +
-          cell(UI.wonShort(st.amt), UI.wonShortUnit(st.amt), '회수 가능', '즉시공용화 · 권장', 'ok') +
-          cell(UI.num(st.hold), '품목', '보류', UI.won(st.holdAmt) + ' · 재분류 검토', 'core') +
+        '<div class="kpistrip-in" style="grid-template-columns:1fr 1fr">' +
+          box('ok', '', '회수 가능', UI.wonShort(st.amt), UI.wonShortUnit(st.amt),
+              '즉시공용화 · 공용화권장', UI.num(st.items - st.hold) + '품목') +
+          box('core', '', '보류', UI.num(st.hold), '품목',
+              UI.won(st.holdAmt) + ' · 재분류 검토', '핵심 · 보험품') +
         '</div>' +
       '</div>' +
       '<div class="fbox">' +
@@ -394,6 +406,7 @@
   }
 })();
 </script>
+<script src="assets/chat.js"></script>
 <script src="assets/tour.js"></script>
 </body>
 </html>

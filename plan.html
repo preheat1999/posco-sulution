@@ -27,10 +27,13 @@
       </div>
     </div>
 
-    <div class="statrow" id="stat"></div>
+    <!-- 마감일이 무엇인지 먼저 말한다. 이 산식을 모르면 「초과 287일」 이 뜻을 잃는다.
+         카드로 두면 자리를 많이 먹어서 알약 한 줄로 줄이고 자세한 것은 ? 에 담았다 -->
+    <div class="phead" style="margin-bottom:14px">
+      <div class="rulepill" id="rule"></div>
+    </div>
 
-    <!-- 마감일이 무엇인지 먼저 말한다. 이 산식을 모르면 「초과 287일」 이 뜻을 잃는다 -->
-    <section class="card" id="rule"></section>
+    <div class="statrow" id="stat"></div>
 
     <div class="phead">
       <div class="tabs" id="tabs"></div>
@@ -110,20 +113,10 @@
     var P = window.PLAN;
     if (!P) { el('rule').innerHTML = '<div class="empty"><strong>정비계획 데이터가 없습니다</strong>' +
       'assets/plan-data.js 를 확인하세요</div>'; return; }
-    var lead = P.meta.leadDays || {};
     el('rule').innerHTML =
-      '<header><div><h2>발주 마감일은 이렇게 나옵니다</h2></div>' +
-        '<div class="card-tools"><span class="badge plan">역산 · 내림</span></div></header>' +
-      '<div class="formula" style="margin-top:0">' +
-        '<div class="ft"><span>산식</span><span>명세 · 2단계 적정재고</span></div>' +
-        '<code>' + UI.esc(P.meta.formula) + '</code>' +
-        '<div class="ft" style="margin:9px 0 5px"><span>휴지구분별 선행일수</span></div>' +
-        '<code>' + Object.keys(lead).map(function (k) {
-          return k + ' ' + lead[k] + '일';
-        }).join(' · ') + '</code>' +
-      '</div>' +
-      '<p class="note" style="margin-top:10px">' + UI.esc(P.meta.dueNote) + ' · ' +
-        UI.esc(P.meta.woNote) + '</p>';
+      '<span class="ri">∑</span>' +
+      '<code>' + UI.esc(P.meta.formula) + '</code>' +
+      '<button class="askbtn" type="button" id="rule-why" aria-label="산식 근거">?</button>';
   }
 
   // ------------------------------------------------------------ 목록
@@ -266,7 +259,25 @@
   function short(d) { return window.UI ? UI.dateShort(d) : String(d); }
 
   // ------------------------------------------------------------ 이벤트
+  /* 선행일수와 주의사항은 ? 안에 담는다. 화면에 다 적으면 목록이 밀려 내려간다 */
+  function wireRule() {
+    el('rule').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('#rule-why');
+      if (!b || !window.PLAN) { return; }
+      var lead = PLAN.meta.leadDays || {};
+      POP.show(b, {
+        title: '발주 마감일 산식',
+        rows: Object.keys(lead).map(function (k) {
+          return ['선행일수 · ' + k, lead[k] + '일'];
+        }).concat([['내림 처리', 'floor · 하루라도 늦으면 휴지에 못 맞춘다']]),
+        formula: PLAN.meta.formula,
+        note: PLAN.meta.dueNote + ' · ' + PLAN.meta.woNote
+      });
+    });
+  }
+
   function wire() {
+    wireRule();
     el('tabs').addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('.tab');
       if (!b) { return; }
@@ -323,6 +334,7 @@
   S.on(paintList);
 })();
 </script>
+<script src="assets/chat.js"></script>
 <script src="assets/tour.js"></script>
 </body>
 </html>

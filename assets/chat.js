@@ -30,7 +30,10 @@
     btn.id = 'chatbtn';
     btn.type = 'button';
     btn.setAttribute('aria-label', 'AI 자재 질의');
-    btn.innerHTML = '✦';
+    /* 아이콘만 두면 무엇이 열리는지 모른다. 글자를 같이 둔다.
+     * 오른쪽 점은 연동 상태다 · 초록이면 붙었고 회색이면 아직이다 */
+    btn.innerHTML = '<span class="cbi">✦</span><span class="cbt">AI 자재 질의</span>' +
+      '<span class="cbd' + (CFG.CHAT_API ? ' on' : '') + '"></span>';
 
     var wrap = document.createElement('aside');
     wrap.className = 'chatpane';

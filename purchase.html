@@ -106,14 +106,17 @@
             (r.active ? '<span class="badge ok">구매 가능</span>'
               : '<span class="badge core">정보 보완 필요</span>') +
           '</span>' +
-          '<span class="pick-meta">' + UI.esc(r.q) + ' · 소요 ' + UI.num(r.qty) + ' ' +
-            UI.esc(r.unit) + ' · ' + UI.esc(r.kind || '구분 미확인') +
+          '<span class="pick-meta">' + UI.esc(r.q) + ' · ' +
+            UI.esc(r.kind || '구분 미확인') +
             (r.eq ? ' · ' + UI.esc(r.eq) : '') + '</span>' +
+          /* 수량과 금액을 한 상자에 나란히. 눈이 한 번만 움직인다 */
+          '<span class="pick-box">' +
+            '<span><em>소요 필요</em><b>' + UI.num(r.qty) + ' ' + UI.esc(r.unit) + '</b></span>' +
+            '<span class="r"><em>추정 금액</em><b class="blue">' + UI.won(r.amount) +
+              '</b></span>' +
+          '</span>' +
         '</span>' +
-        '<span class="pick-right">' +
-          '<span class="pick-v">' + UI.wonShort(r.amount) + '</span>' +
-          '<span class="pick-k">' + UI.wonShortUnit(r.amount) + ' 추정</span>' +
-        '</span></button>';
+        '</button>';
     }).join('') :
       '<div class="empty"><strong>구매신청 대상이 없습니다</strong>' +
       '적정재고 분석에서 발주 필요 자재를 확인하세요</div>';
@@ -239,6 +242,7 @@
   S.on(paintAll);
 })();
 </script>
+<script src="assets/chat.js"></script>
 <script src="assets/tour.js"></script>
 </body>
 </html>

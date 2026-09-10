@@ -43,6 +43,9 @@
 
     <div class="split">
       <div>
+        <!-- 이 목록이 무엇인지 한 줄로. Stitch 안의 「±0.05」 와 「MODEL V3.8-ST」 는
+             원천에 없는 값이라 실제 점수차 범위로 바꿨다 -->
+        <div class="noticebar" id="notice"></div>
         <div class="picklist" id="list"></div>
         <div class="pagerow">
           <span id="pinfo">&nbsp;</span>
@@ -151,6 +154,18 @@
     el('prev').disabled = page <= 0;
     el('next').disabled = page >= max;
 
+    /* 안내 띠 · 지금 칸이 무엇을 모아 둔 것인지 적는다 */
+    var gaps = listRows.map(function (r) { return S.gap(r); });
+    el('notice').innerHTML = gaps.length
+      ? '<span class="ni">◇</span><span>' +
+        (tab === 'gray'
+          ? '<b>점수차가 작아 알고리즘이 보류한 자재</b>입니다 · 사람이 확정해야 라벨이 생깁니다'
+          : (tab === 'done' ? '<b>담당자가 확정한 자재</b>입니다 · 승인이 첫 라벨이 됐습니다'
+            : '<b>알고리즘이 속성을 바꾸자고 본 자재</b>입니다 · 근거를 보고 확정하세요')) +
+        '</span><span class="nx">점수차 ' + Math.min.apply(null, gaps).toFixed(1) + ' ~ ' +
+        Math.max.apply(null, gaps).toFixed(1) + '점</span>'
+      : '<span class="ni">◇</span><span>이 칸에는 자재가 없습니다</span>';
+
     var c = S.attrCounts();
     el('lnote').innerHTML = '이 목록은 <b>손대야 하는 ' + UI.num(c.all) + '품목</b>입니다. ' +
       '판정일치 ' + UI.num(c.same) + '품목과 배제 ' + UI.num(c.out) +
@@ -174,30 +189,39 @@
     var mark = d.bucket === 'gray' ? '△' : (d.bucket === 'done' ? '✓' : '✦');
 
     el('panel').innerHTML =
-      '<p class="gt"><span>자재 판정 근거</span>' +
-        '<span class="gt-sub">' + UI.srcLabel(r.typeSrc) + '</span></p>' +
-
-      '<h2 style="font-size:20px;letter-spacing:-.6px;margin-bottom:4px">' +
-        UI.esc(r.name || '품명 미확인') + '</h2>' +
+      '<div class="panel-head">' +
+        '<div style="min-width:0">' +
+          '<p class="gt" style="margin-bottom:6px"><span>자재 판정 근거</span></p>' +
+          '<h2 style="font-size:20px;letter-spacing:-.6px;margin-bottom:4px">' +
+            UI.esc(r.name || '품명 미확인') + '</h2>' +
       /* 소속 이름은 로그인이 고른 조직 트리에서 온다.
          정본의 부서 경로를 쓰면 빵조각과 다른 이름이 떠서 두 부서처럼 보인다 */
       '<p class="sub">' + UI.esc(r.q) + ' · ' +
         UI.esc((window.ORG ? ORG.load().part : '') || r.dept) + ' · ' +
         UI.esc(r.dept) + ' · ' + UI.gradeBadge(r.grade) + '</p>' +
+        '</div>' +
+        '<span class="panel-ico">◈</span>' +
+      '</div>' +
 
       /* 점수 두 개를 한 축에 놓는다. 두 점이 붙어 있으면 그게 회색지대다 */
+      /* 점수 두 개가 붙어 있어도 값이 겹치지 않게 방울을 위아래로 나눈다.
+         회색지대는 두 점이 가까운 것이 핵심이라 이 배치가 필요하다 */
       '<div class="axis2">' +
         '<div class="axis2-head">' +
-          '<span style="color:var(--brand)">계획품 점수 <b>' + sp.toFixed(1) + '</b></span>' +
-          '<span style="color:var(--insur)">보험품 점수 <b>' + si.toFixed(1) + '</b></span>' +
+          '<span style="color:var(--brand)"><i class="ad sp"></i>계획품 점수 <b>' +
+            sp.toFixed(1) + '</b></span>' +
+          '<span style="color:var(--insur)">보험품 점수 <b>' + si.toFixed(1) +
+            '</b><i class="ad si"></i></span>' +
         '</div>' +
         '<div class="axis2-track">' +
           '<span class="axis2-mid"></span>' +
-          '<span class="axis2-dot sp" style="left:' + clamp(sp) + '%"></span>' +
-          '<span class="axis2-dot si" style="left:' + clamp(si) + '%"></span>' +
+          '<span class="axis2-dot sp" style="left:' + clamp(sp) + '%">' +
+            '<i class="bub up">' + sp.toFixed(1) + '</i></span>' +
+          '<span class="axis2-dot si" style="left:' + clamp(si) + '%">' +
+            '<i class="bub down">' + si.toFixed(1) + '</i></span>' +
         '</div>' +
-        '<div class="axis2-foot"><span>0점</span>' +
-          '<span>점수차 ' + d.gap.toFixed(1) + '점</span><span>100점</span></div>' +
+        '<div class="axis2-foot"><span>계획품 0</span>' +
+          '<span>점수차 ' + d.gap.toFixed(1) + '점</span><span>보험품 100</span></div>' +
       '</div>' +
 
       '<div class="callout ' + cls + '">' +
@@ -315,6 +339,7 @@
   }
 })();
 </script>
+<script src="assets/chat.js"></script>
 <script src="assets/tour.js"></script>
 </body>
 </html>

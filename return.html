@@ -84,6 +84,7 @@
   var S = window.SCREEN;
   var tab = 'all';
   var picked = null;
+  var done = {};        // 이번 화면에서 반납한 자재. 버튼을 「완료」 로 바꾼다
 
   function el(id) { return document.getElementById(id); }
 
@@ -157,8 +158,12 @@
             UI.esc(r.unit) + '</td>' +
           '<td data-label="물품 상태">' + condBadge(r.cond) + '</td>' +
           '<td data-label="반납">' +
-            '<button class="btn sm" type="button" data-ret="' + UI.esc(r.q) + '">반납</button>' +
-            ' <button class="btn line sm" type="button" data-pick="' + UI.esc(r.q) + '">미리보기</button>' +
+            (done[r.q]
+              ? '<span class="badge ok">완료</span>'
+              : '<button class="btn sm" type="button" data-ret="' + UI.esc(r.q) +
+                '">반납</button>') +
+            ' <button class="btn line sm" type="button" data-pick="' + UI.esc(r.q) +
+              '">미리보기</button>' +
           '</td></tr>';
       }).join('') + '</tbody></table>' :
       '<div class="empty"><strong>이 상태의 반납 대상이 없습니다</strong>' +
@@ -222,6 +227,7 @@
     var r = rows.filter(function (x) { return x.q === q; })[0];
     if (!r) { return; }
     var before = DB.item(q);
+    done[q] = true;
     try {
       /* 부호는 config 가 정한다. 화면이 -1 을 만들지 않는다 */
       DB.txn({ q: q, type: '반납', qty: r.left, note: '자재반납 (QR) · ' + r.cond });
@@ -267,6 +273,7 @@
   S.on(function () { paintTable(); paintEffect(); });
 })();
 </script>
+<script src="assets/chat.js"></script>
 <script src="assets/tour.js"></script>
 </body>
 </html>

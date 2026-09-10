@@ -28,6 +28,15 @@
       </div>
     </div>
 
+    <!-- 문맥 띠 · 이 화면이 무엇을 보여 주는지 한 줄로.
+         Stitch 안의 「V4.2 ACTIVE · ERP SYNC 09:14」 는 원천에 없는 값이라 넣지 않았다 -->
+    <div class="ctxbar">
+      <span class="ci">◑</span>
+      <span class="ct">핵심 파이프라인</span>
+      <span class="badge insur" id="ctx-n">&nbsp;</span>
+      <span class="cx" id="ctx-asof">&nbsp;</span>
+    </div>
+
     <!-- 첫 줄 · 내가 맡은 것(왼쪽)과 지금 해야 할 것(오른쪽).
          나머지는 그 두 개를 설명하는 값이라 아래로 내린다 -->
     <div class="dashrow c2">
@@ -350,13 +359,15 @@
       '<div class="cmp-row">' +
         '<div class="cmp-lab"><span>지금 보유</span>' +
           '<b class="cmp-v">' + UI.won(w.nowAmt) + '</b></div>' +
-        '<div class="cmp-track"><div class="cmp-fill now" style="width:100%"></div></div>' +
+        '<div class="cmp-track"><div class="cmp-fill now" style="width:100%"></div>' +
+          '<span class="cmp-in right">100% 현행</span></div>' +
       '</div>' +
       '<div class="cmp-row">' +
-        '<div class="cmp-lab"><span>목표 안</span>' +
+        '<div class="cmp-lab"><span>목표 안 <span class="badge plan">AI 제안</span></span>' +
           '<b class="cmp-v">' + UI.won(w.keepAmt) + '</b></div>' +
         '<div class="cmp-track">' +
           '<div class="cmp-fill tgt" style="width:' + keepPct.toFixed(1) + '%"></div>' +
+          '<span class="cmp-in left">' + UI.won(w.keepAmt) + '</span>' +
           '<div class="cmp-gap" style="width:' + cutPct.toFixed(1) + '%">' + inLabel + '</div>' +
         '</div>' +
       '</div>' +
@@ -487,7 +498,12 @@
         '<div class="due-right">' +
           '<div class="due-d">' + UI.esc(UI.dleft(r.dDays)) + '</div>' +
           '<div class="due-date">' + UI.esc(UI.date(r.dueDate)) + '</div>' +
-        '</div></div>';
+        '</div></div>' +
+        /* 초과일수를 막대로도 낸다. 숫자만으로는 「332 와 225 중 어느 쪽이 급한가」 를
+           읽는 데 시간이 걸린다. 가장 오래 넘긴 건을 100% 로 두고 견준다 */
+        '<div class="due-bar"><i style="width:' + barPct(r.dDays, d.rows) +
+        '%;background:var(--' + (tone === 'over' ? 'insur' : (tone === 'soon' ? 'core' : 'ok')) +
+        ')"></i></div>';
     }).join('') :
       '<div class="empty"><strong>정비 일정에 묶인 자재가 없습니다</strong>' +
       '정비계획 화면에서 휴지 일정을 확인하세요</div>';
@@ -496,6 +512,13 @@
     document.getElementById('due-note').innerHTML =
       UI.num(d.total) + '건 모두 마감 초과 · 지금 신청은 <b>' + UI.num(d.now) + '건</b>' +
       ask('due-why');
+  }
+
+  /* 가장 오래 넘긴 건을 100% 로 두고 견준다 */
+  function barPct(dDays, rows) {
+    var worst = 1;
+    rows.forEach(function (x) { worst = Math.max(worst, Math.abs(Number(x.dDays) || 0)); });
+    return Math.max(6, Math.min(100, (Math.abs(Number(dDays) || 0) / worst) * 100)).toFixed(1);
   }
 
   function wireDue() {
@@ -623,8 +646,18 @@
   }
 
   // ------------------------------------------------------------ 시작 · 구독
+  function paintCtx() {
+    var d = A.donut(), s = A.summary(), m = A.meta();
+    /* 「집중 검토」 는 사람이 지금 봐야 하는 묶음 수다 · 보류 · 즉시발주 · 마감초과 */
+    var n = [d.hold > 0, (s.signal.red || 0) > 0, true].filter(Boolean).length;
+    document.getElementById('ctx-n').textContent = '집중 검토 ' + n + '개';
+    document.getElementById('ctx-asof').textContent =
+      (m.asof ? UI.date(m.asof) : '기준일 미확인') + ' 기준 · 743품목 전수';
+  }
+
   function paintAll() {
     paintKpi();
+    paintCtx();
     paintQuick();
     paintTodo();
     paintDue();
