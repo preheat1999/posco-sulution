@@ -85,6 +85,15 @@
     stage = 'done'; S.setStockStage('done');
     if (!S.stockStamp()) { S.setStockStamp(S.nowStamp()); }
   }
+  /* 챗봇 · 음성의 「Q1000108 적정재고 화면에서 보여줘」 는 #q=코드 로 들어온다 ·
+   * 분석된 화면에서 그 자재 하나만 찾은 표를 바로 본다 (칸은 「전체」 · 어느 조치든 보이게) */
+  (function () {
+    var m = String(location.hash || '').match(/q=(Q\d{7})/i);
+    if (!m) { return; }
+    query = m[1].toUpperCase(); tab = 'all';
+    stage = 'done'; S.setStockStage('done');
+    if (!S.stockStamp()) { S.setStockStamp(S.nowStamp()); }
+  })();
 
   function el(id) { return document.getElementById(id); }
 
@@ -682,6 +691,8 @@
 <script src="assets/md.js"></script>
 <script src="assets/catalog.js"></script>
 <script src="assets/ask.js"></script>
+<script src="assets/actions.js"></script>
+<script src="assets/voice.js"></script>
 <script src="assets/chat.js"></script>
 <script src="assets/tour.js"></script>
 </body>

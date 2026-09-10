@@ -32,6 +32,7 @@ import http.server
 import io
 import json
 import os
+import re
 import socket
 import socketserver
 import time
@@ -43,8 +44,12 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 
 RAG = {'api': '', 'token': ''}      # .env 에서 읽는다 (main 이 채운다)
 LLM = {'key': '', 'model': '', 'url': 'https://api.anthropic.com/v1/messages'}
+# 음성 → 글자. OpenAI 음성 인식(whisper) · 키는 .env 의 OPENAI_API_KEY · 브라우저로 내려가지 않는다.
+# 키가 없으면 화면은 브라우저 내장 음성 인식(Web Speech)으로 대신한다 (config.local.js 의 STT 가 비어 있다)
+STT = {'key': '', 'model': 'whisper-1', 'url': 'https://api.openai.com/v1/audio/transcriptions'}
 PREFIX = '/rag/'
 LLM_PATH = '/llm/route'
+STT_PATH = '/stt'
 TOOLS_CACHE = {'mtime': 0, 'data': None}
 
 
@@ -70,7 +75,57 @@ class H(http.server.SimpleHTTPRequestHandler):
         if self.path.split('?')[0] == LLM_PATH:
             self.route_question()
             return
-        self.send_error(405, 'Only /rag/ and /llm/route accept POST')
+        if self.path.split('?')[0] == STT_PATH:
+            self.transcribe()
+            return
+        self.send_error(405, 'Only /rag/, /llm/route and /stt accept POST')
+
+    def transcribe(self):
+        """녹음(webm/ogg/mp4) 바이트 → 한국어 문장. 소리 파일은 저장하지 않고 그대로 넘긴다."""
+        n = int(self.headers.get('Content-Length') or 0)
+        if not STT['key']:
+            self.json_out(503, {'detail': '.env 에 OPENAI_API_KEY 가 없습니다 · 브라우저 음성 인식을 씁니다'})
+            return
+        if n <= 0 or n > 25 * 1024 * 1024:
+            self.json_out(400, {'detail': '녹음이 비었거나 25MB 를 넘습니다'})
+            return
+        audio = self.rfile.read(n)
+        ctype = self.headers.get('Content-Type') or 'audio/webm'
+        ext = 'webm'
+        for k, v in (('ogg', 'ogg'), ('mp4', 'mp4'), ('mpeg', 'mp3'), ('wav', 'wav'), ('webm', 'webm')):
+            if k in ctype:
+                ext = v
+                break
+        boundary = '----mtrlvoice%d' % int(time.time() * 1000)
+        parts = []
+
+        def field(name, value):
+            parts.append(('--%s\r\nContent-Disposition: form-data; name="%s"\r\n\r\n%s\r\n'
+                          % (boundary, name, value)).encode('utf-8'))
+        field('model', STT['model'])
+        field('language', 'ko')
+        field('response_format', 'json')
+        parts.append(('--%s\r\nContent-Disposition: form-data; name="file"; filename="voice.%s"\r\n'
+                      'Content-Type: %s\r\n\r\n' % (boundary, ext, ctype.split(';')[0])).encode('utf-8'))
+        parts.append(audio)
+        parts.append(('\r\n--%s--\r\n' % boundary).encode('utf-8'))
+        body = b''.join(parts)
+        r = urllib.request.Request(
+            STT['url'], data=body,
+            headers={'Authorization': 'Bearer ' + STT['key'],
+                     'Content-Type': 'multipart/form-data; boundary=' + boundary})
+        t0 = time.time()
+        try:
+            with urllib.request.urlopen(r, timeout=60) as up:
+                out = json.loads(up.read().decode('utf-8'))
+        except urllib.error.HTTPError as e:
+            self.json_out(e.code, {'detail': 'STT 오류 · ' + e.read().decode('utf-8', 'replace')[:300]})
+            return
+        except Exception as e:
+            self.json_out(502, {'detail': 'STT 서버에 닿지 못했습니다 · ' + str(e)})
+            return
+        self.json_out(200, {'text': str(out.get('text') or '').strip(),
+                            'ms': int((time.time() - t0) * 1000), 'model': STT['model']})
 
     def json_out(self, code, obj):
         body = json.dumps(obj, ensure_ascii=False).encode('utf-8')
@@ -119,11 +174,25 @@ class H(http.server.SimpleHTTPRequestHandler):
                 msgs.append({'role': 'assistant', 'content': '(도구를 골라 답했습니다)'})
         msgs.append({'role': 'user', 'content': q})
 
+        # 화면 문맥 · 어느 화면인지 · 「이 자재」 가 무엇인지. 코드 한 개와 화면 키만 보낸다
+        ctx = req.get('context') or {}
+        ctx_line = ''
+        route = re.sub(r'[^a-z_-]', '', str(ctx.get('route') or '').lower())[:20]
+        sel = str(ctx.get('selectedCode') or '').upper()
+        sel = sel if re.match(r'^Q[0-9]{7}$', sel) else ''
+        stage = re.sub(r'[^a-z]', '', str(ctx.get('stage') or '').lower())[:10]
+        if route or sel:
+            ctx_line = ('\n\n## 지금 화면 문맥\n- route: %s\n- selectedCode: %s\n- stage: %s'
+                        % (route or '(모름)', sel or '(없음 · 「이 자재」 라고 하면 코드를 비워 둔다)',
+                           stage or '(모름)'))
+
+        tools = list(spec.get('tools') or []) + [
+            {k: v for k, v in a.items() if k != 'kind'} for a in (spec.get('actions') or [])]
         body = {
             'model': LLM['model'],
-            'max_tokens': 300,
-            'system': spec.get('system') or '',
-            'tools': spec.get('tools') or [],
+            'max_tokens': 600,
+            'system': (spec.get('system') or '') + ctx_line,
+            'tools': tools,
             'tool_choice': {'type': 'any'},      # 반드시 도구를 고르게 한다
             'messages': msgs,
         }
@@ -145,12 +214,31 @@ class H(http.server.SimpleHTTPRequestHandler):
 
         picks = [c for c in (out.get('content') or []) if c.get('type') == 'tool_use']
         if not picks:
-            self.json_out(200, {'tool': None, 'input': {},
+            self.json_out(200, {'tool': None, 'input': {}, 'picks': [],
                                 'ms': int((time.time() - t0) * 1000)})
             return
+        # 한 문장에 일이 여럿이면 도구가 여러 개 온다 · 순서대로 준다 (같은 이름은 한 번만)
+        known = set(t['name'] for t in tools)
+        flat = []
+        for c in picks:
+            if c.get('name') == 'multi_step':
+                # 순서 목록 · 안에 든 도구 이름도 아는 것만 · 다시 겹쳐 넣는 것은 버린다
+                for st in ((c.get('input') or {}).get('steps') or [])[:4]:
+                    if isinstance(st, dict) and st.get('tool') != 'multi_step':
+                        flat.append({'name': st.get('tool'), 'input': st.get('input') or {}})
+            else:
+                flat.append({'name': c.get('name'), 'input': c.get('input') or {}})
+        plist, seen = [], set()
+        for c in flat:
+            nm = c.get('name')
+            sig = str(nm) + json.dumps(c.get('input') or {}, sort_keys=True, ensure_ascii=False)
+            if nm in known and nm != 'multi_step' and sig not in seen:
+                plist.append({'tool': nm, 'input': c.get('input') or {}})
+                seen.add(sig)
         self.json_out(200, {
-            'tool': picks[0].get('name'),
-            'input': picks[0].get('input') or {},
+            'tool': plist[0]['tool'] if plist else None,
+            'input': plist[0]['input'] if plist else {},
+            'picks': plist[:4],
             'ms': int((time.time() - t0) * 1000),
             'model': out.get('model'),
             'usage': out.get('usage'),
@@ -272,6 +360,10 @@ def write_local_config(env):
         # 라우터가 켜졌다는 사실만 알린다 · 키는 내려보내지 않는다
         body.append("  C.ASK_ROUTE = '/llm/route';")
         body.append("  C.ASK_MODEL = '%s';" % (env.get('LLM_MODEL') or 'claude-haiku-4-5-20251001'))
+    if env.get('OPENAI_API_KEY'):
+        # 음성 인식 프록시가 켜졌다는 사실만 · 키는 서버에 있다. 없으면 브라우저 내장 인식으로 간다
+        body.append("  C.STT = '/stt';")
+        body.append("  C.STT_MODEL = '%s';" % (env.get('STT_MODEL') or 'whisper-1'))
     body.append('})();')
     body.append('')
     path = os.path.join(ROOT, 'assets', 'config.local.js')
@@ -303,6 +395,8 @@ def main():
     RAG['token'] = env.get('CHAT_TOKEN', '')
     LLM['key'] = env.get('LLM_API_KEY', '')
     LLM['model'] = env.get('LLM_MODEL', '') or 'claude-haiku-4-5-20251001'
+    STT['key'] = env.get('OPENAI_API_KEY', '')
+    STT['model'] = env.get('STT_MODEL', '') or 'whisper-1'
     ip = lan_ip()
     base = 'http://%s:%d' % (ip, a.port)
     print('서버 · %s:%d (no-store)' % (a.host, a.port))
@@ -324,6 +418,9 @@ def main():
           % (LLM['model'], len((tools or {}).get('tools') or []),
              '있음' if LLM['key'] else '없음 · .env 에 LLM_API_KEY 를 넣어라'))
     print('  질문 문장만 보낸다 · 자재 값은 브라우저 안에서 답을 만든다')
+    print('음성 인식 · %s' % ('/stt → OpenAI ' + STT['model'] + ' (키는 서버에)' if STT['key']
+                           else '브라우저 내장(Web Speech) · .env 에 OPENAI_API_KEY 를 넣으면 /stt 로 바뀐다'))
+    print('  마이크는 https 또는 localhost 에서만 열린다 · 폰(IP 주소)에서는 브라우저가 막는다')
     print()
     print('폰이 안 붙으면 · 윈도 방화벽에서 이 포트를 한 번 허용해야 한다')
     print('  (관리자 명령창) netsh advfirewall firewall add rule '

@@ -78,6 +78,13 @@ test_screens.js        : 화면 8개 전수 PASS (실행 · undefined · 지어�
   - **사전** (`assets/catalog.js`) · 화면 8개 · 용어 27개 · 출처 8개. 값은 안 적고 코드에서 읽으므로 명세가 바뀌면 답도 바뀐다 (`test_ask.js` 가 대조).
   - **키** · `.env` 의 `LLM_API_KEY`·`LLM_MODEL`(claude-haiku-4-5). 서버가 보관하고 브라우저로 내려보내지 않는다.
   - **실사용 확인** · 「지금 발주 필요 몇 품목이야」(즉시·119품목) · 「stale 이 무슨 뜻이야」(설명+지금 값) · 「감축 금액 큰 자재 5개」(표) · 「오늘 할 일」(대시보드와 같은 4줄·633품목) · 「대시보드 설명」 · 「자재 반납 절차」(문서 5건) · 「회식 장소」(근거 없음) 7갈래 통과. 시연 중 새어 나간 세 문장은 `test_ask.js` 에 박아 두었다.
+- **음성 · 명령 Agent (2026-09-11)**: 챗봇이 말(🎤)과 글로 받은 **명령**을 실행한다 · 별도 Voice Agent 없이 기존 라우터를 넓혔다. 안내 · `VOICE_GUIDE.md`.
+  - **Action Registry** (`assets/actions.js`) · navigate · searchMaterial · openMaterialDetail · getInventoryStatus · openPurchaseRequest · submitPurchaseRequest · openReturnPage · returnMaterial · runAttrAlgorithm · judgeMaterial · commitAttr · runStockAnalysis · convertToPool (13) + `multi_step` 봉투. 화면은 표의 키로만 · 코드는 `Q\d{7}` · 수량 1~999 · **LLM 이 만든 주소 · 코드는 실행되지 않는다**.
+  - **DB 변경 5개는 `UI.confirm` 뒤에만** (구매신청 초안 · 반납 · 판단 · 확정 · 공용 전환) · 각 화면의 버튼과 **같은 DB 호출**을 쓴다 (새 저장 경로 없음).
+  - **화면 문맥** · 라우터에 `{route, selectedCode, stage}` 를 보낸다 (코드 하나 · 이름 · 금액은 안 감) · 「이 자재」 = 주소 `#q=` → 누른 `[data-q]` → 마지막 말한 코드.
+  - **화면을 넘어가는 실행** · 남은 단계를 `sessionStorage` 에 실어 새 화면에서 이어 한다 · 「Q1201564 찾아서 적정재고 화면에서 보여줘」 = 2단계 (`stock.html#q=코드` 새로 지원).
+  - **음성** (`assets/voice.js`) · `.env` `OPENAI_API_KEY` 가 있으면 `MediaRecorder` → `serve.py /stt` → whisper (키는 서버) · 없으면 Chrome Web Speech(ko-KR) 로 대체. idle/recording/transcribing/executing 상태 · 인식 문장은 🎤 표시로 채팅에. **마이크는 https·localhost 에서만** 열린다.
+  - **실측** · 라우터 1.0~2.1초 · 11개 명령 문장 의도대로 (multi_step 으로 2단계 3건) · 브라우저 실행 · 확인 → 저장 (`pr_drafts` +1) · 취소 → 기록 없음 확인. 검사기 `test_actions.js` 60여 항목 PASS.
 - **발표자료**: 별도 트랙, 이 리포지토리 밖에서 진행.
 
 ## 4. 다음 단계

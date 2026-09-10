@@ -8,6 +8,12 @@
  *   2) 이 서비스의 화면 · 용어 · 출처 · 「stale 이 뭐야」 「히트맵 상자 크기」
  *      → 카탈로그(assets/catalog.js)로 답한다
  *   3) 사내 규정 · 절차 → RAG 서버(문서 30건 · 6,901조각)가 답한다 · 6~11초 걸린다
+ *   4) 명령 · 「적정재고 탭으로 가줘」 「이 자재 10개 구매 신청해줘」
+ *      → Action Registry(assets/actions.js)에 등록된 것만 실행한다 · 여러 개면 순서대로 ·
+ *        DB 를 바꾸는 것은 확인 창을 거친다 · 화면을 옮겨야 하면 남은 단계를 새 화면에서 이어 한다
+ *
+ * 음성은 입력 방법일 뿐이다 · 마이크(assets/voice.js)가 글자를 주면 그 뒤는 글로 친 것과 같다.
+ * 라우터에는 화면 문맥(route · selectedCode · stage)을 함께 보낸다 · 「이 자재」 가 무엇인지 알게.
  *
  * 어느 갈래인지 고르는 것은 질의 라우터다 ·
  *   먼저 규칙(ASK.fast)으로 맞춰 보고, 안 맞으면 serve.py 의 /llm/route 가 도구 하나를
@@ -43,6 +49,9 @@
   var turns = [];
   var health = null;       // /api/health 결과 · null 이면 아직 모름
   var timer = null;
+  var voice = { state: 'idle', note: '', interim: '' };   // 마이크 상태 · 버튼과 안내 줄이 본다
+  var SEL_KEY = 'mtrl.voice.sel';          // 「이 자재」 · 마지막으로 다룬 자재코드 (같은 탭 안에서만)
+  var PEND_KEY = 'mtrl.voice.pending';     // 화면을 옮기며 이어 할 단계
 
   /* 화면마다 다른 추천 질문.
    *
@@ -119,8 +128,32 @@
       var src = e.target.closest('[data-src]');
       if (src) { src.classList.toggle('open'); return; }
       var rt = e.target.closest('#chatretry');
-      if (rt) { ping(true); }
+      if (rt) { ping(true); return; }
+      if (e.target.closest('#chatmic')) { micClick(); }
     });
+
+    /* 「이 자재」 · 화면에서 자재를 누르면 그것이 문맥이 된다 (표 줄 · 히트맵 상자 · 목록) */
+    document.addEventListener('click', function (e) {
+      var q = e.target.closest && e.target.closest('[data-q]');
+      if (q && /^Q\d{7}$/i.test(q.getAttribute('data-q') || '')) { setSelected(q.getAttribute('data-q')); }
+    });
+
+    if (window.VOICE) {
+      VOICE.on({
+        state: function (st, extra) {
+          voice.state = st; voice.interim = (extra && extra.interim) || '';
+          if (st === 'idle') { voice.note = ''; }
+          paintMic();
+        },
+        text: function (text, info) {
+          voice.note = '';
+          ask(text, { voice: true, stt: info });
+        },
+        error: function (why) { voice.note = why; paintMic(); }
+      });
+    }
+
+    resumePending();
 
     wrap.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && e.target && e.target.id === 'chatq' && !e.shiftKey) {
@@ -203,12 +236,14 @@
         }).join('') + '</div>' +
         '<div class="chat-input">' +
           '<input class="input" id="chatq" autocomplete="off" placeholder="' +
-            (usable ? '이 서비스 숫자 · 화면 · 사내 문서를 물어보세요' : '연결 설정이 필요합니다') + '"' +
+            (usable ? '말하거나 입력하세요 · 숫자 · 화면 · 문서 · 명령' : '연결 설정이 필요합니다') + '"' +
             (usable ? '' : ' disabled') + '>' +
+          micHtml(usable) +
           '<button class="btn" type="button" id="chatsend"' +
             (busy || !usable ? ' disabled' : '') + '>' +
             (busy ? '답변 중' : '보내기') + '</button>' +
         '</div>' +
+        '<div class="chat-voice" id="chatvoice">' + voiceLine() + '</div>' +
         (tk
           ? '<div class="chat-tools">' + (tokenFromEnv()
             ? '<span class="chat-tsrc">' + (PROXY
@@ -219,6 +254,69 @@
           : '') +
       '</div>';
     scrollEnd();
+  }
+
+  /* 마이크 버튼 · 상태가 클래스다 (idle · recording · transcribing · executing) */
+  function micHtml(usable) {
+    var m = window.VOICE ? VOICE.mode() : { mode: null, why: '음성 모듈이 없습니다' };
+    var st = busy ? 'executing' : voice.state;
+    var off = !usable || !m.mode || busy;
+    var label = { idle: '말하기', recording: '듣는 중 · 눌러서 끝', transcribing: '글자로 바꾸는 중', executing: '실행 중' }[st] || '말하기';
+    return '<button class="mic ' + st + '" type="button" id="chatmic" aria-label="' + esc(label) + '" title="' +
+      esc(m.mode ? label + ' · ' + m.why : m.why) + '"' + (off ? ' disabled' : '') + '>' +
+      '<span class="mic-i">' + (st === 'recording' ? '■' : '🎤') + '</span></button>';
+  }
+  function voiceLine() {
+    var m = window.VOICE ? VOICE.mode() : null;
+    if (voice.note) { return '<span class="vnote warn">' + esc(voice.note) + '</span>'; }
+    if (voice.state === 'recording') {
+      return '<span class="vnote live"><i></i>듣고 있습니다' + (voice.interim ? ' · 「' + esc(voice.interim) + '」' : '') + '</span>';
+    }
+    if (voice.state === 'transcribing') { return '<span class="vnote">글자로 바꾸는 중…</span>'; }
+    if (busy) { return '<span class="vnote">실행 중…</span>'; }
+    if (m && m.mode) {
+      return '<span class="vnote dim">🎤 ' + (m.mode === 'server' ? '서버 음성 인식' : '브라우저 음성 인식') +
+        ' · 「적정재고 탭으로 가줘」 「이 자재 10개 구매 신청해줘」</span>';
+    }
+    return m ? '<span class="vnote dim">' + esc(m.why) + '</span>' : '';
+  }
+  function paintMic() {
+    var b = el('chatmic');
+    if (b) {
+      var tmp = document.createElement('div');
+      tmp.innerHTML = micHtml(!b.disabled || busy || voice.state !== 'idle');
+      b.replaceWith(tmp.firstChild);
+    }
+    var v = el('chatvoice');
+    if (v) { v.innerHTML = voiceLine(); }
+  }
+  function micClick() {
+    if (!window.VOICE) { return; }
+    if (busy) { return; }
+    voice.note = '';
+    VOICE.start();      // 듣는 중이면 멈춘다
+    paintMic();
+  }
+
+  // ---------------------------------------------------------------- 화면 문맥 · 「이 자재」
+  function setSelected(code) {
+    var c = String(code || '').toUpperCase();
+    if (!/^Q\d{7}$/.test(c)) { return; }
+    try { window.sessionStorage.setItem(SEL_KEY, c); } catch (e) { /* 무시 */ }
+  }
+  function selectedCode() {
+    var m = String(location.hash || '').match(/(?:q=)?(Q\d{7})/i) ||
+            String(location.search || '').match(/code=(Q\d{7})/i);
+    if (m) { return m[1].toUpperCase(); }
+    try { return window.sessionStorage.getItem(SEL_KEY) || ''; } catch (e) { return ''; }
+  }
+  /* 라우터에 보내는 문맥 · 화면 키 · 자재코드 하나 · 단계. 이름 · 금액 · 부서는 보내지 않는다 */
+  function uiContext() {
+    var st = '';
+    try {
+      if (window.SCREEN) { st = PAGE === 'stock' ? SCREEN.stockStage() : (PAGE === 'attr' ? SCREEN.stage() : ''); }
+    } catch (e) { /* 무시 */ }
+    return { route: PAGE, selectedCode: selectedCode(), stage: st };
   }
 
   function subline() {
@@ -237,6 +335,7 @@
       '<span class="mtag data">이 서비스 데이터</span> 발주 필요 몇 품목 · 감축 금액 · 자재 한 건 · 순위<br>' +
       '<span class="mtag about">서비스 설명</span> 항목 뜻 · 화면이 하는 일 · 이 수치의 출처<br>' +
       '<span class="mtag doc">사내 문서</span> 절차 · 규정 · 매뉴얼 (출처 번호가 붙습니다)<br>' +
+      '<span class="mtag act">명령</span> 「적정재고 탭으로 가줘」 「이 자재 10개 구매 신청해줘」 · 🎤 로 말해도 됩니다<br>' +
       (route
         ? '앞의 둘은 <b>이 브라우저 안에서 즉시</b> 답하고, 문서 질문만 <b>6~11초</b> 걸립니다.'
         : '지금은 문서 질문만 됩니다 · 질의 라우터가 꺼져 있습니다 (.env 의 LLM_API_KEY).') +
@@ -281,7 +380,13 @@
 
   // ---------------------------------------------------------------- 한 턴
   function turnHtml(t, i) {
-    var me = '<div class="chat-me">' + esc(t.q) + '</div>';
+    var me = '<div class="chat-me">' + (t.voice ? '<span class="vmark" title="음성으로 인식한 문장">🎤</span> ' : '') + esc(t.q) + '</div>';
+    if (t.steps && t.steps.length) {
+      /* 실행 턴 · 단계마다 결과 · 문서 답이 뒤따르면 그 아래 붙는다 */
+      return me + stepsHtml(t, i) +
+        (t.status === 'run' && t.mode === 'doc' ? runningHtml(t, i) : '') +
+        (t.status !== 'run' && (t.res || t.err) ? (t.err ? errHtml(t) : answerHtml(t, i)) : '');
+    }
     if (t.status === 'done' && t.local) { return me + localHtml(t, i); }
     if (t.status === 'error') {
       return me + '<div class="chat-ai noans"><span class="na-ico">!</span>' +
@@ -289,6 +394,46 @@
     }
     if (t.status === 'run') { return me + runningHtml(t, i); }
     return me + answerHtml(t, i);
+  }
+
+  function errHtml(t) {
+    return '<div class="chat-ai noans"><span class="na-ico">!</span>' +
+      '<div><b>답을 받지 못했습니다</b><div class="na-why">' + esc(t.err) + '</div></div></div>';
+  }
+
+  /* 실행 턴 · 한 단계가 한 카드다 */
+  function stepsHtml(t, i) {
+    var TAG = { navigate: ['act', '화면 이동'], query: ['data', '조회'], mutation: ['act', 'DB 변경'],
+                data: ['data', '이 서비스 데이터'], about: ['about', '서비스 설명'] };
+    var cards = t.steps.map(function (st, k) {
+      var r = st.out || {};
+      var kind = r.kind || (window.ACTIONS && ACTIONS.kindOf(st.tool)) || 'data';
+      var tg = TAG[kind] || TAG.data;
+      var head = '<span class="mtag ' + tg[0] + '">' + tg[1] + '</span> <span class="step-n">' + (k + 1) + '/' + t.steps.length +
+        ' · ' + esc(st.tool) + '</span>';
+      if (st.cancelled) {
+        return '<div class="chat-ai step off">' + head + '<div class="md">취소했습니다 · ' + esc(st.tool) + ' 은 실행하지 않았습니다.</div></div>';
+      }
+      if (st.waiting) {
+        return '<div class="chat-ai step">' + head + '<div class="md">확인을 기다립니다…</div></div>';
+      }
+      if (r.unknown) {
+        return '<div class="chat-ai step noans">' + head + '<div class="md">' + MD.render(r.text || '실행하지 못했습니다') + '</div></div>';
+      }
+      var table = r.table ? tableHtml(r.table) : '';
+      var ev = (r.evidence || []).length
+        ? '<div class="chat-srcs"><div class="cs-h">근거 · 한 일</div>' + r.evidence.map(function (p) {
+          return '<div class="evrow"><span class="evk">' + esc(p[0]) + '</span><span class="evv">' + esc(p[1]) + '</span></div>';
+        }).join('') + '</div>' : '';
+      var link = r.link ? '<a class="btn line sm" href="' + esc(r.link.href) + '" style="margin-top:10px">' + esc(r.link.label) + ' →</a>' : '';
+      var go = r.href && st.moved ? '<div class="chat-rw">화면을 옮겼습니다 · ' + esc(r.href) + '</div>' : '';
+      return '<div class="chat-ai step">' + head + '<div class="md">' + MD.render(r.text || '') + '</div>' + table + ev + link + go + '</div>';
+    }).join('');
+    var meta = t.status === 'run' && t.mode !== 'doc' ? '' :
+      '<div class="chat-meta">' + (t.voice ? '음성 → 글자' + (t.stt && t.stt.ms ? ' ' + (t.stt.ms / 1000).toFixed(1) + 's' : '') + ' · ' : '') +
+      '실행 ' + t.steps.length + '단계' + (t.routeMs ? ' · 라우터 ' + t.routeMs + 'ms' : ' · 규칙 매치') +
+      ' · 등록된 action 만 실행 (LLM 이 주소 · 코드를 만들지 않음)</div>';
+    return '<div id="turn-' + i + '">' + cards + meta + '</div>';
   }
 
   /* 이 서비스 데이터 · 설명 답. 숫자는 어댑터에서 온 값이고 LLM 을 거치지 않았다 */
@@ -499,14 +644,25 @@
    *   4 문서 · ask_documents 이거나 데이터로 못 찾았을 때 RAG 에 물어본다
    *
    * 서버는 한 번에 한 질문씩 처리한다 · 답이 오는 동안 새 질문을 막는다 */
-  function ask(qtext) {
+  function ask(qtext, opt) {
     if (busy) { return; }
-    var t = { q: qtext, status: 'run', stages: [], text: '', t0: Date.now(), route: null };
+    opt = opt || {};
+    var t = { q: qtext, status: 'run', stages: [], text: '', t0: Date.now(), route: null,
+              voice: !!opt.voice, stt: opt.stt || null };
     turns.push(t);
     busy = true;
+    /* 문장에 자재코드가 있으면 그것이 「이 자재」 다 */
+    var cm = String(qtext).match(/Q\d{7}/i);
+    if (cm) { setSelected(cm[0]); }
 
-    /* 1 · 규칙으로 바로 맞는 질문은 LLM 을 부르지 않는다 */
-    var hit = window.ASK ? ASK.fast(qtext) : null;
+    /* 0 · 화면 이동 명령은 규칙으로 바로 (「적정재고 탭으로 가줘」) */
+    var nav = fastNavigate(qtext);
+    if (nav) { runPicks(t, [nav], qtext); return; }
+
+    /* 1 · 규칙으로 바로 맞는 질문은 LLM 을 부르지 않는다 ·
+     * 단, 명령 동사가 있으면 규칙을 건너뛴다 (「Q1201564 찾아서 화면에서 보여줘」 는 조회가 아니라 실행이다) */
+    var isCmd = /(가\s*줘|가줘|가자|열어|열기|보여\s*줘|보여줘|이동|띄워|신청해|반납해|판단해|확정해|실행해|전환해|돌려|찾아서|만들어)/.test(qtext);
+    var hit = (window.ASK && !isCmd) ? ASK.fast(qtext) : null;
     if (hit) {
       var quick = ASK.run(hit.tool, hit.input);
       if (quick && !quick.unknown) {
@@ -523,6 +679,10 @@
 
     routeQuestion(qtext).then(function (pick) {
       t.routeMs = pick && pick.ms;
+      var picks = (pick && pick.picks && pick.picks.length) ? pick.picks : (pick && pick.tool ? [pick] : []);
+      /* 명령이 하나라도 있으면 실행 턴이다 · 순서대로 간다 */
+      var isAct = function (p) { return window.ACTIONS && !!ACTIONS.kindOf(p.tool); };
+      if (picks.length > 1 || picks.some(isAct)) { runPicks(t, picks, qtext); return; }
       var tool = pick && pick.tool;
       t.tool = tool;
       if (!tool || tool === 'ask_documents') {
@@ -544,13 +704,143 @@
     });
   }
 
-  /* 라우터에 질문 문장만 보낸다 · 자재 값은 보내지 않는다 */
+  /* 「적정재고 탭으로 가줘」 · 화면 이름 + 가라는 말 · 자재코드가 없을 때만. LLM 을 부르지 않는다 */
+  function fastNavigate(q) {
+    if (!window.ACTIONS) { return null; }
+    var s = String(q || '');
+    if (/Q\d{7}/i.test(s)) { return null; }
+    if (!/(가\s*줘|가줘|가자|이동|열어|열기|보여\s*줘|보여줘|가고|갈래|띄워|켜)/.test(s)) { return null; }
+    if (!/(탭|화면|페이지|메뉴)|(대시보드|속성값 판단|속성 판단|적정재고|적정구매시점|공용 전환|구매신청|자재반납|반납 화면)/.test(s)) { return null; }
+    var sk = ACTIONS.screenKey(s.replace(/(탭|화면|페이지|메뉴).*$/, '').trim()) || ACTIONS.screenKey(s);
+    if (!sk) { return null; }
+    /* 칸은 화면 이름을 뺀 나머지에서만 찾는다 (「적정재고」 의 「적정」 이 「적정 유지」 로 읽히지 않게) */
+    var rest = s.replace(new RegExp(ACTIONS.screens[sk].title.split(' ').join('\\s*'), 'g'), ' ')
+      .replace(/대시보드|속성값?\s*판단|적정재고(\s*분석)?|적정구매시점|공용\s*전환|구매신청|자재?\s*반납/g, ' ');
+    var sec = ACTIONS.sectionKey(sk, rest);
+    return { tool: 'navigate', input: { screen: sk, section: sec || '' } };
+  }
+
+  /* 실행 턴 · 도구를 순서대로. ASK 도구는 답을 붙이고, action 은 실행한다.
+   *   - DB 를 바꾸는 action 은 확인 창을 먼저 띄운다 (취소하면 그 단계는 건너뛴다)
+   *   - 다른 화면에서만 뜻이 있는 action · href 가 나온 action 은 화면을 옮긴다 ·
+   *     남은 단계와 지금까지의 결과를 sessionStorage 에 실어 새 화면에서 이어 한다
+   *   - ask_documents 는 맨 끝에 한 번 · 앞 단계가 끝난 뒤 문서에 묻는다 */
+  function runPicks(t, picks, qtext) {
+    t.steps = t.steps || [];
+    t.mode = 'act';
+    var ctx = uiContext();
+    var docQ = null;
+    var list = picks.slice();
+    paint(); startTimer();
+
+    function next() {
+      if (!list.length) { return finishActs(); }
+      var p = list.shift();
+      if (p.tool === 'ask_documents') { docQ = (p.input && p.input.question) || qtext; return next(); }
+
+      /* 조회 도구 (ASK) */
+      if (window.ASK && !(window.ACTIONS && ACTIONS.kindOf(p.tool)) && ASK.tools().indexOf(p.tool) >= 0) {
+        var out = ASK.run(p.tool, p.input);
+        if (out && !out.unknown && p.tool === 'material_detail' && p.input && p.input.code) { setSelected(p.input.code); }
+        t.steps.push({ tool: p.tool, out: out || { unknown: true, text: '값을 읽지 못했습니다' } });
+        paint(); return next();
+      }
+      if (!window.ACTIONS || !ACTIONS.kindOf(p.tool)) {
+        t.steps.push({ tool: p.tool, out: { unknown: true, text: '등록되지 않은 도구라 실행하지 않습니다' } });
+        paint(); return next();
+      }
+
+      /* 다른 화면에서만 되는 action · 먼저 그 화면으로 */
+      var need = ACTIONS.needs(p.tool);
+      if (need && need !== PAGE) {
+        list.unshift(p);
+        return moveTo(ACTIONS.screens[need].file, { tool: 'navigate', out: { kind: 'navigate', text: '**' + ACTIONS.screens[need].title + '** 화면으로 먼저 갑니다.', href: ACTIONS.screens[need].file }, moved: true });
+      }
+
+      var doRun = function () {
+        var ctxNow = uiContext();
+        var out = ACTIONS.run(p.tool, p.input, ctxNow);
+        if (out && out.selectedCode) { setSelected(out.selectedCode); }
+        else if (ctxNow.selectedCode && ctxNow.selectedCode !== ctx.selectedCode) { setSelected(ctxNow.selectedCode); }
+        var step = { tool: p.tool, out: out || { unknown: true, text: '실행하지 못했습니다' } };
+        t.steps.push(step);
+        if (out && out.href && !out.unknown) {
+          /* 화면을 옮기고 남은 단계를 싣는다 · 같은 화면의 다른 칸이어도 다시 읽는다
+           * (화면들이 해시를 들어올 때만 읽는다 · hashchange 를 듣지 않는다) */
+          step.moved = true;
+          return moveTo(out.href, null);
+        }
+        paint(); return next();
+      };
+
+      if (ACTIONS.kindOf(p.tool) === 'mutation') {
+        var spec = ACTIONS.confirmSpec(p.tool, p.input, ctx);
+        if (!spec) {
+          /* 확인 창을 만들 값이 없다 · 실행이 이유를 말한다 (코드가 없다 등) */
+          return doRun();
+        }
+        var waiting = { tool: p.tool, waiting: true };
+        t.steps.push(waiting); paint();
+        spec.onOk = function () { t.steps.splice(t.steps.indexOf(waiting), 1); doRun(); };
+        spec.onCancel = function () { waiting.waiting = false; waiting.cancelled = true; paint(); next(); };
+        if (window.UI && UI.confirm) { UI.confirm(spec); }
+        else if (window.confirm(spec.title)) { spec.onOk(); } else { spec.onCancel(); }
+        return;
+      }
+      doRun();
+    }
+
+    function moveTo(href, extraStep) {
+      if (extraStep) { t.steps.push(extraStep); }
+      paint();
+      try {
+        window.sessionStorage.setItem(PEND_KEY, JSON.stringify({
+          q: t.q, voice: t.voice, stt: t.stt, routeMs: t.routeMs, steps: t.steps, picks: list, docQ: docQ, at: Date.now()
+        }));
+      } catch (e) { /* 무시 */ }
+      stopTimer();
+      window.setTimeout(function () {
+        var samePath = href.split('#')[0] === (location.pathname.split('/').pop() || 'main.html');
+        location.href = href;
+        if (samePath) { location.reload(); }     // 해시만 바뀌면 브라우저가 다시 읽지 않는다
+      }, 500);
+    }
+
+    function finishActs() {
+      if (docQ) { toDocs(t, docQ); return; }
+      t.status = 'done'; stopTimer(); busy = false; paint(); focusInput();
+    }
+
+    next();
+  }
+
+  /* 새 화면에서 이어 한다 · 앞 화면이 실어 둔 단계가 있으면 서랍을 열고 계속 */
+  function resumePending() {
+    var raw = null;
+    try { raw = window.sessionStorage.getItem(PEND_KEY); window.sessionStorage.removeItem(PEND_KEY); } catch (e) { return; }
+    if (!raw) { return; }
+    var p;
+    try { p = JSON.parse(raw); } catch (e) { return; }
+    if (!p || Date.now() - (p.at || 0) > 60000) { return; }
+    var t = { q: p.q, status: 'run', stages: [], text: '', t0: Date.now(), route: null,
+              voice: !!p.voice, stt: p.stt || null, routeMs: p.routeMs, steps: p.steps || [], mode: 'act' };
+    turns.push(t);
+    busy = true;
+    toggle(true);
+    var rest = (p.picks || []).slice();
+    if (p.docQ) { rest.push({ tool: 'ask_documents', input: { question: p.docQ } }); }
+    if (!rest.length) { t.status = 'done'; busy = false; paint(); return; }
+    /* 화면이 다 그려진 뒤에 · 어댑터가 준비돼야 한다 */
+    window.setTimeout(function () { runPicks(t, rest, p.q); }, 250);
+  }
+
+  /* 라우터에 질문 문장과 화면 문맥(화면 키 · 자재코드 하나 · 단계)만 보낸다 · 자재 값은 보내지 않는다 */
   function routeQuestion(q) {
     var hist = turns.slice(0, -1).slice(-2).map(function (x) { return { question: x.q }; });
     return fetch(CFG.ASK_ROUTE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q, history: hist })
+      body: JSON.stringify({ question: q, history: hist, context: uiContext() })
     }).then(function (r) {
       if (!r.ok) { throw new Error('HTTP ' + r.status); }
       return r.json();
@@ -560,6 +850,7 @@
   /* 문서 갈래 · 지금까지와 같다 */
   function toDocs(t, question) {
     t.mode = 'doc';
+    if (t.steps && t.steps.length) { paint(); }
     if (!API || !token()) {
       t.status = 'error';
       t.err = API ? '토큰이 없어 문서에 물어볼 수 없습니다' : 'RAG 주소(CHAT_API)가 없습니다';
@@ -675,7 +966,9 @@
   window.CHAT = {
     open: function () { toggle(true); },
     close: function () { toggle(false); },
-    ask: function (q) { toggle(true); ask(q); },
+    ask: function (q, opt) { toggle(true); ask(q, opt); },
+    context: uiContext,
+    select: setSelected,
     suggest: suggest
   };
 })();

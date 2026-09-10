@@ -132,14 +132,14 @@ window.ASK = (function () {
       if (qr && !qr.inMaster) {
         return {
           kind: 'data',
-          text: '**' + esc(code) + '** 은 우리 부서 자재 대장(743품목) 밖입니다 · ' +
-            'QR 로 등록한 자재이고 재고부서가 ' + esc(qr.deptCode) + ' 입니다.',
+          text: '**' + (code) + '** 은 우리 부서 자재 대장(743품목) 밖입니다 · ' +
+            'QR 로 등록한 자재이고 재고부서가 ' + (qr.deptCode) + ' 입니다.',
           evidence: base([['품명', qr.name + (qr.spec ? ' · ' + qr.spec : '')],
                           ['출처', 'assets/qr-items.js · 자재식별표 QR']]),
           link: { href: 'material-view.html?code=' + encodeURIComponent(code), label: '자재 확인 화면' }
         };
       }
-      return unknown('**' + esc(code) + '** 은 우리 부서 자재 743품목에 없습니다');
+      return unknown('**' + (code) + '** 은 우리 부서 자재 743품목에 없습니다');
     }
     var d = SCREEN.attrDetail(r);
     var rows = [
@@ -156,7 +156,7 @@ window.ASK = (function () {
     ];
     return {
       kind: 'data',
-      text: '**' + esc(r.name || '품명 미확인') + '** (' + esc(r.q) + ') · ' +
+      text: '**' + (r.name || '품명 미확인') + '** (' + (r.q) + ') · ' +
         r.type + ' · 목표 ' + num(r.targetNow) + ' · 보유 ' + num(r.stock) +
         ' · 조치 **' + r.actionNow + '**' +
         (r.reasonNow ? '\n\n목표가 그 값인 이유 · `' + r.reasonNow + '`' : ''),
@@ -268,7 +268,7 @@ window.ASK = (function () {
   RUN.explain_term = function (a) {
     var t = window.CATALOG ? CATALOG.findTerm(a.term) : null;
     if (!t) {
-      return unknown('「' + esc(a.term || '') + '」 는 이 서비스의 항목 사전에 없습니다');
+      return unknown('「' + (a.term || '') + '」 는 이 서비스의 항목 사전에 없습니다');
     }
     var ev = [['어디에 나오나', screenTitle(t.where) + ' 화면']];
     if (t.field) { ev.push(['데이터 필드', t.field + ' (DB.item() 이 주는 값)']); }
@@ -346,7 +346,7 @@ window.ASK = (function () {
   RUN.data_source = function (a) {
     var s = window.CATALOG ? CATALOG.findSource(a.topic) : null;
     if (!s) {
-      return unknown('「' + esc(a.topic || '') + '」 의 출처를 사전에서 찾지 못했습니다');
+      return unknown('「' + (a.topic || '') + '」 의 출처를 사전에서 찾지 못했습니다');
     }
     return {
       kind: 'about',

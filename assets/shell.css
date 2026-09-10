@@ -1919,6 +1919,42 @@ td.num, th.num { text-align: right; }
 .mtag.data { background: var(--brand-weak); color: var(--b1); }
 .mtag.about { background: var(--ok-weak); color: var(--ok); }
 .mtag.doc { background: var(--core-weak); color: var(--core); }
+.mtag.act { background: var(--warn-weak, rgba(255,171,64,.16)); color: var(--warn, #ffab40); }
+
+/* 마이크 · 상태가 클래스다 */
+.mic {
+  flex: 0 0 42px; min-height: 42px; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--text);
+  font-size: 16px; cursor: pointer; display: grid; place-items: center; position: relative;
+}
+.mic:hover:not(:disabled) { border-color: var(--b1); }
+.mic:disabled { opacity: .45; cursor: not-allowed; }
+.mic.recording { background: var(--ins-weak, rgba(255,99,99,.16)); border-color: var(--ins, #ff6b6b); color: var(--ins, #ff6b6b); }
+.mic.recording::after {
+  content: ''; position: absolute; inset: -4px; border-radius: inherit;
+  border: 2px solid var(--ins, #ff6b6b); opacity: .6; animation: micpulse 1.1s ease-out infinite;
+}
+@keyframes micpulse { 0% { transform: scale(.92); opacity: .7; } 100% { transform: scale(1.18); opacity: 0; } }
+.mic.transcribing, .mic.executing { color: var(--muted); }
+.mic.transcribing .mic-i { animation: micspin 1s linear infinite; display: inline-block; }
+@keyframes micspin { to { transform: rotate(360deg); } }
+
+/* 마이크 안내 줄 */
+.chat-voice { min-height: 16px; margin-top: 6px; font-size: 10.5px; line-height: 1.5; }
+.vnote { color: var(--text-2); }
+.vnote.dim { color: var(--muted); }
+.vnote.warn { color: var(--ins, #ff6b6b); }
+.vnote.live { color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+.vnote.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--ins, #ff6b6b); animation: micblink 1s step-end infinite; }
+@keyframes micblink { 50% { opacity: .2; } }
+.vmark { opacity: .8; margin-right: 2px; }
+
+/* 실행 턴 · 단계 카드 */
+.chat-ai.step { margin-top: 6px; }
+.chat-ai.step .step-n { font-size: 10px; color: var(--muted); }
+.chat-ai.step .md { margin-top: 6px; }
+.chat-ai.step.off { opacity: .6; }
+.chat-ai.step.noans { border-left: 3px solid var(--ins, #ff6b6b); }
 .chat-intro .mtag { margin-bottom: 2px; }
 
 /* 근거 줄 · 어느 함수 · 어느 필드 · 기준일 */
