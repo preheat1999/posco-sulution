@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """자재식별표에 붙일 QR 을 만든다.
 
-QR 에 담는 값 · <배포 주소>/material-view.html?code=Q0000000
-스캔하면 브라우저가 그 화면을 열고, 화면이 code 파라미터를 읽어 자재를 찾는다.
+QR 에 담는 값 · <배포 주소>/mobile-return.html?code=Q0000000
+스캔하면 브라우저가 모바일 반납 화면을 열고, code 파라미터를 읽어 1단계(QR 스캔)를
+건너뛰고 2단계(자재정보 초안 확인)부터 시작한다.
 
 사용법 ·
     python -B make_qr.py                                  기본값으로 만든다
     python -B make_qr.py --code Q4046777                  자재 하나
     python -B make_qr.py --base http://192.168.0.10:8130  사내망 · 노트북 주소
+    python -B make_qr.py --page material-view.html        자재 확인 화면으로 보내기
     python -B make_qr.py --all                             qr-items.js 에 등록된 전부
 
 내는 것 (qr/ 폴더) ·
@@ -35,7 +37,9 @@ OUT = os.path.join(ROOT, 'qr')
 
 # 배포된 사이트 주소. 코드 안에 도메인을 박지 않으려고 인자로 받고, 기본값만 여기 둔다
 DEFAULT_BASE = 'https://main.dl62ond6b4cv9.amplifyapp.com'
-PAGE = 'material-view.html'
+# QR 이 여는 화면 · 모바일 반납으로 바로 보낸다 (code 가 있으면 2단계부터 시작한다).
+# 자재 확인 화면을 거치게 하려면 --page material-view.html 로 만든다
+DEFAULT_PAGE = 'mobile-return.html'
 
 # 인쇄용 · 현장에서 장갑 끼고 폰으로 찍는다. 한 칸을 두껍게 두어야 잘 읽힌다
 SCALE = 16          # QR 한 칸 = 16px
@@ -71,12 +75,12 @@ def font(size, bold=False):
     return ImageFont.load_default()
 
 
-def payload(base, code):
-    return base.rstrip('/') + '/' + PAGE + '?code=' + code
+def payload(base, code, page):
+    return base.rstrip('/') + '/' + page + '?code=' + code
 
 
-def make_one(code, item, base):
-    url = payload(base, code)
+def make_one(code, item, base, page):
+    url = payload(base, code, page)
     qr = segno.make(url, error=ERROR)
 
     png = os.path.join(OUT, code + '_qr.png')
@@ -220,6 +224,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--code', default='Q4046777')
     ap.add_argument('--base', default=DEFAULT_BASE)
+    ap.add_argument('--page', default=DEFAULT_PAGE)
     ap.add_argument('--all', action='store_true')
     a = ap.parse_args()
 
@@ -236,7 +241,7 @@ def main():
             print('!! %s 는 assets/qr-items.js 에 없다 · 등록하고 다시 돌려라' % code)
             fail += 1
             continue
-        made = make_one(code, item, a.base)
+        made = make_one(code, item, a.base, a.page)
         bad = check(code, made)
         print('%s · %s' % (code, made['url']))
         print('   버전 %s · 오류복정 %s · 한 변 %d칸 · PNG %dpx'

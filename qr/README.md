@@ -6,16 +6,22 @@
 python -B make_qr.py --all                              # 등록된 자재 전부
 python -B make_qr.py --code Q4046777                    # 한 건
 python -B make_qr.py --base http://192.168.0.10:8130    # 다른 주소로 (사내망 · 노트북)
+python -B make_qr.py --page material-view.html          # 자재 확인 화면을 거치게
 ```
 
 ## QR 에 담긴 값
 
 ```
-<배포 주소>/material-view.html?code=Q4046777
+<배포 주소>/mobile-return.html?code=Q4046777
 ```
 
-스캔하면 브라우저가 그 화면을 열고, 화면이 `code` 를 읽어 자재를 찾는다.
+스캔하면 브라우저가 **모바일 반납 화면**을 열고, `code` 를 읽어 1단계(QR 스캔)를
+건너뛰고 2단계(자재정보 초안 확인)부터 시작한다.
 자재는 `assets/qr-items.js` 에 **자재코드를 PK** 로 등록한다.
+
+자재 확인 화면(취소 · 반납 · 확인 팝업)을 먼저 거치게 하려면
+`--page material-view.html` 로 만든다 · 그 화면의 「반납 · 확인」 이 같은
+`mobile-return.html?code=...` 로 이어진다.
 
 ## 파일
 
@@ -44,5 +50,6 @@ python -B make_qr.py --base http://192.168.0.10:8130    # 다른 주소로 (사�
 
 ## 주의
 
-QR 은 절대 주소를 담는다. 그 주소에 **`material-view.html` 이 올라가 있어야** 열린다.
+QR 은 절대 주소를 담는다. 그 주소에 **`mobile-return.html` 이 올라가 있어야** 열린다
+(`assets/qr-items.js` 도 함께 올라가야 자재를 찾는다).
 아직 배포하지 않았다면 `--base` 로 지금 열려 있는 주소(사내망 노트북 등)를 넣어 다시 만든다.

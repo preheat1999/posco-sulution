@@ -11,7 +11,8 @@
  * 키는 자재코드 하나다 (PK · Q + 숫자 7자리). 여러 건을 등록해도 구조가 그대로다.
  * 값은 자재식별표에 인쇄된 항목만 담는다 · 없는 칸을 만들지 않는다.
  *
- * QR 이 여는 주소 · <배포된 사이트 주소>/material-view.html?code=Q4046777
+ * QR 이 여는 주소 · <배포된 사이트 주소>/mobile-return.html?code=Q4046777
+ *   (자재 확인 화면을 거치게 하려면 material-view.html?code=... 로 만든다)
  * 도메인은 코드에 박지 않는다 · 화면은 실행 중인 주소(location.origin)를 읽어서 적는다.
  */
 window.QR_ITEMS = {
@@ -73,9 +74,10 @@ window.QRDB = (function () {
 
   /* 이 자재의 QR 주소. 배포된 곳이 어디든 실행 중인 주소를 그대로 쓴다 ·
    * 사내 서버로 옮겨도 화면에 적히는 주소가 맞는다 */
-  function url(code, abs) {
+  function url(code, abs, page) {
     var c = norm(code);
-    var path = 'material-view.html?code=' + encodeURIComponent(c || 'Q0000000');
+    var path = (page || 'mobile-return.html') +
+      '?code=' + encodeURIComponent(c || 'Q0000000');
     if (!abs) { return path; }
     try {
       var base = window.location.href.replace(/[^/]*$/, '');
