@@ -281,6 +281,105 @@
     };
   }
 
+  // ---------------------------------------------------------------- 재고 금액 트렌드
+  /* 「우리 부서 자재 금액이 오르고 있나」 를 선 하나로 보여 준다.
+   *
+   * 원천 CSV 11개 어디에도 **월말 재고 스냅샷이 없다.** 그래서 월별 재고를
+   * 그대로 읽을 수는 없다. 대신 지금 보유 중인 자재를 입고일(recvDate)
+   * 기준으로 되쌓는다. 「이 재고가 어떻게 쌓여 왔는가」 는 이 방법으로
+   * 정확히 나오고, 「그 달의 월말 재고」 와는 다르다.
+   * 그 차이를 화면과 근거 팝오버에 그대로 적는다. 지어낸 값이 아니다.
+   *
+   * 값이 어긋나는 곳도 적어 둔다.
+   *   recvDate 가 없는 39품목은 곡선에 안 들어간다. 그래서 마지막 점이
+   *   보유 재고 총액보다 1.2억원 적다.
+   *   불출로 이미 빠진 수량은 과거 시점에도 빠진 것으로 그려진다.
+   *
+   * 초록 선은 같은 자재 743종의 **전사 보유**(stockAll)다.
+   * 원천에 사업장 칸이 없어 「광양소」 로 못 쓴다. 없는 칸을 만들지 않는다. */
+  function monthKeys(base, n) {
+    var y = Number(String(base).slice(0, 4)), m = Number(String(base).slice(5, 7));
+    var out = [], i, mm, yy;
+    for (i = n - 1; i >= 0; i--) {
+      mm = m - i; yy = y;
+      while (mm <= 0) { mm += 12; yy -= 1; }
+      out.push(yy + '-' + (mm < 10 ? '0' + mm : String(mm)));
+    }
+    return out;
+  }
+
+  /* 데이터가 없을 때 쓰는 시연용 곡선.
+   * 반드시 src 를 'demo' 로 돌려준다. 화면이 「시연용」 배지를 띄운다.
+   * 실제 값처럼 보이게 두면 안 된다 */
+  function demoTrend(n) {
+    var ms = monthKeys(CFG_BASE(), n), dept = [], all = [], i, k;
+    for (i = 0; i < ms.length; i++) {
+      k = i / (ms.length - 1);
+      dept.push(Math.round(1.72e9 * (1 + 1.82 * k * k)));
+      all.push(Math.round(2.56e9 * (1 + 2.52 * k * k)));
+    }
+    return finishTrend(ms, dept, all, 'demo', 0, 0);
+  }
+
+  function CFG_BASE() {
+    var m = meta();
+    return m.asof || (window.CFG && CFG.BASE_DATE) || '2026-09-03';
+  }
+
+  function finishTrend(ms, dept, all, src, missing, missingAmt) {
+    var f = dept[0], l = dept[dept.length - 1];
+    /* 방향은 창 전체의 처음과 끝으로 정한다.
+     * 오르면 빨강, 내리면 파랑 · 색이 뜻을 갖는다 */
+    var dir = l > f ? 'up' : (l < f ? 'down' : 'flat');
+    var max = Math.max.apply(null, all.concat(dept)) || 1;
+    return {
+      src: src, months: ms, dept: dept, all: all,
+      max: max,
+      deptFirst: f, deptLast: l,
+      allFirst: all[0], allLast: all[all.length - 1],
+      pct: f ? ((l / f - 1) * 100) : null,
+      allPct: all[0] ? ((all[all.length - 1] / all[0] - 1) * 100) : null,
+      dir: dir,
+      missing: missing, missingAmt: missingAmt
+    };
+  }
+
+  function trend(n) {
+    n = n || 13;
+    if (!live) { return demoTrend(n); }
+
+    var rows = DB.list();
+    var ms = monthKeys(CFG_BASE(), n);
+    var dept = [], all = [], i, j, r, end, d, a;
+    var missing = 0, missingAmt = 0;
+
+    for (j = 0; j < rows.length; j++) {
+      if (!rows[j].recvDate) {
+        missing += 1;
+        missingAmt += (Number(rows[j].price) || 0) * (Number(rows[j].stock) || 0);
+      }
+    }
+
+    for (i = 0; i < ms.length; i++) {
+      /* 그 달 말까지 들어온 것만 센다. 문자열 비교로 충분하다 (ISO 날짜) */
+      end = ms[i] + '-31';
+      d = 0; a = 0;
+      for (j = 0; j < rows.length; j++) {
+        r = rows[j];
+        if (!r.recvDate || String(r.recvDate) > end) { continue; }
+        d += (Number(r.price) || 0) * (Number(r.stock) || 0);
+        a += (Number(r.price) || 0) * (Number(r.stockAll) || 0);
+      }
+      dept.push(Math.round(d));
+      all.push(Math.round(a));
+    }
+
+    /* 곡선이 한 점도 안 나오면(입고일이 전부 비었으면) 시연용으로 돌린다.
+     * 빈 차트를 띄우면 화면이 고장난 것처럼 보인다 */
+    if (!dept[dept.length - 1]) { return demoTrend(n); }
+    return finishTrend(ms, dept, all, 'derived', missing, Math.round(missingAmt));
+  }
+
   /* 타부서 보유가 있으면 사는 대신 이관받을 수 있다. 사는 것보다 싸다 */
   function transferable(r) {
     var all = Number(r.stockAll) || 0, mine = Number(r.stock) || 0;
@@ -298,6 +397,7 @@
     dueList: dueList,
     pipelines: pipelines,
     needRows: needRows,
+    trend: trend,
     transferable: transferable,
     DONUT_ORDER: DONUT_ORDER,
     /* 승인 · 반납이 일어나면 화면이 다시 그려져야 한다.

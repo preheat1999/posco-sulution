@@ -275,6 +275,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
  * 375px 화면에서 카드가 445px 로 삐져나가 가로 스크롤이 생긴다.
  * 실제로 「자재 Hydraulic & Pneumatics · Q2154362 · C등급」 한 줄이 그걸 냈다 */
 .grid2 > *, .kpiwrap > * { min-width: 0; }
+/* 대시보드 한 줄. 카드와 KPI 묶음을 섞어 놓는다.
+ * .grid2 를 쓰지 않는 이유 · 로그인 폼도 .grid2 를 쓰는데
+ * 거기에 줄 간격(margin-bottom)을 주면 입력칸 사이가 벌어진다 */
+.dashrow { display: grid; gap: 16px; margin-bottom: 16px; }
+.dashrow.c2 { grid-template-columns: 1.12fr 1fr; }
+.dashrow.c3 { grid-template-columns: 1fr 1fr 1fr; }
+/* grid 자식도 min-width:auto 다. 안의 nowrap 한 줄이 칸을 벌린다 */
+.dashrow > * { min-width: 0; }
+.dashrow > .card { margin-bottom: 0; }
+
 /* 한쪽이 접혀 있어 짧을 때 쓴다.
  * 기본은 두 카드의 높이를 맞추는데, 한쪽 내용이 접혀 있으면
  * 그 카드 안에 300px 짜리 빈 곳이 생긴다. 그럴 때는 각자 높이대로 둔다 */
@@ -682,6 +692,10 @@ td.num, th.num { text-align: right; }
   /* 변형 클래스를 여기 같이 적지 않으면 명시도에서 밀려 좁은 화면에서도 3열로 남는다 */
   .kpiwrap, .kpiwrap.viz { grid-template-columns: 1fr 1fr; }
   .kpiwrap.five { grid-template-columns: repeat(2, 1fr); }
+  /* 3열을 2열로. 세 번째 칸(목록 카드)은 한 줄을 다 쓰게 둔다.
+   * 반쪽 폭에 목록을 넣으면 자재명이 한 글자씩 잘린다 */
+  .dashrow.c3 { grid-template-columns: 1fr 1fr; }
+  .dashrow.c3 > :nth-child(3) { grid-column: 1 / -1; }
 }
 
 /* 960 · 사이드바를 햄버거 오버레이로 */
@@ -696,6 +710,8 @@ td.num, th.num { text-align: right; }
   .hamb { display: grid; }
   .grid2 { grid-template-columns: 1fr; }
   .kpiwrap, .kpiwrap.viz { grid-template-columns: 1fr 1fr; }
+  .dashrow.c2, .dashrow.c3 { grid-template-columns: 1fr; }
+  .dashrow.c3 > :nth-child(3) { grid-column: auto; }
 }
 
 /* 760 · 상단 바를 두 줄로.
@@ -970,6 +986,11 @@ td.num, th.num { text-align: right; }
 
 /* 마우스가 없는 기계(터치 · 발표용 태블릿)에서는 hover 가 아예 안 온다.
  * 그러면 내역을 볼 방법이 사라지므로 그쪽에서는 처음부터 펼쳐 둔다 */
+/* 한 줄에 세 칸일 때는 칸이 좁고 대신 높다.
+ * 도넛을 그만큼 키운다 · 작은 도넛에 빈 곳이 넓으면 카드가 비어 보인다 */
+.dashrow.c3 .donut { width: 132px; height: 132px; }
+.dashrow.c3 .viz-right { min-height: 132px; }
+
 @media (hover: none) {
   .viz-right { min-height: 0; }
   .viz-msg { display: none; }
@@ -1034,7 +1055,49 @@ td.num, th.num { text-align: right; }
   font-size: 13px; font-weight: 800;
 }
 .fin-pill b { display: block; font-size: 17px; font-weight: 800; letter-spacing: -.5px; white-space: nowrap; }
+/* 한 줄에 세 묶음이 나란히 서면 높이는 제일 큰 것에 맞춰진다.
+ * 그냥 두면 이 묶음 아래가 200px 넘게 빈다. 돈 한 줄을 바닥에 붙여 메운다 */
+.kpigroup > .fin-pill { margin-top: auto; }
 .fin-pill span { display: block; }
+
+/* 담당 현황 아래쪽 · 금액 하나와 그 금액이 어떻게 쌓여 왔는지를 나란히 둔다.
+ * 숫자만 있으면 「많다 적다」 를 알 수 없다. 올라가는 선이 붙어야
+ * 「자제해야 한다」 가 그림으로 읽힌다 */
+.lead-bottom { display: flex; align-items: flex-end; gap: 18px; }
+.lead-bottom .kpi { flex: none; }
+
+.trend { flex: 1; min-width: 0; }
+.trend-head {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  font-size: 10.5px; color: var(--muted); margin-bottom: 3px;
+}
+.trend-chip {
+  padding: 1px 6px; border-radius: 6px; font-size: 10.5px; font-weight: 800;
+  white-space: nowrap; background: var(--insur-weak); color: var(--insur);
+}
+.trend-chip.down { background: var(--brand-weak); color: var(--brand); }
+.trend-chip.flat { background: var(--line); color: var(--text-2); }
+/* 값이 원천에서 온 것이 아니면 반드시 이 배지를 띄운다.
+ * 시연용 곡선을 실제 값처럼 두면 심사에서 한 번에 들킨다 */
+.trend-chip.demo { background: var(--core-weak); color: var(--core); }
+.trend-chart { display: block; width: 100%; height: auto; }
+.trend-x { font-size: 8.5px; fill: var(--muted); }
+.trend-legend {
+  display: flex; gap: 11px; flex-wrap: wrap; margin-top: 3px;
+  font-size: 10px; color: var(--muted);
+}
+.trend-legend b { color: var(--text-2); font-variant-numeric: tabular-nums; }
+/* 선 범례는 점이 아니라 선분이어야 한다. 도넛의 사각 점과 헷갈리면 안 된다 */
+.trend-legend i {
+  display: inline-block; width: 12px; height: 0;
+  border-top: 2px solid currentColor; vertical-align: 3px; margin-right: 4px;
+}
+.trend-legend .up { color: var(--insur); }
+.trend-legend .down { color: var(--brand); }
+.trend-legend .all { color: var(--ok); }
+.trend-legend .all i { border-top-style: dashed; }
+/* 근거 버튼. 그림에도 ? 를 붙인다 · 어떻게 만든 선인지 물어볼 수 있어야 한다 */
+.trend-head .askbtn { margin-left: auto; }
 
 /* ---------------------------------------------------------------- 26. 대시보드 본체 */
 /* 설비별 자재 현황의 두 줄 셀 */
@@ -1063,6 +1126,9 @@ td.num, th.num { text-align: right; }
   .cmp-row { grid-template-columns: 48px 1fr auto; gap: 7px; }
   .cmp-gap { font-size: 0; }        /* 글자가 안 들어가면 빗금만 남기고 아래 줄로 옮긴다 */
   .fin-pill b { font-size: 15.5px; }
+  /* 좁으면 금액과 그림을 위아래로 둔다.
+   * 나란히 두면 그림이 185px 로 눌려 축 글자가 선에 겹친다 */
+  .lead-bottom { flex-direction: column; align-items: stretch; gap: 11px; }
   .todo-row.hero .todo-num { font-size: 23px; }
   .kpigroup.lead .kpi.big .v { font-size: 29px; }
 }
