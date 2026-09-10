@@ -102,8 +102,17 @@ function run(page, preset, loc) {
   return sandbox;
 }
 
+/* 그려진 innerHTML · textContent 를 다 모은다 */
+function seenOf(s) {
+  const store = s.document._store;
+  let all = '';
+  Object.keys(store).forEach((k) => { all += store[k]._html + ' ' + store[k]._text + ' '; });
+  return all;
+}
+
 console.log('=== 화면별 · 스크립트가 끝까지 도는가 ===');
 const seen = {};
+const sb = {};
 PAGES.forEach((p) => {
   let s = null, err = null;
   try {
@@ -115,10 +124,9 @@ PAGES.forEach((p) => {
   if (!s) { return; }
 
   /* 그려진 innerHTML 을 다 모아서 나쁜 글자를 찾는다 */
-  const store = s.document._store;
-  let all = '';
-  Object.keys(store).forEach((k) => { all += store[k]._html + ' ' + store[k]._text + ' '; });
+  const all = seenOf(s);
   seen[p] = all;
+  sb[p] = s;
 
   ok(!/undefined/.test(all), p + ' · undefined 없음');
   ok(!/NaN/.test(all), p + ' · NaN 없음');
@@ -189,7 +197,18 @@ ok(/부족/.test(seen.stock || '') && /초과/.test(seen.stock || ''),
    'stock · 과부족 방향이 적혀 있다');
 ok(!/2\.33/.test(seen.stock || ''), 'stock · Stitch 목업의 2.33 이 안 들어갔다');
 ok(/156/.test(seen.plan || ''), 'plan · 정비계획 156건');
-ok(/K10665396/.test(seen.purchase || ''), 'purchase · 실제 작업주문 번호');
+/* 구매신청 초안은 자재를 눌러야 열린다(기본 접힘) · 그래서 목록만 있는 화면에는
+ * 작업주문 번호가 없다. 적정재고 · 적정구매시점에서 자재를 들고 넘어온 길(#q=코드)로 본다 */
+ok(!/K10665396/.test(seen.purchase || ''), 'purchase · 초안은 접혀 있다 (누르기 전)');
+const prQ = (() => {
+  try { return sb.purchase.SCREEN.prList()[0].q; } catch (e) { return null; }
+})();
+let prSeen = '';
+if (prQ) {
+  try { prSeen = seenOf(run('purchase', null, { hash: '#q=' + prQ })); } catch (e) { prSeen = ''; }
+}
+ok(/K10665396/.test(prSeen), 'purchase · 초안을 열면 실제 작업주문 번호가 있다 (' + prQ + ')');
+ok(!/undefined|NaN/.test(prSeen), 'purchase · 열린 초안에 undefined · NaN 없음');
 /* 물품 상태는 반납받은 자재를 검사하고 사람이 정한다 · 반납 전 목록에는 나오지 않는다.
  * 그래서 「반납 뒤 결정」 이 적혀 있는지, 상태 이름이 미리 새지 않는지를 본다 */
 ok(/반납 뒤 결정/.test(seen['return'] || ''), 'return · 반납 전에는 상태를 적지 않는다');

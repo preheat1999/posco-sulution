@@ -34,7 +34,11 @@
       <section class="card" id="table-card">
         <header>
           <div><h2>불출 잔여 자재</h2><p class="sub" id="tsub">&nbsp;</p></div>
-          <div class="card-tools"><span class="badge" id="tcount">&nbsp;</span></div>
+          <div class="card-tools">
+            <span class="badge" id="tcount">&nbsp;</span>
+            <!-- 시연용 문 · 현장 폰 화면을 PC 에서 열어 본다 -->
+            <a class="btn line sm" href="material-view.html?code=Q4046777">폰 화면 · QR 진입</a>
+          </div>
         </header>
         <div class="callout ok" style="margin-top:0">
           <span class="ci">↩</span>
@@ -45,23 +49,9 @@
         <p class="note" style="margin-top:12px" id="tnote">&nbsp;</p>
       </section>
 
+      <!-- 스마트 반납 QR 은 여기 없다 · 자재식별표에 붙은 QR 을 현장에서 폰으로 찍는 것이라
+           PC 화면에 QR 그림을 띄울 이유가 없다. 폰 화면으로 가는 문은 표 머리에 두었다 -->
       <div class="sticky">
-        <section class="card">
-          <p class="gt"><span>스마트 반납 QR</span><span class="gt-sub">현장용</span></p>
-          <div class="qrbox" id="qr"></div>
-          <p class="qr-title">자재식별표 QR 을 찍으면 자재 확인 화면이 열립니다</p>
-          <p class="qr-sub">QR 에는 자재코드가 주소로 들어 있습니다 ·
-            <code id="qrurl">material-view.html?code=Q0000000</code><br>
-            식별표 값과 반납자를 확인하고 「반납」 을 누르면 반납 화면 2단계로 이어집니다 ·
-            <b>위 그림은 자리표시입니다</b> · 실제 QR 은 <code>make_qr.py</code> 가 만듭니다</p>
-          <a class="btn line" href="material-view.html?code=Q4046777"
-            style="width:100%;margin-top:14px">QR 로 들어온 화면 열기 · Q4046777</a>
-          <a class="btn line" href="mobile-return.html?list=1"
-            style="width:100%;margin-top:8px">반납 대상 목록 · 폰 화면</a>
-          <a class="btn line" href="mobile-return.html" style="width:100%;margin-top:8px">
-            모바일 반납 화면 열기</a>
-        </section>
-
         <section class="card" id="effect"></section>
       </div>
     </div>
@@ -97,38 +87,8 @@
 
   function el(id) { return document.getElementById(id); }
 
-  /* QR 자리표시.
-   * 무작위 모듈을 그려 두면 스캔되는 QR 처럼 보이는데 실제로는 아무것도 안 읽힌다.
-   * 시연에서 심사위원이 찍어 보면 그게 더 나쁘다.
-   * 그래서 찾기 패턴(세 모서리)만 그리고 가운데에 「연동 예정」 이라고 적는다.
-   * 실제 인코더는 assets/qr.js 로 따로 만든다 (버전 3 · 바이트 모드 · ECC L) */
-  function qrPlaceholder() {
-    var N = 21, cell = 8, S2 = N * cell;
-    function rect(x, y, w, h, c) {
-      return '<rect x="' + (x * cell) + '" y="' + (y * cell) + '" width="' + (w * cell) +
-        '" height="' + (h * cell) + '" fill="' + c + '"></rect>';
-    }
-    function finder(x, y) {
-      return rect(x, y, 7, 7, '#0B0E15') + rect(x + 1, y + 1, 5, 5, '#FFFFFF') +
-             rect(x + 2, y + 2, 3, 3, '#0B0E15');
-    }
-    var timing = '';
-    var i;
-    for (i = 8; i < N - 8; i += 2) {
-      timing += rect(i, 6, 1, 1, '#0B0E15') + rect(6, i, 1, 1, '#0B0E15');
-    }
-    return '<svg viewBox="0 0 ' + S2 + ' ' + S2 + '" role="img" ' +
-      'aria-label="반납 화면 QR 자리표시 · 인코더 연동 예정">' +
-      '<rect width="100%" height="100%" fill="#FFFFFF"></rect>' +
-      finder(0, 0) + finder(N - 7, 0) + finder(0, N - 7) + timing +
-      '<rect x="' + (4.5 * cell) + '" y="' + (8.5 * cell) + '" width="' + (12 * cell) +
-        '" height="' + (4 * cell) + '" rx="6" fill="#0B0E15"></rect>' +
-      '<text x="' + (S2 / 2 + 12) + '" y="' + (10.9 * cell) +
-        '" text-anchor="middle" fill="#F3F5F9" font-size="13" font-weight="600">QR</text>' +
-      '<text x="' + (S2 / 2 + 12) + '" y="' + (12 * cell) +
-        '" text-anchor="middle" fill="#7C859A" font-size="9">연동 예정</text>' +
-      '</svg>';
-  }
+  /* QR 자리표시 그림은 지웠다 · QR 은 자재식별표에 인쇄해 현장에서 폰으로 찍는다.
+   * 실제 QR 은 make_qr.py 가 만들고, 찍으면 material-view.html 로 들어온다 */
 
   function paintTabs() {
     var tabs = S.retTabs();
@@ -168,7 +128,8 @@
             UI.esc(r.unit) + '</td>' +
           /* 상태는 반납한 줄에만 적는다 · 반납 전에는 아직 정해지지 않은 값이다 */
           '<td data-label="물품 상태">' +
-            ((r.returned || done[r.q]) ? condBadge(r.cond)
+            ((r.returned || done[r.q])
+              ? condBadge(done[r.q] && cond[r.q] ? cond[r.q] : r.cond)
               : '<span class="sub">반납 뒤 결정</span>') + '</td>' +
           '<td data-label="반납">' +
             (done[r.q]
@@ -199,43 +160,112 @@
   }
 
   /* 반납하면 무엇이 바뀌는지 먼저 보여 준다. 눌러 보고 알게 하면 안 된다 */
+  /* 반납 수량은 사람이 고친다 · 추천값은 불출 잔여다.
+   * 화면이 기억하고 있어야 다시 그릴 때 되돌아가지 않는다 (자재별로 따로 둔다) */
+  var qty = {};
+  var cond = {};
+
+  /* 조치(반납 유형) · 원천 08_반납_거래상태 에 있는 상태 이름을 그대로 쓴다.
+   * 「미정」 이 기본이다 · 물품 상태는 반납받은 자재를 검사하고 정하는 것이라
+   * 반납자가 신고한 값과 검사에서 확정한 값은 다를 수 있다 */
+  var CONDS = ['신품', '중고', '수리 필요', '불용'];
+
+  function qtyOf(r) {
+    var v = qty[r.q];
+    if (v === undefined) { return Number(r.left) || 0; }
+    return v;
+  }
+
   function paintEffect() {
     var rows = S.retList(tab);
     var r = picked ? rows.filter(function (x) { return x.q === picked; })[0] : null;
     if (!r) {
       el('effect').innerHTML = '<div class="empty"><strong>반납 대상을 고르세요</strong>' +
-        '반납하면 무엇이 바뀌는지 미리 보여 줍니다</div>';
+        '표에서 「미리보기」 를 누르면 신청서 초안이 채워집니다</div>';
       return;
     }
     var e = S.retEffect(r);
+    var n = qtyOf(r);
+    var price = window.DB ? (Number(DB.item(r.q).price) || 0) : 0;
+
     el('effect').innerHTML =
-      '<p class="gt"><span>반납하면 이렇게 바뀝니다</span>' +
+      '<p class="gt"><span>자재반납신청서 초안</span>' +
         '<span class="gt-sub">' + UI.esc(r.q) + '</span></p>' +
       '<h2 style="font-size:16px;letter-spacing:-.4px;margin-bottom:10px">' +
         UI.esc(r.name) + '</h2>' +
-      (e ? '<div class="pgrid">' +
-        '<div><div class="pk">현재고</div><div class="pv">' + UI.num(e.stock[0]) +
-          ' → ' + UI.num(e.stock[1]) + '</div></div>' +
-        '<div><div class="pk">조치</div><div class="pv">' + UI.esc(e.action[0]) +
-          ' → ' + UI.esc(e.action[1]) + '</div></div>' +
-        '<div><div class="pk">반납 수량</div><div class="pv">' + UI.num(r.left) + ' ' +
-          UI.esc(r.unit) + '</div></div>' +
-        '<div><div class="pk">회수 금액</div><div class="pv">' + UI.won(e.amount) +
-          '</div></div>' +
-      '</div>' : '') +
-      '<div class="formula">' +
-        '<div class="ft"><span>재고 계산</span><span>현재고를 저장하지 않습니다</span></div>' +
-        '<code>현재고 = 스냅샷 + Σ 트랜잭션 (반납 +1 · 불출 -1)</code>' +
-        '<div class="ft" style="margin:8px 0 5px"><span>불출 근거</span></div>' +
-        UI.esc((r.wo ? '작업주문 ' + r.wo : '작업주문 미확인') + ' · ' +
-          (r.acc || '계정 미확인')) +
+
+      '<div class="rf">' +
+        /* 4 · 추천값을 넣어 두고 고칠 수 있게 둔다 · 최대는 불출 잔여다 */
+        '<div class="rf-row">' +
+          '<label class="rf-k" for="retqty">반납 수량</label>' +
+          '<div class="rf-v">' +
+            '<input class="input" id="retqty" type="number" inputmode="numeric" ' +
+              'min="1" step="1" max="' + UI.esc(String(r.left)) + '" value="' + n + '">' +
+            '<span class="rf-u">' + UI.esc(r.unit) + '</span>' +
+          '</div>' +
+          '<p class="rf-x">추천 ' + UI.num(r.left) + ' ' + UI.esc(r.unit) +
+            ' · 불출 잔여 전량 (최대)</p>' +
+        '</div>' +
+
+        /* 3 · 조치는 고르는 값이다 · 반납자가 신고하고 검사에서 확정한다 */
+        '<div class="rf-row">' +
+          '<label class="rf-k" for="retcond">조치</label>' +
+          '<div class="rf-v">' +
+            '<select class="input" id="retcond">' +
+              '<option value="">미정 · 검사에서 정함</option>' +
+              CONDS.map(function (c) {
+                return '<option value="' + UI.esc(c) + '"' +
+                  (cond[r.q] === c ? ' selected' : '') + '>' + UI.esc(c) + '</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          '<p class="rf-x">반납자가 신고하는 값입니다 · 검사에서 바뀔 수 있습니다</p>' +
+        '</div>' +
       '</div>' +
+
+      /* 5 · 6 · 회수 금액은 수량을 고치는 대로 다시 세고, 테두리를 초록으로 둔다 */
+      '<div class="pgrid" style="margin-top:14px">' +
+        '<div class="won-box"><div class="pk">회수 금액</div>' +
+          '<div class="pv ok" id="retamt">' + UI.won(n * price) + '</div></div>' +
+        (e ? '<div><div class="pk">현재고</div><div class="pv">' + UI.num(e.stock[0]) +
+          ' → ' + UI.num(e.stock[0] + n) + '</div></div>' : '') +
+      '</div>' +
+
+      /* 7 · 「재고 계산」 산식은 뺐다 · 불출 근거는 남긴다 */
+      '<div class="formula">' +
+        '<div class="ft"><span>불출 근거</span><span>원천 그대로</span></div>' +
+        UI.esc((r.wo ? '작업주문 ' + r.wo : '작업주문 미확인') + ' · ' +
+          (r.acc || '계정 미확인') +
+          (r.issueWh ? ' · 불출 창고 ' + r.issueWh : '') +
+          (r.asm ? ' · ' + r.asm : '')) +
+      '</div>' +
+
       '<div class="decide">' +
         '<div class="decide-row">' +
           '<button class="btn pln" type="button" data-ret="' + UI.esc(r.q) + '">' +
-            '반납 ' + UI.num(r.left) + ' ' + UI.esc(r.unit) + ' 처리</button>' +
+            '반납 신청 · ' + UI.num(n) + ' ' + UI.esc(r.unit) + '</button>' +
         '</div>' +
       '</div>';
+  }
+
+  /* 수량을 치는 대로 회수 금액과 단추 글자만 고친다 · 카드를 다시 그리면 입력칸에서 포커스가 빠진다 */
+  function retLive() {
+    var rows = S.retList(tab);
+    var r = picked ? rows.filter(function (x) { return x.q === picked; })[0] : null;
+    var inp = el('retqty');
+    if (!r || !inp) { return; }
+    var max = Number(r.left) || 1;
+    var v = Math.round(Number(inp.value));
+    if (!(v > 0)) { v = 1; }
+    if (v > max) { v = max; inp.value = max; }
+    qty[r.q] = v;
+    var price = window.DB ? (Number(DB.item(r.q).price) || 0) : 0;
+    if (el('retamt')) { el('retamt').textContent = UI.won(v * price); }
+    var btn = el('effect').querySelector('[data-ret]');
+    if (btn) { btn.textContent = '반납 신청 · ' + UI.num(v) + ' ' + r.unit; }
+    var sk = el('effect').querySelector('.pgrid > div:last-child .pv');
+    var e = S.retEffect(r);
+    if (sk && e) { sk.textContent = UI.num(e.stock[0]) + ' → ' + UI.num(e.stock[0] + v); }
   }
 
   function doReturn(q, anchor) {
@@ -243,19 +273,24 @@
     var r = rows.filter(function (x) { return x.q === q; })[0];
     if (!r) { return; }
     var before = DB.item(q);
+    var n = Math.min(Number(r.left) || 0, qtyOf(r));
+    var c = cond[q] || '';
     done[q] = true;
     try {
       /* 부호는 config 가 정한다. 화면이 -1 을 만들지 않는다 */
-      /* 상태는 반납 뒤 검사에서 정한다 · 여기서 붙이지 않는다 */
-      DB.txn({ q: q, type: '반납', qty: r.left, note: '자재반납 (QR) · 상태 미정' });
+      /* 조치는 반납자가 신고한 값이다 · 없으면 검사에서 정한다고 적는다 */
+      DB.txn({ q: q, type: '반납', qty: n,
+               note: '자재반납신청서 · ' + (c ? '신고 ' + c : '상태 미정') });
       var after = DB.item(q);
       POP.show(anchor, {
-        title: '반납했습니다',
+        title: '반납 신청을 접수했습니다',
         rows: [['자재', r.name + ' · ' + q],
-               ['수량', UI.num(r.left) + ' ' + r.unit],
-               ['물품 상태', '반납 뒤 검사에서 정합니다'],
+               ['수량', UI.num(n) + ' ' + r.unit +
+                 (n < Number(r.left) ? ' (잔여 ' + UI.num(Number(r.left) - n) + ')' : '')],
+               ['회수 금액', UI.won(n * (Number(before.price) || 0))],
+               ['조치', c ? c + ' (신고값 · 검사에서 확정)' : '미정 · 검사에서 정합니다'],
                ['현재고', UI.num(before.stock) + ' → ' + UI.num(after.stock)],
-               ['조치', before.actionNow + ' → ' + after.actionNow]],
+               ['적정재고 조치', before.actionNow + ' → ' + after.actionNow]],
         note: '재고를 저장하지 않고 트랜잭션으로 더했습니다. 적정재고 화면 숫자도 같이 움직입니다.'
       });
     } catch (err) {
@@ -271,6 +306,15 @@
       paintTabs(); paintTable(); paintEffect();
     });
 
+    /* 수량은 치는 대로 · 조치는 고르는 대로 받는다 */
+    el('effect').addEventListener('input', function (e) {
+      if (e.target.id === 'retqty') { retLive(); }
+    });
+    el('effect').addEventListener('change', function (e) {
+      if (e.target.id !== 'retcond') { return; }
+      if (picked) { cond[picked] = e.target.value; }
+    });
+
     document.addEventListener('click', function (e) {
       var p = e.target.closest && e.target.closest('[data-pick]');
       if (p) { picked = p.getAttribute('data-pick'); paintTable(); paintEffect(); return; }
@@ -283,14 +327,6 @@
     var m = window.DB ? DB.meta() : null;
     el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
     paintTabs(); paintTable(); paintEffect();
-  }
-
-  el('qr').innerHTML = qrPlaceholder();
-
-  /* QR 이 여는 주소는 배포된 곳에 따라 달라진다. 지금 실행 중인 주소를 그대로 적는다 ·
-   * 도메인을 화면에 박아 두면 사내 서버로 옮겼을 때 거짓이 된다 */
-  if (el('qrurl') && window.QRDB) {
-    el('qrurl').textContent = QRDB.url('Q0000000', true);
   }
 
   paintAll();

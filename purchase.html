@@ -38,7 +38,12 @@
       <div class="prsteps" id="steps"></div>
     </section>
 
-    <div class="split">
+    <!-- 초안은 자재를 눌렀을 때 열린다 · 접혀 있을 때 무엇을 누르면 되는지 한 줄로 적는다 -->
+    <p class="foldhint" id="foldhint" hidden>
+      왼쪽에서 <b>자재를 누르면</b> 그 자재의 구매신청서 초안이 열립니다
+    </p>
+
+    <div class="split" id="split">
       <div>
         <div class="phead">
           <div><h2 style="font-size:15.5px;font-weight:600">발주 소요 자재</h2></div>
@@ -88,9 +93,19 @@
     var m = String(location.hash || '').match(/wo=([^&]+)/);
     return m ? decodeURIComponent(m[1]) : null;
   })();
+  /* 초안을 펼쳤나 · 기본은 접힘.
+   * 다른 화면에서 자재를 들고 넘어왔으면(#q=코드) 이미 고른 것이라 열어 둔다 */
+  var openForm = !!fromQ;
   if (fromQ) { picked = fromQ; }
 
   function el(id) { return document.getElementById(id); }
+
+  /* 초안을 펼칠지 한 곳에서 정한다 · 두 군데에서 hidden 을 만지면 어긋난다 */
+  function applyFold() {
+    el('split').classList.toggle('nopanel', !openForm);
+    el('form').hidden = !openForm;
+    el('foldhint').hidden = openForm;
+  }
   function asof() { return window.DB ? DB.meta().asof : (window.CFG && CFG.BASE_DATE); }
 
   function paintSteps() {
@@ -105,7 +120,8 @@
 
   function paintList() {
     rows = S.prList(fromQ, fromWo);
-    if (!picked || !rows.filter(function (r) { return r.q === picked; }).length) {
+    /* 펼쳐 있을 때만 자동으로 고른다 · 접혀 있는데 고르면 초안이 저절로 열린다 */
+    if (openForm && (!picked || !rows.filter(function (r) { return r.q === picked; }).length)) {
       picked = rows.length ? rows[0].q : null;
     }
     el('lcount').textContent = '총 ' + UI.num(rows.length) + '건';
@@ -195,8 +211,11 @@
     el('list').addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('.pick');
       if (!b) { return; }
-      picked = b.getAttribute('data-q');
-      paintList(); paintForm();
+      var key = b.getAttribute('data-q');
+      /* 같은 자재를 다시 누르면 접는다 (토글) */
+      if (openForm && picked === key) { openForm = false; picked = null; }
+      else { picked = key; openForm = true; }
+      paintList(); paintForm(); applyFold();
     });
 
     el('form').addEventListener('click', function (e) {
@@ -248,7 +267,7 @@
   function paintAll() {
     var m = window.DB ? DB.meta() : null;
     el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
-    paintSteps(); paintList(); paintForm();
+    paintSteps(); paintList(); paintForm(); applyFold();
   }
 
   paintAll();
