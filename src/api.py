@@ -64,13 +64,18 @@ def startup():
 
 WEB = Path(__file__).resolve().parent.parent / "web" / "index.html"
 
+# ★ HTML·JS 는 캐시하지 않는다. FileResponse 는 기본적으로 Cache-Control 을 넣지 않는데,
+#   그러면 브라우저가 서버에 물어보지도 않고(디스크 캐시 히트) 예전 화면을 그대로 보여준다.
+#   실제로 겪은 문제다 — 코드를 고쳐 재기동해도 팀원 브라우저는 며칠 전 화면을 보고 있었다.
+NO_CACHE = {"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"}
+
 
 @app.get("/", response_class=HTMLResponse)
 def ui():
     """최소 채팅 UI — 외부 의존성 없는 단일 HTML (화면은 토큰 없이 연다)."""
     if not WEB.exists():
         return HTMLResponse("<h1>web/index.html 이 없습니다</h1>", status_code=404)
-    return FileResponse(WEB)
+    return FileResponse(WEB, headers=NO_CACHE)
 
 
 WEBDIR = Path(__file__).resolve().parent.parent / "web"
@@ -83,7 +88,7 @@ def dashboard():
     f = WEBDIR / "dashboard.html"
     if not f.exists():
         return HTMLResponse("<h1>web/dashboard.html 이 없습니다</h1>", status_code=404)
-    return FileResponse(f)
+    return FileResponse(f, headers=NO_CACHE)
 
 
 @app.get("/web/{name}")
@@ -92,7 +97,7 @@ def web_asset(name: str):
     f = (WEBDIR / name).resolve()
     if f.parent != WEBDIR.resolve() or not f.exists():
         raise HTTPException(status_code=404, detail="not found")
-    return FileResponse(f)
+    return FileResponse(f, headers=NO_CACHE)
 
 
 @app.get("/api/viz")
@@ -102,7 +107,7 @@ def viz():
     if not f.exists():
         raise HTTPException(status_code=404,
                             detail="data/viz.json 없음 — python scripts/build_viz.py 실행")
-    return FileResponse(f, media_type="application/json")
+    return FileResponse(f, media_type="application/json", headers=NO_CACHE)
 
 
 @app.get("/api/eval")
@@ -111,7 +116,7 @@ def eval_result():
     if not f.exists():
         raise HTTPException(status_code=404,
                             detail="data/eval_result.json 없음 — python scripts/run_eval.py 실행")
-    return FileResponse(f, media_type="application/json")
+    return FileResponse(f, media_type="application/json", headers=NO_CACHE)
 
 
 @app.get("/api/health")
