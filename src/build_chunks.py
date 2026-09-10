@@ -5,6 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from common import file_meta, doc_id_of, STRATEGY
 from parsers import PARSERS, convert_legacy
 from chunker import CHUNKERS, assign_ids, deduplicate
+from faq import parse_faq, chunk_faq
 
 RAW = Path("raw"); PROC = Path("data/processed"); CH = Path("data/chunks")
 FAQ_EXCEL = {  # 2파에서 추가 (3절)
@@ -24,6 +25,8 @@ def strategy_for(meta):
         s = "slide"
     if cat == "faq" and ft in ("pptx", "ppt"):
         s = "slide"          # POS-Appia FAQ 는 PPT 다 (엑셀 qa_pair 아님)
+    if cat == "faq" and ft in ("xlsx", "xlsb"):
+        s = "qa_pair"
     if ft in ("xlsx", "xlsb") and cat != "faq":
         s = "record"
     return s
@@ -59,9 +62,16 @@ def main():
                     failed.append((m["file_name"], "레거시 변환 실패 (MS Office COM 없음)"))
                     continue
                 p, ft = conv, conv.suffix.lstrip(".")
-            elements = PARSERS[ft](p)
             strat = strategy_for(m)
-            chunks = CHUNKERS[strat](elements, m)
+            if strat == "qa_pair":
+                records = parse_faq(p)
+                elements = [{"kind": "row", "text": None,
+                             "location": {"sheet": sh, "row": r, "row_end": r},
+                             "low_quality": False} for sh, r, _ in records]
+                chunks = chunk_faq(records, m)
+            else:
+                elements = PARSERS[ft](p)
+                chunks = CHUNKERS[strat](elements, m)
             chunks = assign_ids(chunks, m["doc_id"], m)
             all_chunks.extend(chunks)
             ok.append(m["file_name"])
