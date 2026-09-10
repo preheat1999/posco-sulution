@@ -61,6 +61,19 @@
   })();
   var KEYS = Object.keys(MAT);
 
+  /* 담당자가 확정한 지점 · 3층 attribute_overrides 의 seq 하나로 적는다.
+   * 이 값보다 나중에 쌓인 판단은 「확정 대기」 이고, 이 DB 를 읽는 어떤 화면도 쓰지 않는다 */
+  var COMMIT_KEY = (CFG.STAGE_KEY || 'mtrl.stage.v1') + '.commit';
+  function commitRead() {
+    try {
+      var raw = window.localStorage.getItem(COMMIT_KEY);
+      return raw ? JSON.parse(raw) : { seq: 0, at: '', n: 0 };
+    } catch (e) { return { seq: 0, at: '', n: 0 }; }
+  }
+  function commitWrite(v) {
+    try { window.localStorage.setItem(COMMIT_KEY, JSON.stringify(v)); } catch (e) { /* 무시 */ }
+  }
+
   /* 3층은 자주 읽힌다. 바뀔 때만 다시 만든다 */
   var cache = null;
   function changes() {
@@ -102,10 +115,17 @@
     var t = ch.txn[k] || { delta: 0, n: 0, rows: [] };
     var pl = ch.pool[k] || null;
 
+    /* 사람의 판단은 확정된 것만 쓴다.
+     * judged 는 「사람이 고른 값」, pending 은 「아직 확정 안 된 판단」 이다.
+     * 속성값 판단 화면만 이 둘을 보고, 다른 화면은 type 만 본다 */
+    var cm = commitRead();
+    var applied = !!ov && Number(ov.seq) <= Number(cm.seq || 0);
     var type, src;
-    if (ov) { type = ov.newType; src = 'override'; }
+    if (applied) { type = ov.newType; src = 'override'; }
     else if (CONFIRMED.indexOf(a.verdict) >= 0) { type = a.verdict; src = 'algorithm'; }
     else { type = m.type; src = 'master'; }
+    var judged = ov ? ov.newType : null;
+    var pending = (ov && !applied) ? ov : null;
 
     var seed = Number(m.stockDept) || 0;
     var stock = seed + t.delta;
@@ -114,7 +134,7 @@
     /* 확정 속성과 적정재고가 계산된 속성이 다른가.
      * 원본 상태에서는 743행 전부 같다(확인함). 사람이 바꿨을 때만 생긴다 */
     var stockType = s.type || m.type;
-    var stale = !!ov && type !== stockType;
+    var stale = applied && type !== stockType;
     var targetNow = target, recalc = null;
     if (stale) {
       if (type === '계획품' && !m.ceq) {
@@ -152,6 +172,8 @@
       poolGrade: p.poolGrade, poolAge: p.ageDays, staleValue: p.staleValue,
       // 3층
       type: type, typeSrc: src, override: ov,
+      /* 사람이 고른 값과 그 확정 여부 · 속성값 판단 화면만 쓴다 */
+      judged: judged, pending: pending, committed: applied,
       stock: stock, stockDelta: t.delta, txns: t.n, txnRows: t.rows,
       pooled: !!pl, poolAction: pl ? pl.action : null,
       /* need 와 needNow 를 둘 다 둔 이유
@@ -382,7 +404,37 @@
       return row;
     },
 
+    /* 여기까지의 판단을 확정한다. 이 순간부터 다른 화면이 그 속성으로 계산한다 */
+    commitAttr: function () {
+      var rows = C ? C.rows('attribute_overrides') : [];
+      var seq = rows.reduce(function (t, r) { return Math.max(t, Number(r.seq) || 0); }, 0);
+      var t = new Date();
+      function p(n) { return (n < 10 ? '0' : '') + n; }
+      var at = t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()) + ' ' +
+        p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
+      var info = { seq: seq, at: at, n: rows.length };
+      commitWrite(info);
+      invalidate();
+      if (C) { C.emit(); }        // 화면들이 다시 그린다
+      return info;
+    },
+
+    /* 확정 지점 · 확정된 건수와 대기 건수 */
+    commitInfo: function () {
+      var cm = commitRead();
+      var rows = C ? C.rows('attribute_overrides') : [];
+      var done = 0, waiting = 0;
+      rows.forEach(function (r) {
+        if (Number(r.seq) <= Number(cm.seq || 0)) { done += 1; } else { waiting += 1; }
+      });
+      return { seq: Number(cm.seq || 0), at: cm.at || '', done: done, waiting: waiting,
+               total: rows.length };
+    },
+
+    /* 판단 취소 · 화면이 {q, dept} 로 부르기도 한다. 둘 다 받는다
+     * (객체로 부르면 조용히 아무 것도 안 되던 버그가 있었다) */
     revertAttr: function (q, dept) {
+      if (q && typeof q === 'object') { dept = q.dept; q = q.q; }
       var k = needMat(q, dept || DEFAULT_DEPT);
       var rows = C.rows('attribute_overrides').filter(function (r) {
         return key(r.q, r.dept || DEFAULT_DEPT) === k;

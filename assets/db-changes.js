@@ -151,6 +151,9 @@
       fire({ table: null, op: 'reset' });
     },
 
+    /* 표는 안 바뀌었지만 화면은 다시 그려야 할 때 (담당자 확정처럼) */
+    emit: function (detail) { fire(detail || { table: null, op: 'notify' }); },
+
     /* 지금 메모리로 돌고 있는가. 화면이 「저장되지 않는다」 고 알릴 때 쓴다 */
     isMemoryOnly: function () { return usingMemory; },
 

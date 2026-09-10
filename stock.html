@@ -119,7 +119,7 @@
   function paintHero() {
     var h = el('anahero');
     if (stage === 'done') { h.hidden = true; return; }
-    var conf = window.DB ? (DB.changes().attribute_overrides || []).length : 0;
+    var conf = window.DB ? DB.commitInfo().done : 0;
     var s = DB.summary();
     h.hidden = false;
     h.innerHTML =
@@ -148,7 +148,7 @@
   function runAnalysis() {
     if (running) { return; }
     running = true;
-    var conf = (DB.changes().attribute_overrides || []).length;
+    var conf = DB.commitInfo().done;
     var STEPS = [
       '확정 속성 반영 · ' + UI.num(conf) + '품목',
       '속성별 공식으로 목표재고 결과 불러오기',
@@ -359,11 +359,21 @@
   function paintStageBar() {
     var bar = el('stagebar');
     var s = DB.summary();
-    var confirmed = window.DB ? (DB.changes().attribute_overrides || []).length : 0;
-    if (!confirmed) {
+    var cm = DB.commitInfo();
+    /* 확정 대기가 있으면 그 사실만 적는다. 이 화면은 확정된 것만 쓴다 */
+    if (cm.waiting) {
+      bar.hidden = false;
+      bar.innerHTML = '<span class="ni">△</span><span><b>속성값 판단에 확정 대기 ' +
+        UI.num(cm.waiting) + '품목</b>이 있습니다 · ' +
+        '이 화면은 <b>확정된 속성만</b> 씁니다. 담당자가 확정하면 그 속성으로 다시 계산합니다</span>' +
+        '<a class="nx" href="attr.html#done" style="color:var(--brand)">확정하러 가기 →</a>';
+      return;
+    }
+    if (!cm.done) {
       bar.hidden = false;
       bar.innerHTML = '<span class="ni">◇</span><span><b>담당자가 확정한 속성이 아직 없습니다</b> · ' +
-        '이 목표재고는 지금 속성으로 계산된 값입니다. 속성값 판단에서 확정하면 그 속성으로 다시 봅니다</span>' +
+        '이 목표재고는 알고리즘 판정 속성으로 계산된 값입니다. 속성값 판단에서 확정하면 ' +
+        '그 속성으로 다시 봅니다</span>' +
         '<a class="nx" href="attr.html" style="color:var(--brand)">속성값 판단으로 →</a>';
       return;
     }

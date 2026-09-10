@@ -46,6 +46,8 @@
           <button type="button" data-sort="amt" class="on">재고금액 순</button>
           <button type="button" data-sort="gap">점수차 순</button>
         </div>
+        <!-- 판단과 확정은 다른 일이다. 확정을 눌러야 다른 화면이 그 속성을 쓴다 -->
+        <button class="btn" type="button" id="commit" hidden>담당자 확정</button>
         <button class="btn line sm" type="button" id="export" hidden>확정 내보내기</button>
       </div>
     </div>
@@ -53,6 +55,8 @@
     <div class="split">
       <div>
         <div class="noticebar" id="notice"></div>
+        <!-- 여러 건을 한 번에 판단한다. 회색지대 31품목을 하나씩 누르면 손이 너무 많이 간다 -->
+        <div class="bulkbar" id="bulk" hidden></div>
         <div class="picklist" id="list"></div>
         <div class="pagerow">
           <span id="pinfo">&nbsp;</span>
@@ -97,14 +101,13 @@
   var picked = null;
   var listRows = [];
   var running = false;
+  var sel = {};             // 체크한 자재 · key 집합
 
-  /* 들어올 때는 원본이다.
-   * 결과 탭을 가리키는 주소(#gray 처럼 · 적정재고 화면에서 넘어오는 링크)로 들어온 것만
-   * 실행한 뒤 화면을 이어 본다. 메뉴에서 누른 attr.html 은 주소에 칸이 없으니 원본이 된다 */
+  /* 처음 들어오면 원본이다. 한 번 실행하면 그 상태가 남는다 ·
+   * 다른 화면에 갔다 돌아와도 2단계(알고리즘 결과)에서 이어 본다.
+   * 원본으로 되돌리는 것은 단계 줄의 「원본 속성」 을 누르는 것뿐이다 (시연 초기화도 지운다) */
   var hash = (location.hash || '').replace('#', '');
-  var deep = ['all', 'i2p', 'p2i', 'gray', 'done'].indexOf(hash) >= 0;
-  if (deep) { stage = 'algo'; S.setStage('algo'); tab = hash; }
-  else if (stage === 'algo') { stage = 'raw'; S.setStage('raw'); tab = 'all'; }
+  if (stage === 'algo' && ['all', 'i2p', 'p2i', 'gray', 'done'].indexOf(hash) >= 0) { tab = hash; }
 
   /* 원본 단계의 칸 · 속성은 정본 Type 두 가지뿐이다 */
   var RAW_TABS = [
@@ -117,35 +120,41 @@
   function byAmt(a, b) { return (b.stock * b.price) - (a.stock * a.price); }
 
   // ------------------------------------------------------------ 단계 표시
+  /* 네 칸이 각각 누를 수 있는 버튼이다.
+   * 1 원본 보기 · 2 실행 · 3 확정 대기 목록 · 4 적정재고 분석으로 이동.
+   * 마지막 칸은 확정한 뒤에만 열린다 · 확정 전에는 다른 화면이 이 판단을 쓰지 않기 때문이다 */
   function paintStage() {
     var c = S.attrCounts();
+    var cm = DB.commitInfo();
     var steps = [
-      { k: '1', t: '원본 속성', s: '정본 743품목 · 보험품 ' + UI.num(c.insBase) + ' · 계획품 ' + UI.num(c.plnBase),
+      { k: '1', t: '원본 속성', act: 'raw',
+        s: '정본 743품목 · 보험품 ' + UI.num(c.insBase) + ' · 계획품 ' + UI.num(c.plnBase),
         state: 'done' },
-      { k: '2', t: '알고리즘 실행',
+      { k: '2', t: '알고리즘 실행', act: 'run',
         /* 743 중 판정 근거에서 빠지는 것(사전 배제 · 판정일치)을 같이 적는다.
          * 이걸 안 적으면 「743 이 왜 270 이 됐나」 가 화면에서 사라진다 */
         s: stage === 'algo'
           ? '변경 제안 ' + UI.num(c.i2p + c.p2i) + ' · 보류 ' + UI.num(c.gray + c.done)
-          : '아직 실행하지 않았습니다',
+          : '눌러서 실행하세요',
         x: stage === 'algo'
           ? '<span class="excl">제외대상 ' + UI.num(c.excluded) + '</span>' : '',
         state: stage === 'algo' ? 'done' : 'doing' },
-      { k: '3', t: '담당자 확정', s: stage === 'algo'
-          ? '확정 ' + UI.num(c.done) + ' · 남은 보류 ' + UI.num(c.gray)
-          : '실행 뒤에 할 수 있습니다',
-        state: stage === 'algo' ? (c.gray ? 'doing' : 'done') : 'wait' },
-      { k: '4', t: '적정재고 반영', s: stage === 'algo'
-          ? (c.stale ? '속성이 바뀐 ' + UI.num(c.stale) + '품목 · 엔진 재계산 ' + UI.num(c.recalc) + '품목 대기'
-                     : '확정 속성 그대로 계산돼 있습니다')
-          : '확정된 속성으로 계산합니다',
-        state: stage === 'algo' ? (c.recalc ? 'doing' : 'done') : 'wait' }
+      { k: '3', t: '담당자 확정', act: 'judge',
+        s: stage !== 'algo' ? '실행 뒤에 할 수 있습니다'
+          : (c.waiting ? '판단 ' + UI.num(c.done) + ' · 확정 대기 ' + UI.num(c.waiting)
+             : (cm.done ? '확정 ' + UI.num(cm.done) + '품목 · ' + UI.esc(cm.at)
+                : '판단한 자재가 없습니다')),
+        state: stage !== 'algo' ? 'wait' : (c.waiting ? 'doing' : (cm.done ? 'done' : 'wait')) },
+      { k: '4', t: '적정재고 분석', act: 'stock',
+        s: cm.done ? '확정 ' + UI.num(cm.done) + '품목으로 계산합니다'
+          : '확정하면 이 판단으로 계산합니다',
+        state: cm.done && !c.waiting ? 'done' : 'wait' }
     ];
     el('stageline').innerHTML = steps.map(function (s) {
-      return '<div class="prstep ' + s.state + '">' +
+      return '<button class="prstep ' + s.state + '" type="button" data-act="' + s.act + '">' +
         '<span class="sc">' + (s.state === 'done' ? '✓' : s.k) + '</span>' +
         '<span class="sk">' + UI.esc(s.t) + '</span>' +
-        '<span class="sv">' + UI.esc(s.s) + (s.x ? ' · ' + s.x : '') + '</span></div>';
+        '<span class="sv">' + UI.esc(s.s) + (s.x ? ' · ' + s.x : '') + '</span></button>';
     }).join('');
 
     el('progress').className = 'badge ' + (stage === 'algo' ? 'ok' : '');
@@ -153,8 +162,16 @@
       ? (c.done ? '승인 ' + UI.num(c.done) + '건 · 검토 ' + UI.num(c.gray + c.done) + ' → ' + UI.num(c.gray) + '품목'
                 : '검토 대기 ' + UI.num(c.gray) + '품목')
       : '원본 속성 · 알고리즘 실행 전';
-    el('export').hidden = stage !== 'algo';
+    el('export').hidden = stage !== 'algo' || !cm.done;
     el('sort').hidden = stage !== 'algo';        // 점수차는 실행 뒤에 생긴다
+
+    /* 확정 버튼 · 대기 건수를 그대로 적는다. 대기가 없으면 누를 것이 없다 */
+    var cb = el('commit');
+    cb.hidden = stage !== 'algo';
+    cb.disabled = !c.waiting;
+    cb.textContent = c.waiting
+      ? ('담당자 확정 · ' + UI.num(c.waiting) + '건')
+      : (cm.done ? '확정 완료 · ' + UI.num(cm.done) + '건' : '확정할 판단이 없습니다');
     paintStamp(c);
   }
 
@@ -164,10 +181,15 @@
     if (stage !== 'algo') { bar.hidden = true; return; }
     var at = S.stamp();
     bar.hidden = false;
+    var cm = DB.commitInfo();
     bar.innerHTML = '<span class="st-k">속성값 판단 실행</span>' +
       '<b class="st-v">' + UI.esc(at || '시각을 기록하지 못했습니다') + '</b>' +
       '<span class="st-x">기준일 ' + UI.esc(UI.date(DB.meta().asof)) +
-        ' 스냅샷 · 743품목 판정 · 제외 ' + UI.num(c.excluded) + '품목</span>';
+        ' 스냅샷 · 743품목 판정 · 제외 ' + UI.num(c.excluded) + '품목</span>' +
+      (cm.at ? '<span class="st-k" style="margin-left:auto">담당자 확정</span>' +
+        '<b class="st-v">' + UI.esc(cm.at) + '</b>' +
+        '<span class="st-x">' + UI.num(cm.done) + '품목' +
+        (cm.waiting ? ' · 대기 ' + UI.num(cm.waiting) : '') + '</span>' : '');
   }
 
   /* 실행 전 · 무엇을 실행하는지 정확히 적는다.
@@ -235,22 +257,27 @@
       var col = stage === 'algo'
         ? ({ i2p: 'var(--brand)', p2i: 'var(--insur)', gray: 'var(--core)', done: 'var(--ok)' }[b] || 'var(--slate)')
         : (r.baseType === '보험품' ? 'var(--insur)' : 'var(--brand)');
-      return '<button class="pick' + (r.key === picked ? ' on' : '') + '" type="button" ' +
-        'data-key="' + UI.esc(r.key) + '">' +
-        '<span class="pick-dot" style="background:' + col + '"></span>' +
-        '<span class="pick-body">' +
-          '<span class="pick-name">' + UI.esc(r.name || '품명 미확인') + ' ' +
-            UI.typeBadge(stage === 'algo' ? r.type : r.baseType) +
-            (r.csp ? ' <span class="badge core">핵심예비품</span>' : '') +
-            (stage === 'algo' && r.typeSrc === 'override' ? ' <span class="badge ok">승인 완료</span>' : '') +
-            (stage === 'algo' && r.stale ? ' <span class="badge core">재고 재계산</span>' : '') +
+      /* 속성 배지는 사람이 판단한 값이 있으면 그 값이다. 아직 확정 전이면 ◌ 로 적는다 ·
+       * 배지를 여러 개 달면 목록이 배지 밭이 되어 이름이 안 읽힌다 */
+      var mark = r.judged ? (r.committed ? '<i class="pm ok">✓</i>' : '<i class="pm wait">◌</i>') : '';
+      return '<div class="pick' + (r.key === picked ? ' on' : '') +
+        (sel[r.key] ? ' sel' : '') + '" data-key="' + UI.esc(r.key) + '">' +
+        (stage === 'algo'
+          ? '<label class="pick-chk"><input type="checkbox" data-chk="' + UI.esc(r.key) + '"' +
+            (sel[r.key] ? ' checked' : '') + ' aria-label="선택"></label>'
+          : '<span class="pick-dot" style="background:' + col + '"></span>') +
+        '<button class="pick-body" type="button" data-open="' + UI.esc(r.key) + '">' +
+          '<span class="pick-name">' + mark + UI.esc(r.name || '품명 미확인') + ' ' +
+            UI.typeBadge(stage === 'algo' ? (r.judged || r.type) : r.baseType) +
           '</span>' +
           '<span class="pick-meta">' + UI.esc(r.q) + ' · ' + UI.esc(r.grade || '?') +
             '등급 · 재고 ' + UI.num(r.stock) + ' · ' + UI.won(r.stock * r.price) + '</span>' +
-        '</span>' +
-        '<span class="pick-right">' + right + '</span></button>';
+        '</button>' +
+        '<span class="pick-right">' + right + '</span></div>';
     }).join('') :
       '<div class="empty"><strong>이 칸에는 자재가 없습니다</strong>다른 칸을 눌러 보세요</div>';
+
+    paintBulk(view);
 
     el('pinfo').textContent = total
       ? ('표시 ' + UI.num(view.length) + '건 · 전체 ' + UI.num(total) + '건 · ' + (page + 1) + ' / ' + (max + 1))
@@ -280,6 +307,31 @@
       '정본 743품목에서 <span class="excl">제외대상 ' + UI.num(c.excluded) + '품목</span>' +
       '(사전 배제 ' + UI.num(c.out) + ' · 판정일치 ' + UI.num(c.same) + ')은 올리지 않습니다. ' +
       '점수차가 작은 것이 알고리즘이 가장 헷갈린 자재입니다.';
+  }
+
+  /* 여러 건 판단 줄 · 이 쪽에 보이는 것을 한 번에 고르고 한 번에 판단한다.
+   * 판단은 3층에 쌓이고, 다른 화면이 쓰는 것은 「담당자 확정」 을 누른 뒤부터다 */
+  function paintBulk(view) {
+    var bar = el('bulk');
+    if (stage !== 'algo') { bar.hidden = true; return; }
+    var keys = view.map(function (r) { return r.key; });
+    var on = keys.filter(function (k) { return sel[k]; }).length;
+    var n = Object.keys(sel).filter(function (k) { return sel[k]; }).length;
+    bar.hidden = false;
+    bar.innerHTML =
+      '<label class="pick-chk"><input type="checkbox" id="chkall"' +
+        (on && on === keys.length ? ' checked' : '') + ' aria-label="이 쪽 전체 선택"></label>' +
+      '<span class="bk">이 쪽 전체 선택' + (on ? ' · ' + UI.num(on) + ' / ' + UI.num(keys.length) : '') +
+        '</span>' +
+      (n ? '<span class="bn">선택 ' + UI.num(n) + '건</span>' +
+        '<span class="bacts">' +
+          '<button class="btn ins sm" type="button" data-bulk="보험품">보험품</button>' +
+          '<button class="btn pln sm" type="button" data-bulk="계획품">계획품</button>' +
+          '<button class="btn ghost sm" type="button" data-bulk="keep">현행유지</button>' +
+          '<button class="btn ghost sm" type="button" data-bulk="revert">판단 취소</button>' +
+          '<button class="btn line sm" type="button" data-bulk="clear">선택 해제</button>' +
+        '</span>'
+        : '<span class="bn sub">체크하면 여러 건을 한 번에 판단합니다</span>');
   }
 
   // ------------------------------------------------------------ 근거 패널
@@ -342,7 +394,9 @@
       '</div>' +
 
       '<div class="callout ' + cls + '"><span class="ci">' + mark + '</span>' +
-        '<span><b>' + UI.esc(d.bucket === 'done' ? ('담당자 확정 · ' + r.type) : UI.verdict(r.verdict)) + '</b>' +
+        '<span><b>' + UI.esc(r.judged
+          ? ((r.committed ? '담당자 확정 · ' : '담당자 판단 (확정 대기) · ') + r.judged)
+          : UI.verdict(r.verdict)) + '</b>' +
         UI.esc(d.verdictText) + '</span></div>' +
 
       /* 원본 → 알고리즘 → 확정, 세 값을 한 줄에. 무엇이 어디서 바뀌었는지가 이 화면의 요점이다 */
@@ -352,7 +406,9 @@
         step3('알고리즘', r.verdict === '회색지대' ? '보류' : UI.verdict(r.verdict),
               r.verdict === '회색지대' ? 'core' : 'text') +
         '<span class="fa">→</span>' +
-        step3('확정', r.typeSrc === 'override' ? r.type : '대기', r.typeSrc === 'override' ? 'ok' : 'muted') +
+        step3(r.committed ? '확정' : '담당자 판단',
+              r.judged ? r.judged + (r.committed ? '' : ' (대기)') : '대기',
+              r.judged ? (r.committed ? 'ok' : 'core') : 'muted') +
       '</div>' +
 
       '<p class="gt" style="margin:14px 0 8px"><span>점수를 만든 값</span><span class="gt-sub">신뢰도 ' + UI.esc(d.confText) + '</span></p>' +
@@ -364,17 +420,20 @@
         (d.why ? '<div class="ft" style="margin:8px 0 0"><span>판정 메모</span></div>' + UI.esc(d.why) : '') +
       '</div>' +
 
-      stockBlock(r) +
-
       '<div class="decide">' +
-        '<p class="decide-note">' + (r.typeSrc === 'override'
-          ? '담당자가 <b>' + UI.esc(r.type) + '</b> 으로 확정한 자재입니다'
-          : '담당자 승인이 이 자재의 <b>첫 라벨</b>이 됩니다 · 확정한 속성으로 적정재고를 계산합니다') + '</p>' +
-        (r.typeSrc === 'override'
-          ? '<div class="decide-row"><button class="btn ghost" type="button" data-act="revert">승인 되돌리기</button></div>'
+        '<p class="decide-note">' + (r.judged
+          ? (r.committed
+            ? '담당자가 <b>' + UI.esc(r.judged) + '</b> 으로 <b>확정</b>한 자재입니다 · 다른 화면이 이 속성을 씁니다'
+            : '<b>' + UI.esc(r.judged) + '</b> 으로 판단했습니다 · <b>확정 대기</b>이며 ' +
+              '위의 「담당자 확정」 을 눌러야 다른 화면에 반영됩니다')
+          : '담당자 판단이 이 자재의 <b>첫 라벨</b>이 됩니다 · 판단한 뒤 「담당자 확정」 을 눌러야 ' +
+            '적정재고 · 적정구매시점이 이 속성으로 계산합니다') + '</p>' +
+        (r.judged
+          ? '<div class="decide-row">' +
+              '<button class="btn ghost" type="button" data-act="revert">판단 취소</button></div>'
           : '<div class="decide-row">' +
-              '<button class="btn ins" type="button" data-act="보험품">보험품으로 확정</button>' +
-              '<button class="btn pln" type="button" data-act="계획품">계획품으로 확정</button></div>' +
+              '<button class="btn ins" type="button" data-act="보험품">보험품으로 판단</button>' +
+              '<button class="btn pln" type="button" data-act="계획품">계획품으로 판단</button></div>' +
             '<div class="decide-row" style="margin-top:8px"><button class="btn ghost" type="button" data-act="keep">' +
               '현행유지 · ' + UI.esc(r.baseType) + ' 그대로</button></div>') +
       '</div>';
@@ -383,28 +442,6 @@
   function step3(k, v, tone) {
     var col = { muted: 'var(--muted)', core: 'var(--core)', ok: 'var(--ok)', text: 'var(--text)' }[tone];
     return '<div class="f3"><span class="f3k">' + k + '</span><b style="color:' + col + '">' + UI.esc(v) + '</b></div>';
-  }
-
-  /* 적정재고 반영 · 확정 속성이 계산에 쓰인 속성과 같은지, 다르면 무엇이 바뀌는지 */
-  function stockBlock(r) {
-    var head = '<p class="gt" style="margin:14px 0 8px"><span>적정재고 반영</span>' +
-      '<span class="gt-sub">계산에 쓴 속성 · ' + UI.esc(r.stockType) + '</span></p>';
-    if (!r.stale) {
-      return head + '<div class="callout ok" style="margin:0"><span class="ci">✓</span><span>' +
-        '<b>' + UI.esc(r.type) + ' 공식으로 계산돼 있습니다</b>' +
-        '목표 ' + UI.num(r.target) + ' · 현재고 ' + UI.num(r.stock) + ' · 조치 ' + UI.esc(r.actionNow) +
-        (r.reason ? '<br><code style="font-size:10.5px;color:var(--b1)">' + UI.esc(r.reason) + '</code>' : '') +
-        '</span></div>';
-    }
-    var rc = r.recalc;
-    return head + '<div class="callout ' + (rc.done ? 'pln' : 'gray') + '" style="margin:0">' +
-      '<span class="ci">' + (rc.done ? '↻' : '△') + '</span><span>' +
-      '<b>' + UI.esc(r.stockType) + ' → ' + UI.esc(r.type) + ' · ' +
-        (rc.done ? '목표 ' + UI.num(rc.from) + ' → ' + UI.num(rc.to) : '엔진 재계산 대기') + '</b>' +
-      UI.esc(rc.rule) + (rc.done
-        ? '<br>조치 ' + UI.esc(r.action) + ' → <b>' + UI.esc(r.actionNow) + '</b> · 현재고 ' + UI.num(r.stock)
-        : '<br>「확정 내보내기」 로 낸 파일을 feat/algo 엔진에 넣으면 이 속성으로 다시 계산됩니다') +
-      '</span></div>';
   }
 
   function clamp(v) { return Math.max(2, Math.min(98, Number(v) || 0)).toFixed(1); }
@@ -427,7 +464,7 @@
     (function tick() {
       if (i >= STEPS.length) {
         S.setStage('algo'); S.setStamp(S.nowStamp());
-        stage = 'algo'; tab = 'all'; page = 0; picked = null; running = false;
+        stage = 'algo'; tab = 'all'; page = 0; picked = null; running = false; sel = {};
         location.hash = 'all';        // 실행 직후에는 「전체」 가 눌린 화면을 본다
         paintAll();
         return;
@@ -459,8 +496,118 @@
     });
   }
 
+  /* 한 건 판단 · 3층에 쌓는다. 정본과 알고리즘 판정은 그대로 남는다 */
+  function judge(k, act) {
+    var q = k.split('|')[0], dept = k.split('|')[1];
+    var r = DB.item(q, dept);
+    if (!r) { return false; }
+    if (act === 'revert') {
+      if (!r.judged) { return false; }
+      return !!DB.revertAttr({ q: q, dept: dept });
+    }
+    if (r.judged) { DB.revertAttr({ q: q, dept: dept }); }   // 판단을 바꾸면 앞 줄을 걷는다
+    DB.approveAttr({
+      q: q, dept: dept, newType: act === 'keep' ? r.baseType : act,
+      reason: act === 'keep' ? '담당자 확인 · 현행유지' : '담당자 판단 · 속성값 판단'
+    });
+    return true;
+  }
+
+  /* 여러 건 판단 · 한 건씩 돌린다. 실패한 건은 세어서 그대로 알린다 */
+  function judgeMany(act, anchor) {
+    var keys = Object.keys(sel).filter(function (k) { return sel[k]; });
+    if (!keys.length) { return; }
+    var ok = 0, fail = 0;
+    keys.forEach(function (k) {
+      try { if (judge(k, act)) { ok += 1; } else { fail += 1; } }
+      catch (e) { fail += 1; }
+    });
+    sel = {};
+    var label = { revert: '판단 취소', keep: '현행유지' }[act] || (act + ' 판단');
+    POP.show(anchor, {
+      title: label + ' ' + UI.num(ok) + '건',
+      rows: [['적용', UI.num(ok) + '건'], ['건너뜀', UI.num(fail) + '건'],
+             ['다음', act === 'revert' ? '판단이 지워졌습니다'
+               : '「담당자 확정」 을 눌러야 다른 화면에 반영됩니다']],
+      note: '판단은 3층에 쌓입니다. 정본과 알고리즘 판정은 그대로입니다.'
+    });
+    paintAll();
+  }
+
+  /* 확정 · 여기까지의 판단을 다른 화면이 쓰게 한다 */
+  function commit(anchor) {
+    var c = S.attrCounts();
+    if (!c.waiting) { return; }
+    var info = DB.commitAttr();
+    POP.show(anchor, {
+      title: '담당자 확정 ' + UI.num(info.n) + '품목',
+      rows: [['확정 시각', info.at],
+             ['이제 반영되는 화면', '적정재고 분석 · 적정구매시점 · 대시보드'],
+             ['다음', '적정재고 분석에서 「분석」 을 다시 누르면 이 속성으로 계산합니다']],
+      note: '확정 전까지 다른 화면은 알고리즘 판정 속성을 씁니다. 확정은 3층 이력으로 남습니다.'
+    });
+    paintAll();
+  }
+
   // ------------------------------------------------------------ 이벤트
   function wire() {
+    /* 단계 줄 · 네 칸이 각각 실제 동작이다 */
+    el('stageline').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-act]');
+      if (!b) { return; }
+      var act = b.getAttribute('data-act');
+      if (act === 'raw') {
+        S.setStage('raw'); stage = 'raw'; tab = 'all'; page = 0; sel = {};
+        location.hash = '';
+        paintAll();
+        return;
+      }
+      if (act === 'run') {
+        if (stage === 'algo') { return; }     // 이미 결과가 올라와 있다
+        run();
+        return;
+      }
+      if (act === 'judge') {
+        if (stage !== 'algo') { run(); return; }
+        tab = 'done'; page = 0; location.hash = 'done';
+        paintTabs(); paintList(); paintPanel();
+        el('commit').scrollIntoView({ block: 'center' });
+        return;
+      }
+      if (act === 'stock') {
+        var cm = DB.commitInfo();
+        if (!cm.done || S.attrCounts().waiting) {
+          POP.show(b, {
+            title: '먼저 확정해야 합니다',
+            rows: [['확정된 판단', UI.num(cm.done) + '품목'],
+                   ['확정 대기', UI.num(S.attrCounts().waiting) + '품목']],
+            note: '적정재고 분석은 확정된 속성만 씁니다. 「담당자 확정」 을 누른 뒤 넘어가세요.'
+          });
+          return;
+        }
+        window.location.href = 'stock.html';
+      }
+    });
+
+    el('commit').addEventListener('click', function (e) { commit(e.currentTarget); });
+
+    /* 체크 · 이 쪽 전체 선택 · 여러 건 판단 */
+    el('bulk').addEventListener('click', function (e) {
+      var all = e.target.closest('#chkall');
+      if (all) {
+        var keys = listRows.slice(page * PAGE, page * PAGE + PAGE)
+          .map(function (r) { return r.key; });
+        var on = keys.filter(function (k) { return sel[k]; }).length === keys.length;
+        keys.forEach(function (k) { if (on) { delete sel[k]; } else { sel[k] = true; } });
+        paintList();
+        return;
+      }
+      var b = e.target.closest('[data-bulk]');
+      if (!b) { return; }
+      var act = b.getAttribute('data-bulk');
+      if (act === 'clear') { sel = {}; paintList(); return; }
+      judgeMany(act, b);
+    });
     el('runhero').addEventListener('click', function (e) { if (e.target.closest('#run')) { run(); } });
     el('export').addEventListener('click', function (e) { exportCsv(e.currentTarget); });
     el('tabs').addEventListener('click', function (e) {
@@ -476,8 +623,15 @@
       page = 0; paintList(); paintPanel();
     });
     el('list').addEventListener('click', function (e) {
-      var b = e.target.closest('.pick'); if (!b) { return; }
-      picked = b.getAttribute('data-key'); paintList(); paintPanel();
+      var chk = e.target.closest('[data-chk]');
+      if (chk) {
+        var k = chk.getAttribute('data-chk');
+        if (sel[k]) { delete sel[k]; } else { sel[k] = true; }
+        paintList();
+        return;
+      }
+      var b = e.target.closest('[data-open]'); if (!b) { return; }
+      picked = b.getAttribute('data-open'); paintList(); paintPanel();
     });
     el('prev').addEventListener('click', function () { page -= 1; paintList(); paintPanel(); });
     el('next').addEventListener('click', function () { page += 1; paintList(); paintPanel(); });
@@ -485,16 +639,9 @@
     el('panel').addEventListener('click', function (e) {
       var b = e.target.closest('[data-act]');
       if (!b || !picked || !window.DB) { return; }
-      var q = picked.split('|')[0], dept = picked.split('|')[1], act = b.getAttribute('data-act');
-      var r = DB.item(q, dept); if (!r) { return; }
-      try {
-        if (act === 'revert') { DB.revertAttr({ q: q, dept: dept }); }
-        else {
-          DB.approveAttr({ q: q, dept: dept, newType: act === 'keep' ? r.baseType : act,
-            reason: act === 'keep' ? '담당자 확인 · 현행유지' : '담당자 확정 · 속성값 판단' });
-        }
-      } catch (err) {
-        POP.show(b, { title: '승인하지 못했습니다', rows: [['이유', String(err.message || err)]] });
+      try { judge(picked, b.getAttribute('data-act')); }
+      catch (err) {
+        POP.show(b, { title: '판단하지 못했습니다', rows: [['이유', String(err.message || err)]] });
       }
     });
   }

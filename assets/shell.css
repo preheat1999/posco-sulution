@@ -1524,8 +1524,43 @@ td.num, th.num { text-align: right; }
 }
 .stampbar .st-x { font-size: 11px; color: var(--muted); }
 
-/* 판정에서 빠진 것 · 붉게 적어 743 과의 차이를 눈에 남긴다 */
-.excl { color: var(--insur); font-weight: 600; }
+/* 목록 한 줄 · 체크와 열기를 나눈다.
+ * 줄 전체가 버튼이면 체크박스를 누를 수 없다 · 그래서 줄은 div, 본문만 button 이다 */
+.pick { display: flex; align-items: center; gap: 12px; }
+.pick .pick-body {
+  display: block; flex: 1; min-width: 0; text-align: left;
+  background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit;
+}
+.pick.sel { border-color: var(--brand); background: var(--brand-weak); }
+.pick-chk { display: grid; place-items: center; width: 18px; flex: none; }
+.pick-chk input { width: 15px; height: 15px; accent-color: var(--brand); cursor: pointer; }
+/* 판단 표시 · 확정은 ✓, 확정 대기는 ◌. 배지 대신 한 글자로 둔다 */
+.pick-name .pm { font-style: normal; margin-right: 5px; font-size: 11px; }
+.pick-name .pm.ok { color: var(--ok); }
+.pick-name .pm.wait { color: var(--core); }
+
+/* 여러 건 판단 줄 */
+.bulkbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 12px; margin-bottom: 10px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+}
+.bulkbar .bk { font-size: 11.5px; color: var(--text-2); }
+.bulkbar .bn { font-size: 11.5px; font-weight: 600; color: var(--brand); margin-left: auto; }
+.bulkbar .bn.sub { font-weight: 400; color: var(--muted); }
+.bulkbar .bacts { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* 단계 칸이 버튼이다 · 눌러서 그 단계의 일을 한다 */
+.stageline .prstep {
+  background: none; border: 0; padding: 6px 8px; margin: -6px -8px;
+  border-radius: 10px; cursor: pointer; text-align: left; font: inherit; color: inherit;
+}
+.stageline .prstep:hover { background: var(--surface-2); }
+.stageline .prstep.wait { cursor: default; }
+.stageline .prstep.wait:hover { background: none; }
+
+/* 판정에서 빠진 것 · 조용한 회색이다. 할 일이 아니라 「대상이 아님」 이라서 그렇다 */
+.excl { color: var(--muted); font-weight: 600; }
 
 /* 속성값 판단 · 단계 줄. 원본 → 실행 → 확정 → 적정재고. 네 칸이 한 줄에 */
 .stageline {
