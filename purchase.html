@@ -75,6 +75,13 @@
   var S = window.SCREEN;
   var picked = null;
   var rows = [];
+  /* 적정재고 분석에서 「PR 초안」 을 눌러 넘어오면 주소에 #q=자재코드 가 붙는다.
+   * 그 자재를 목록 맨 앞에 올리고 골라 둔다 · 안 그러면 「어느 자재였나」 를 다시 찾아야 한다 */
+  var fromQ = (function () {
+    var m = String(location.hash || '').match(/q=([^&]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  })();
+  if (fromQ) { picked = fromQ; }
 
   function el(id) { return document.getElementById(id); }
   function asof() { return window.DB ? DB.meta().asof : (window.CFG && CFG.BASE_DATE); }
@@ -90,7 +97,7 @@
   }
 
   function paintList() {
-    rows = S.prList();
+    rows = S.prList(fromQ);
     if (!picked || !rows.filter(function (r) { return r.q === picked; }).length) {
       picked = rows.length ? rows[0].q : null;
     }

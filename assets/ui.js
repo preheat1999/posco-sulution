@@ -193,6 +193,52 @@
    * 머리 안의 링크와 버튼은 접기를 건드리지 않는다.
    * 머리를 <button> 으로 만들지 않은 이유 · 안에 「열기」 링크가 들어가는데
    * 버튼 안의 링크는 규격 위반이고 키보드로 링크에 닿지 못한다 */
+  /* 확인 창 · 예 · 아니오 두 갈래.
+   * 팝오버(POP)는 「설명」 이고 이것은 「물음」 이다 · 답을 받아야 다음이 진행된다.
+   * 화면마다 만들지 않게 여기 하나만 둔다 */
+  function confirm(o) {
+    o = o || {};
+    var wrap = document.createElement('div');
+    wrap.className = 'ask';
+    wrap.innerHTML =
+      '<div class="ask-box" role="dialog" aria-modal="true">' +
+        '<h2>' + esc(o.title || '진행할까요?') + '</h2>' +
+        (o.body ? '<p class="sub">' + o.body + '</p>' : '') +
+        (o.rows && o.rows.length
+          ? '<div class="ask-rows">' + o.rows.map(function (r) {
+            return '<div><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>';
+          }).join('') + '</div>' : '') +
+        (o.note ? '<p class="note">' + esc(o.note) + '</p>' : '') +
+        '<div class="ask-acts">' +
+          '<button class="btn line" type="button" data-ask="no">' +
+            esc(o.cancel || '취소') + '</button>' +
+          '<button class="btn" type="button" data-ask="yes">' +
+            esc(o.ok || '확인') + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(wrap);
+
+    function close(yes) {
+      if (wrap.parentNode) { wrap.parentNode.removeChild(wrap); }
+      document.removeEventListener('keydown', onKey);
+      if (yes && typeof o.onOk === 'function') { o.onOk(); }
+      if (!yes && typeof o.onCancel === 'function') { o.onCancel(); }
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { close(false); }
+      if (e.key === 'Enter') { close(true); }
+    }
+    wrap.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-ask]');
+      if (b) { close(b.getAttribute('data-ask') === 'yes'); return; }
+      if (e.target === wrap) { close(false); }        // 바깥을 누르면 취소
+    });
+    document.addEventListener('keydown', onKey);
+    var y = wrap.querySelector('[data-ask="yes"]');
+    if (y && y.focus) { y.focus(); }
+    return wrap;
+  }
+
   function accordion(scope) {
     var root = scope || document;
 
@@ -227,7 +273,7 @@
 
   window.UI = {
     esc: esc, num: num, won: won, wonShort: wonShort, wonShortUnit: wonShortUnit,
-    wonM: wonM, wonMNum: wonMNum,
+    wonM: wonM, wonMNum: wonMNum, confirm: confirm,
     date: date, dateShort: dateShort, dleft: dleft, tone: tone, isNow: isNow,
     face: face, verdict: verdict, typeBadge: typeBadge, verdictBadge: verdictBadge,
     gradeBadge: gradeBadge, signalBadge: signalBadge, srcLabel: srcLabel,

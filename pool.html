@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>공용 전환 · AI 자재 솔루션</title>
+<link rel="stylesheet" href="assets/shell.css">
+<script>window.PAGE = 'pool';</script>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="side" id="side"></aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="top-left">
+        <button class="hamb" id="hamb" aria-label="메뉴" aria-expanded="false">&#9776;</button>
+        <div>
+          <div class="crumb" data-group="업무">&nbsp;</div>
+          <div class="phead" style="margin-bottom:0">
+            <h1>공용 전환</h1>
+            <span class="badge" id="progress">&nbsp;</span>
+          </div>
+        </div>
+      </div>
+      <div class="top-right">
+        <span class="pill" id="asof">기준일 확인 중</span>
+        <div class="avatar">이</div>
+      </div>
+    </div>
+
+    <!-- 회수 가능 · 보류 · 전환 완료. 보류를 따로 세지 않으면 회수액이 부풀려진다 -->
+    <section class="card kpistrip"><div class="kpistrip-in" id="stat"></div></section>
+
+    <div class="noticebar" id="notice" style="margin-bottom:16px"></div>
+
+    <div class="phead">
+      <div class="tabs" id="tabs"></div>
+      <div class="ptools">
+        <input class="input" id="q" type="search" placeholder="자재명 · 자재코드 검색"
+          style="width:230px;padding:8px 12px;min-height:0">
+      </div>
+    </div>
+
+    <div class="tablewrap" id="table"></div>
+    <div class="pagerow">
+      <span id="info">&nbsp;</span>
+      <span class="pg">
+        <button class="btn line sm" type="button" id="prev">이전</button>
+        <button class="btn line sm" type="button" id="next">다음</button>
+      </span>
+    </div>
+
+    <section class="card" style="margin-top:18px">
+      <header><div><h2>공용 전환이란</h2>
+        <p class="sub">사는 대신 다른 부서에 남는 것을 가져오는 일입니다</p></div></header>
+      <div id="rules"></div>
+    </section>
+  </main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<script src="assets/config.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/org.js"></script>
+<script src="assets/popover.js"></script>
+<script src="assets/db-master.js"></script>
+<script src="assets/db-derived.js"></script>
+<script src="assets/db-changes.js"></script>
+<script src="assets/db.js"></script>
+<script src="assets/db-biz.js"></script>
+<script src="assets/plan-data.js"></script>
+<script src="assets/analysis-data.js"></script>
+<script src="assets/screen-data.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var S = window.SCREEN;
+  var PAGE = 10;
+  var tab = 'get';        // 회수 가능부터 본다. 지금 할 수 있는 일이다
+  var query = '';
+  var page = 0;
+
+  function el(id) { return document.getElementById(id); }
+
+  function paintStat() {
+    var c = S.poolCounts();
+    el('stat').innerHTML =
+      box('ok', '−', '회수 가능', UI.wonShort(c.getAmt), UI.wonShortUnit(c.getAmt),
+          UI.num(c.get) + '품목 · 즉시공용화 · 권장', '전환하면 재고가 빠진다') +
+      box('hero', '', '정체 자재', UI.num(c.all), '품목',
+          '전사 보유가 있는 정체 품목', UI.num(c.all) + ' / ' + UI.num(c.items) + ' 전수') +
+      box('core', '', '보류', UI.num(c.hold), '품목',
+          UI.won(c.holdAmt) + ' · 핵심 · 보험품', '재분류 검토 대상') +
+      box('ok', '✓', '전환 완료', UI.num(c.done), '품목',
+          c.done ? UI.won(c.doneAmt) + ' 회수' : '아직 없습니다', '이 화면에서 한 일');
+  }
+
+  function box(cls, sign, k, v, unit, x, right) {
+    return '<div class="kpibox ' + cls + '">' +
+      '<div class="kb-top">' +
+        '<span class="kb-k">' + (sign ? '<i>' + sign + '</i>' : '') + UI.esc(k) + '</span>' +
+        '<span class="kb-r">' + UI.esc(right) + '</span>' +
+      '</div>' +
+      '<div class="kb-v">' + v + (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
+      '<div class="kb-x">' + UI.esc(x) + '</div>' +
+      '</div>';
+  }
+
+  function paintTabs() {
+    var c = S.poolCounts();
+    var n = { get: c.get, hold: c.hold, done: c.done, all: c.all };
+    el('tabs').innerHTML = S.POOL_TABS.map(function (t) {
+      return '<button class="tab' + (t.key === tab ? ' on' : '') + '" type="button" ' +
+        'data-tab="' + t.key + '">' + UI.esc(t.label) + ' ' + UI.num(n[t.key]) + '</button>';
+    }).join('');
+  }
+
+  function paintTable() {
+    var rows = S.poolList(tab, query);
+    var max = Math.max(0, Math.ceil(rows.length / PAGE) - 1);
+    if (page > max) { page = max; }
+    var view = rows.slice(page * PAGE, page * PAGE + PAGE);
+
+    el('table').innerHTML = view.length ?
+      '<table><thead><tr><th>자재 · 코드</th><th>속성 · 등급</th>' +
+      '<th class="num">부서 보유</th><th class="num">정체</th>' +
+      '<th class="num">묶인 금액</th><th>판정</th><th>작업</th></tr></thead><tbody>' +
+      view.map(function (r) {
+        return '<tr>' +
+          '<td data-label="자재 · 코드"><div class="cell-2">' +
+            '<div class="cell-1st">' + UI.esc(r.name) + '</div>' +
+            '<div class="cell-2nd">' + UI.esc(r.q) + (r.eq ? ' · ' + UI.esc(r.eq) : '') +
+            '</div></div></td>' +
+          '<td data-label="속성 · 등급">' + UI.typeBadge(r.type) + ' ' + UI.gradeBadge(r.grade) +
+            '</td>' +
+          '<td class="num" data-label="부서 보유">' + UI.num(r.stock) + '</td>' +
+          '<td class="num" data-label="정체">' + (r.age === null ? '미확인' : UI.num(r.age) + '일') +
+            '</td>' +
+          '<td class="num" data-label="묶인 금액">' + UI.esc(UI.won(r.amt)) + '</td>' +
+          '<td data-label="판정">' + gradeBadge(r) + '</td>' +
+          '<td data-label="작업">' + (r.done
+            ? '<span class="badge ok">전환 완료</span>'
+            : (r.can
+              ? '<button class="btn soft sm" type="button" data-pool="' + UI.esc(r.q) +
+                '" data-dept="' + UI.esc(r.dept) + '">공용 전환</button>'
+              : '<span class="sub">보류 · 재분류 검토</span>')) + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table>' :
+      '<div class="empty"><strong>' + (query ? '찾는 자재가 없습니다' : '이 칸에는 자재가 없습니다') +
+      '</strong>' + (query ? '코드 앞 두 자리나 품명으로 찾으세요' : '다른 칸을 눌러 보세요') +
+      '</div>';
+
+    el('info').textContent = rows.length
+      ? ('표시 ' + UI.num(view.length) + '건 · 전체 ' + UI.num(rows.length) + '건 · ' +
+         (page + 1) + ' / ' + (max + 1))
+      : '표시할 자재가 없습니다';
+    el('prev').disabled = page <= 0;
+    el('next').disabled = page >= max;
+  }
+
+  function gradeBadge(r) {
+    var m = { strong: ['ok', '즉시공용화'], medium: ['plan', '공용화권장'], review: ['core', '보류'] };
+    var v = m[r.poolGrade] || ['', r.poolGrade || '미확인'];
+    return '<span class="badge ' + v[0] + '">' + UI.esc(v[1]) + '</span>';
+  }
+
+  function paintRules() {
+    var sp = S.poolSpec();
+    el('rules').innerHTML =
+      '<div class="callout"><span class="ci">⇄</span><span>' +
+      '<b>전환하면 부서 재고에서 빠집니다</b>' +
+      '전사에는 남아 있고 우리 부서 장부에서만 내려갑니다. 다른 부서가 쓸 수 있게 되고, ' +
+      '그만큼 우리가 지고 있던 금융비용이 줄어듭니다.</span></div>' +
+      '<div class="formula"><div class="ft"><span>정체 판정</span></div>' +
+        '<code>' + UI.esc(sp.stale) + '</code>' +
+        '<div class="ft" style="margin:8px 0 5px"><span>공용화 규칙</span></div>' +
+        sp.pool.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
+      '</div>' +
+      '<p class="note" style="margin-top:10px">보류(review)는 핵심예비품이면서 보험품인 자재입니다. ' +
+      '설비 정지에 직접 걸려서 회수 금액에 넣지 않습니다 · 전부 더하면 회수액이 부풀려집니다.</p>';
+  }
+
+  /* 전환은 재고를 움직인다. 되돌리기 어려우니 한 번 묻는다 */
+  function convert(q, dept, anchor) {
+    var r = DB.item(q, dept);
+    if (!r) { return; }
+    UI.confirm({
+      title: '공용 전환할까요?',
+      body: '<b>' + UI.esc(r.name) + '</b> · ' + UI.esc(q),
+      rows: [['부서 보유', UI.num(r.stock) + ' → ' + UI.num(Math.max(0, r.stock - 1))],
+             ['묶인 금액', UI.won(r.staleValue || (r.stock * r.price))],
+             ['판정', r.poolGrade || '미확인'],
+             ['기록', '3층 pooling_overrides · 정본은 그대로']],
+      note: '전환 이력은 되돌릴 수 있습니다 (시연 초기화 · 이력 취소).',
+      ok: '공용 전환',
+      onOk: function () {
+        try {
+          DB.pool({ q: q, dept: dept, action: '공용전환', note: '공용 전환 화면' });
+          DB.txn({ q: q, dept: dept, txnType: '공용전환', qty: 1, note: '공용 전환' });
+          paintAll();
+        } catch (err) {
+          POP.show(anchor, { title: '전환하지 못했습니다',
+            rows: [['이유', String(err.message || err)]] });
+        }
+      }
+    });
+  }
+
+  function paintNotice() {
+    var c = S.poolCounts();
+    var cm = DB.commitInfo();
+    el('notice').innerHTML = cm.waiting
+      ? '<span class="ni">△</span><span>속성값 판단에 <b>확정 대기 ' + UI.num(cm.waiting) +
+        '품목</b>이 있습니다 · 이 화면은 확정된 속성만 씁니다</span>' +
+        '<a class="nx" href="attr.html#done" style="color:var(--brand)">확정하러 가기 →</a>'
+      : '<span class="ni">⇄</span><span><b>정체 ' + UI.num(c.all) + '품목 중 ' +
+        UI.num(c.get) + '품목</b>을 지금 전환할 수 있습니다 · 회수 ' +
+        UI.esc(UI.won(c.getAmt)) + '</span>' +
+        '<a class="nx" href="stock.html" style="color:var(--brand)">적정재고 분석 →</a>';
+  }
+
+  function wire() {
+    el('tabs').addEventListener('click', function (e) {
+      var b = e.target.closest('.tab'); if (!b) { return; }
+      tab = b.getAttribute('data-tab'); page = 0;
+      paintTabs(); paintTable();
+    });
+    el('q').addEventListener('input', function (e) {
+      query = e.target.value; page = 0; paintTable();
+    });
+    el('prev').addEventListener('click', function () { page -= 1; paintTable(); });
+    el('next').addEventListener('click', function () { page += 1; paintTable(); });
+    el('table').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-pool]'); if (!b) { return; }
+      convert(b.getAttribute('data-pool'), b.getAttribute('data-dept'), b);
+    });
+  }
+
+  function paintAll() {
+    var m = window.DB ? DB.meta() : null;
+    el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
+    var c = S.poolCounts();
+    el('progress').className = 'badge ' + (c.done ? 'ok' : '');
+    el('progress').textContent = c.done
+      ? '전환 완료 ' + UI.num(c.done) + '품목'
+      : '회수 가능 ' + UI.num(c.get) + '품목';
+    paintStat(); paintNotice(); paintTabs(); paintTable(); paintRules();
+  }
+
+  paintAll();
+  wire();
+  S.on(paintAll);
+})();
+</script>
+<script src="assets/chat.js"></script>
+<script src="assets/tour.js"></script>
+</body>
+</html>

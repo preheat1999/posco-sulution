@@ -1456,59 +1456,59 @@ td.num, th.num { text-align: right; }
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
 }
-.heat-legend {
-  display: flex; align-items: center; gap: 5px; flex: none;
-  font-size: 10px; color: var(--muted);
-}
-.heat-legend .hc { cursor: default; }
-.heat-rows { display: grid; gap: 14px; }
-.heat-row {
-  display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: start;
-  padding-top: 12px; border-top: 1px solid var(--line);
-}
-.heat-row:first-child { padding-top: 0; border-top: 0; }
-.hr-k { display: grid; gap: 2px; }
-.hr-k b { font-size: 13px; font-weight: 600; }
-.hr-k span { font-size: 11px; color: var(--muted); }
-.hr-k .hr-a { font-size: 11px; color: var(--text-2); font-variant-numeric: tabular-nums; }
-.hr-k b.t-core { color: var(--core); }
-.hr-k b.t-keep { color: var(--text-2); }
-.hr-k b.t-cut { color: var(--brand); }
+.heat-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex: none; }
+.heat-tools .tm-lg { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.heat-tools .sw { width: 10px; height: 10px; border-radius: 3px; }
+.heat-tools .sw.over { background: var(--insur); }
+.heat-tools .sw.short { background: var(--brand); }
 
-.heat-grid { display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start; }
-.hc {
-  width: 13px; height: 13px; border-radius: 3px; padding: 0;
-  border: 1px solid transparent; cursor: pointer;
-  transition: transform .08s ease, border-color .08s ease;
+/* 트리맵 · 상자가 직사각형 하나를 빈틈없이 채운다.
+ * 넓이가 곧 과부족 금액이라 남는 자리를 두면 크기 비교가 거짓이 된다 */
+.tmap {
+  position: relative; width: 100%; height: 520px;
+  border-radius: 12px; overflow: hidden; background: var(--surface-2);
 }
-.hc:hover, .hc:focus-visible {
-  transform: scale(1.55); border-color: var(--text); outline: none; z-index: 2;
+.tm {
+  position: absolute; overflow: hidden; cursor: pointer;
+  border: 1px solid var(--bg); padding: 8px 9px; text-align: left;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  color: #F3F5F9; font: inherit;
 }
-/* 속성이 바뀌어 목표를 다시 본 품목은 테두리로 구분한다 */
-.hc[data-stale] { border-color: var(--core); }
+.tm:hover, .tm:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; z-index: 2; }
+.tm .tm-n {
+  font-size: 12px; font-weight: 600; letter-spacing: -.2px; line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tm .tm-v { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tm .tm-a { font-size: 10px; opacity: .8; }
+/* 큰 상자는 이름을 두 줄까지, 작은 상자는 숫자만 남긴다 */
+.tm.lg .tm-n { font-size: 15px; white-space: normal; }
+.tm.lg .tm-v { font-size: 24px; }
+.tm.md .tm-v { font-size: 14px; }
+.tm.sm { padding: 4px 5px; }
+.tm.sm .tm-n, .tm.sm .tm-a { display: none; }
+.tm.sm .tm-v { font-size: 11px; }
 
-/* 발주 필요 · 코랄 (#F0716F) */
-.hc.t-core.l0 { background: rgba(240, 113, 111, .16); }
-.hc.t-core.l1 { background: rgba(240, 113, 111, .34); }
-.hc.t-core.l2 { background: rgba(240, 113, 111, .55); }
-.hc.t-core.l3 { background: rgba(240, 113, 111, .78); }
-.hc.t-core.l4 { background: rgba(240, 113, 111, 1); }
-/* 적정 유지 · 슬레이트. 할 일이 없는 칸이라 가장 조용하게 둔다 */
-.hc.t-keep.l0 { background: rgba(65, 76, 107, .40); }
-.hc.t-keep.l1 { background: rgba(65, 76, 107, .60); }
-.hc.t-keep.l2 { background: rgba(65, 76, 107, .80); }
-.hc.t-keep.l3 { background: #414C6B; }
-.hc.t-keep.l4 { background: #6B7794; }
-/* 감축 대상 · 블루 (#5B8CFF) */
-.hc.t-cut.l0 { background: rgba(91, 140, 255, .16); }
-.hc.t-cut.l1 { background: rgba(91, 140, 255, .34); }
-.hc.t-cut.l2 { background: rgba(91, 140, 255, .55); }
-.hc.t-cut.l3 { background: rgba(91, 140, 255, .78); }
-.hc.t-cut.l4 { background: rgba(91, 140, 255, 1); }
+/* 초과 · 빨강 (묶어 두면 목표를 넘는 돈이다) */
+.tm.over.l1 { background: #8E3634; }
+.tm.over.l2 { background: #B2453F; }
+.tm.over.l3 { background: #D45A54; }
+.tm.over.l4 { background: #F0716F; color: var(--on-accent); }
+/* 부족 · 파랑 (설비가 멈출 수 있는 자리다) */
+.tm.short.l1 { background: #27408F; }
+.tm.short.l2 { background: #3A63D9; }
+.tm.short.l3 { background: #5B8CFF; }
+.tm.short.l4 { background: #7FA6FF; color: var(--on-accent); }
+
+@media (max-width: 760px) {
+  .tmap { height: 420px; }
+  .tm.lg .tm-n { font-size: 13px; }
+  .tm.lg .tm-v { font-size: 18px; }
+}
+
 
 @media (max-width: 760px) {
   .heat { padding: 16px 14px; }
-  .heat-row { grid-template-columns: 1fr; gap: 8px; }
 }
 
 /* 판단 시각 줄 · 제목 바로 밑. 기준일(스냅샷)과 실행 시각은 다른 값이다 */
@@ -1523,6 +1523,25 @@ td.num, th.num { text-align: right; }
   font-variant-numeric: tabular-nums; letter-spacing: -.2px; white-space: nowrap;
 }
 .stampbar .st-x { font-size: 11px; color: var(--muted); }
+
+/* 확인 창 · 되돌리기 어려운 이동 앞에서 한 번 묻는다 */
+.ask {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(9, 12, 18, .72); display: grid; place-items: center; padding: 20px;
+}
+.ask-box {
+  width: min(420px, 100%); background: var(--surface);
+  border: 1px solid var(--line-2); border-radius: var(--radius);
+  padding: 24px 24px 20px; box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+}
+.ask-box h2 { font-size: 17px; letter-spacing: -.4px; margin-bottom: 6px; }
+.ask-box .sub { font-size: 12.5px; color: var(--text-2); }
+.ask-rows { display: grid; gap: 6px; margin: 14px 0 0; }
+.ask-rows > div { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+.ask-rows span { color: var(--muted); }
+.ask-rows b { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.ask-box .note { margin-top: 12px; }
+.ask-acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
 
 /* 목록 한 줄 · 체크와 열기를 나눈다.
  * 줄 전체가 버튼이면 체크박스를 누를 수 없다 · 그래서 줄은 div, 본문만 button 이다 */

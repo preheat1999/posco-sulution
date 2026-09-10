@@ -175,71 +175,85 @@
   }
 
   // ------------------------------------------------------------ 히트맵
-  /* 한 칸이 한 품목이다. 743칸을 조치별로 묶고 색 농도는 그 품목이 걸고 있는 금액이다.
-   * 표로는 8행씩만 보이던 것을 여기서 한 화면에 다 보인다 */
+  /* 핵심예비품 25품목 · 상자 크기는 과부족 금액, 색은 방향이다 (초과 빨강 · 부족 파랑).
+   * 상자를 직사각형 하나에 빈틈없이 채운다 · 남는 자리가 있으면 크기 비교가 거짓이 된다 */
   function paintHeat() {
     var box = el('heat');
     if (stage !== 'done') { box.hidden = true; return; }
     var h = S.stockHeat();
     box.hidden = false;
 
-    var rows = h.groups.map(function (g) {
-      return '<div class="heat-row">' +
-        '<div class="hr-k">' +
-          '<b class="t-' + g.tone + '">' + UI.esc(g.label) + '</b>' +
-          '<span>' + UI.num(g.n) + '품목</span>' +
-          '<span class="hr-a">' + UI.esc(g.amtLabel) + ' ' + UI.won(g.amt) + '</span>' +
-        '</div>' +
-        '<div class="heat-grid">' + g.cells.map(function (c) {
-          return '<button class="hc t-' + g.tone + ' l' + c.lvl + '" type="button" ' +
-            'data-q="' + UI.esc(c.q) + '" data-dept="' + UI.esc(c.dept) + '" ' +
-            'title="' + UI.esc(c.name + ' · ' + c.q + ' · 보유 ' + c.stock + ' 목표 ' +
-              c.target + ' · ' + g.amtLabel + ' ' + UI.won(c.amt)) + '"' +
-            (c.stale ? ' data-stale="1"' : '') + '></button>';
-        }).join('') + '</div>' +
-        '</div>';
+    var rects = h.boxes.length ? tile(h.boxes, 0, 0, 100, 100, []) : [];
+    var cells = rects.map(function (t) {
+      var b = t.d;
+      /* 작은 상자에 글자를 다 넣으면 겹친다. 자리가 되는 것만 숫자까지 적는다 */
+      var size = t.w * t.h;
+      var cls = size > 60 ? 'lg' : (size > 18 ? 'md' : 'sm');
+      return '<button class="tm ' + b.dir + ' l' + b.lvl + ' ' + cls + '" type="button" ' +
+        'data-q="' + UI.esc(b.q) + '" data-dept="' + UI.esc(b.dept) + '" ' +
+        'style="left:' + t.x.toFixed(3) + '%;top:' + t.y.toFixed(3) + '%;width:' +
+          t.w.toFixed(3) + '%;height:' + t.h.toFixed(3) + '%" ' +
+        'title="' + UI.esc(b.name + ' · ' + b.q + ' · 보유 ' + b.stock + ' 목표 ' + b.target +
+          ' · ' + (b.dir === 'over' ? '초과 ' : '부족 ') + Math.abs(b.gap) + '개 · ' +
+          UI.won(b.amt)) + '">' +
+        '<span class="tm-n">' + UI.esc(b.name) + '</span>' +
+        '<span class="tm-v">' + (b.dir === 'over' ? '+' : '−') + Math.abs(b.gap) + '개</span>' +
+        '<span class="tm-a">' + UI.esc(UI.won(b.amt)) + '</span>' +
+        '</button>';
     }).join('');
-
-    /* 단계 1 · 2 · 6 에 있던 근거를 여기로 옮겼다. 색만 있고 공식이 없으면 히트맵이 뜻을 잃는다 */
-    var zChips = Object.keys(h.z).map(function (k) {
-      var cls = k === 'S' ? 'insur' : (k === 'A' ? 'core' : (k === 'B' ? 'plan' : ''));
-      return '<span class="badge ' + cls + '">' + k + ' ' + h.z[k] + '</span>';
-    }).join(' ');
 
     box.innerHTML =
       '<div class="heat-head">' +
         '<div style="min-width:0">' +
-          '<p class="gt" style="margin-bottom:4px"><span>적정재고 분석 결과</span>' +
-            '<span class="gt-sub">한 칸이 한 품목 · 색이 진할수록 걸린 금액이 큽니다</span></p>' +
+          '<p class="gt" style="margin-bottom:4px"><span>적정재고 과부족 · 핵심예비품 ' +
+            UI.num(h.boxes.length) + '품목</span>' +
+            '<span class="gt-sub">상자 크기 = 과부족 금액 · 색 = 초과 빨강 · 부족 파랑</span></p>' +
           '<p class="note" style="margin:0">분석 실행 <b>' +
-            UI.esc(S.stockStamp() || '시각 미기록') + '</b> · ' +
-            UI.num(h.items) + '품목 · 보험품 ' + UI.num(h.ins) + ' · 계획품 ' + UI.num(h.pln) +
-            (h.staleN ? ' · 속성 변경 ' + UI.num(h.staleN) + '품목 반영' : '') + '</p>' +
+            UI.esc(S.stockStamp() || '시각 미기록') + '</b> · 핵심예비품 ' + UI.num(h.csp) +
+            '품목 중 과부족 금액이 큰 ' + UI.num(h.n) + '품목 · 나머지 중 ' + UI.num(h.fine) +
+            '품목은 목표와 같습니다' +
+            (h.staleN ? ' · 확정 속성 반영 ' + UI.num(h.staleN) + '품목' : '') + '</p>' +
         '</div>' +
-        '<div class="heat-legend">' +
-          '<span>금액 작음</span>' +
-          '<i class="hc t-cut l0"></i><i class="hc t-cut l1"></i><i class="hc t-cut l2"></i>' +
-          '<i class="hc t-cut l3"></i><i class="hc t-cut l4"></i>' +
-          '<span>큼</span>' +
+        '<div class="heat-tools">' +
+          '<span class="tm-lg"><i class="sw short"></i>부족 ' + UI.num(h.shortN) + '품목 · ' +
+            UI.esc(UI.won(h.shortAmt)) + '</span>' +
+          '<span class="tm-lg"><i class="sw over"></i>초과 ' + UI.num(h.overN) + '품목 · ' +
+            UI.esc(UI.won(h.overAmt)) + '</span>' +
+          '<button class="btn line sm" type="button" id="reana">다시 분석</button>' +
         '</div>' +
       '</div>' +
-      '<div class="heat-rows">' + rows + '</div>' +
-      '<div class="formula" style="margin-top:16px">' +
-        '<div class="ft"><span>목표재고 산식</span>' +
-          '<span>명세 부록 A~N · 화면이 상수를 만들지 않습니다</span></div>' +
-        '<code>' + UI.esc(h.formula) + '</code>' +
-        '<div class="ft" style="margin:9px 0 5px"><span>보험품 · 안전재고</span></div>' +
-        h.insFormula.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
-        '<div class="ft" style="margin:9px 0 5px"><span>안전계수 Z · 등급별</span></div>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap">' + zChips + '</div>' +
-        '<div class="ft" style="margin:9px 0 5px"><span>계획품 · 무재고 원칙</span></div>' +
-        '<code>목표 = 0 (상시 무재고)</code><br>' +
-        h.plnFormula.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
-      '</div>' +
-      '<p class="note" style="margin-top:10px">' +
-        '목표재고 0 이 <b>' + UI.num(h.zeroTarget) + '품목 · ' +
-        UI.pct(h.zeroTarget, h.items) + '</b> 입니다. 계획품은 상시 재고 0 이 원칙이라 ' +
-        '데이터가 빈 것이 아닙니다 · ' + UI.esc(h.zNote) + '</p>';
+      (cells
+        ? '<div class="tmap">' + cells + '</div>'
+        : '<div class="empty"><strong>핵심예비품이 모두 목표재고와 같습니다</strong>' +
+          '손댈 것이 없습니다</div>') +
+      '<p class="note" style="margin-top:12px">상자를 누르면 그 품목의 목표재고 계산을 ' +
+        '그대로 볼 수 있습니다. 핵심예비품은 설비 정지에 직접 걸리는 자재라 이 화면에서 ' +
+        '먼저 봅니다 · 전체 ' + UI.num(h.items) + '품목은 아래 <b>조치 판정</b> 표에 있습니다.</p>';
+  }
+
+  /* 트리맵 자리 계산 · 값 합을 반으로 가르고 긴 변을 쪼갠다.
+   * 넓이 합이 늘 100% 라 빈틈이 없고, 큰 상자가 왼쪽 위에 모인다 */
+  function tile(items, x, y, w, h, out) {
+    if (!items.length) { return out; }
+    if (items.length === 1) { out.push({ d: items[0], x: x, y: y, w: w, h: h }); return out; }
+    var total = items.reduce(function (t, d) { return t + d.value; }, 0);
+    if (total <= 0) { return out; }
+    var acc = 0, cut = 1, best = Infinity, i;
+    for (i = 1; i < items.length; i++) {
+      acc += items[i - 1].value;
+      var diff = Math.abs(0.5 - acc / total);
+      if (diff < best) { best = diff; cut = i; }
+    }
+    var a = items.slice(0, cut), b = items.slice(cut);
+    var fa = a.reduce(function (t, d) { return t + d.value; }, 0) / total;
+    if (w >= h) {
+      tile(a, x, y, w * fa, h, out);
+      tile(b, x + w * fa, y, w * (1 - fa), h, out);
+    } else {
+      tile(a, x, y, w, h * fa, out);
+      tile(b, x, y + h * fa, w, h * (1 - fa), out);
+    }
+    return out;
   }
 
   // ------------------------------------------------------------ 단계
@@ -285,13 +299,8 @@
       '<div class="tablewrap" id="stable"></div>' +
       '<div class="pagerow"><span id="sinfo">&nbsp;</span>' +
         '<span class="pg"><button class="btn line sm" type="button" id="sprev">이전</button>' +
-        '<button class="btn line sm" type="button" id="snext">다음</button></span></div>' +
-      '<div class="formula" style="margin-top:12px">' +
-        '<div class="ft"><span>보험품 신호</span></div>' +
-        st.signalIns.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
-        '<div class="ft" style="margin:8px 0 5px"><span>계획품 신호</span></div>' +
-        st.signalPln.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
-      '</div>';
+        '<button class="btn line sm" type="button" id="snext">다음</button></span></div>';
+
   }
 
   function paintTable() {
@@ -430,6 +439,9 @@
           '<div class="ft" style="margin:8px 0 5px"><span>공용화 규칙</span></div>' +
           st.pool.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
         '</div>' +
+        /* 전환은 재고를 움직이는 일이라 화면을 따로 뒀다 */
+        '<p style="margin-top:12px"><a class="btn line sm" href="pool.html">' +
+          '공용 전환 화면에서 처리 →</a></p>' +
       '</div></div>';
   }
 
@@ -456,9 +468,15 @@
       if (e.target.closest && e.target.closest('#ana')) { runAnalysis(); }
     });
 
-    /* 히트맵 칸 · 한 품목의 계산을 그대로 펼친다. 표의 보유 수량과 같은 분해다 */
+    /* 히트맵 상자 · 한 품목의 계산을 그대로 펼친다. 표의 보유 수량과 같은 분해다 */
     el('heat').addEventListener('click', function (e) {
-      var c = e.target.closest && e.target.closest('.hc');
+      if (e.target.closest && e.target.closest('#reana')) {
+        /* 다시 분석 · 확정이 바뀐 뒤 눌러 새 속성으로 계산한다 */
+        S.setStockStage('raw'); stage = 'raw'; paintAll();
+        window.scrollTo({ top: 0 });
+        return;
+      }
+      var c = e.target.closest && e.target.closest('.tm');
       if (!c || !c.getAttribute('data-q')) { return; }
       var r = DB.item(c.getAttribute('data-q'), c.getAttribute('data-dept'));
       if (!r) { return; }
@@ -493,22 +511,34 @@
         return;
       }
 
-      /* 초안 · 공용 전환은 3층에 쌓는다. 정본은 손대지 않는다 */
+      /* 초안 · 공용 전환은 3층에 쌓는다. 정본은 손대지 않는다.
+       * 초안을 만든 다음 실제로 신청하는 곳은 구매신청 화면이라 거기까지 데려간다 */
       var dq = t.closest && t.closest('[data-draft]');
       if (dq) {
         var q = dq.getAttribute('data-draft');
         var m = DB.item(q);
-        try {
-          DB.draft('PR', { q: q, data: { qty: m.needNow, why: '적정재고 분석 · 발주 필요' } });
-          POP.show(dq, {
-            title: '구매신청 초안을 만들었습니다',
-            rows: [['자재', m.name + ' · ' + q], ['수량', UI.num(m.needNow)],
-                   ['다음', '구매신청 (PR) 화면에서 확인']],
-            note: '초안은 3층에 쌓입니다. 정본과 판정값은 그대로입니다.'
-          });
-        } catch (err) {
-          POP.show(dq, { title: '초안을 만들지 못했습니다', rows: [['이유', String(err.message)]] });
-        }
+        if (!m) { return; }
+        UI.confirm({
+          title: '구매신청 페이지로 넘어가시겠습니까?',
+          body: '<b>' + UI.esc(m.name) + '</b> · ' + UI.esc(q),
+          rows: [['신청 수량', UI.num(m.needNow) + ' (목표 ' + UI.num(m.targetNow) +
+                    ' − 보유 ' + UI.num(m.stock) + ')'],
+                 ['금액', UI.won((Number(m.price) || 0) * (Number(m.needNow) || 0))],
+                 ['리드타임 평균', UI.num(m.ltMean) + '일'],
+                 ['하는 일', '초안을 만들고 구매신청 화면을 엽니다']],
+          note: '초안은 3층에 쌓입니다. 정본과 판정값은 그대로입니다.',
+          ok: '초안 만들고 이동',
+          cancel: '여기 머무르기',
+          onOk: function () {
+            try {
+              DB.draft('PR', { q: q, data: { qty: m.needNow, why: '적정재고 분석 · 발주 필요' } });
+              window.location.href = 'purchase.html#q=' + encodeURIComponent(q);
+            } catch (err) {
+              POP.show(dq, { title: '초안을 만들지 못했습니다',
+                rows: [['이유', String(err.message)]] });
+            }
+          }
+        });
         return;
       }
 

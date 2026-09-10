@@ -145,7 +145,11 @@ ok(/3,604만원/.test(seen.main || ''), 'main · 금융비용 3,604만원');
 ok(/149/.test(seen.attr || '') && /90/.test(seen.attr || '') && /31/.test(seen.attr || ''),
    'attr · 칸 숫자 149 · 90 · 31');
 ok(/270/.test(seen.attr || ''), 'attr · 손대야 하는 270품목');
-ok(/2\.58/.test(seen.stock || ''), 'stock · Z 계수 2.58 (명세 값)');
+/* 히트맵은 핵심예비품만 본다 · 목표재고 산식은 화면에서 뺐다(요청).
+ * 그래서 Z 계수 대신 「핵심예비품 25품목」 과 과부족 방향이 실렸는지를 본다 */
+ok(/핵심예비품/.test(seen.stock || ''), 'stock · 히트맵이 핵심예비품을 본다');
+ok(/부족/.test(seen.stock || '') && /초과/.test(seen.stock || ''),
+   'stock · 과부족 방향이 적혀 있다');
 ok(!/2\.33/.test(seen.stock || ''), 'stock · Stitch 목업의 2.33 이 안 들어갔다');
 ok(/156/.test(seen.plan || ''), 'plan · 정비계획 156건');
 ok(/K10665396/.test(seen.purchase || ''), 'purchase · 실제 작업주문 번호');

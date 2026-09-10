@@ -133,16 +133,30 @@ function run() {
 
   // 5 · 승인하면 요약이 움직인다  <- 이 시스템의 핵심
   say();
-  say('[5] 회색지대 한 건을 계획품으로 승인하면 요약이 움직인다');
+  say('[5] 판단만 하면 요약이 그대로다 · 확정해야 움직인다');
   const gray = DB.list({ verdict: '회색지대' })[0];
   ok(!!gray, '회색지대 자재를 찾았다 · ' + (gray && gray.q) + ' (정본 ' + (gray && gray.baseType) + ')');
   const before = { ins: s0.insItems, pln: s0.plnItems };
   const want = gray.baseType === '보험품' ? '계획품' : '보험품';
   DB.approveAttr({ q: gray.q, dept: gray.dept, newType: want, reason: '시험' });
+
+  /* 확정 전 · 다른 화면이 쓰는 값(type · 요약)은 움직이지 않아야 한다 */
+  const mid = DB.item(gray.q, gray.dept);
+  const sMid = DB.summary();
+  ok(mid.judged === want, '판단이 ' + want + ' 으로 남았다');
+  ok(mid.type !== want && !mid.committed, '확정 전이라 type 은 그대로 · ' + mid.type);
+  ok(sMid.insItems === before.ins && sMid.plnItems === before.pln,
+     '확정 전 요약은 그대로 · 보험품 ' + sMid.insItems + ' · 계획품 ' + sMid.plnItems);
+  ok(DB.commitInfo().waiting === 1, '확정 대기 ' + DB.commitInfo().waiting + '건');
+
+  /* 확정 · 이제부터 다른 화면이 이 속성을 쓴다 */
+  const info = DB.commitAttr();
+  ok(info.seq > 0 && !!info.at, '확정 지점 seq ' + info.seq + ' · ' + info.at);
   const s1 = DB.summary();
   const after = DB.item(gray.q, gray.dept);
-  ok(after.type === want, '속성이 ' + want + ' 이 됐다');
-  ok(after.typeSrc === 'override', '출처가 override 다');
+  ok(after.type === want, '확정 뒤 속성이 ' + want + ' 이 됐다');
+  ok(after.typeSrc === 'override' && after.committed, '출처가 override 다');
+  ok(DB.commitInfo().waiting === 0, '확정 대기가 비었다');
   ok(s1.insItems !== before.ins || s1.plnItems !== before.pln,
      '요약이 움직였다 · 보험품 ' + before.ins + '->' + s1.insItems +
      ' · 계획품 ' + before.pln + '->' + s1.plnItems);

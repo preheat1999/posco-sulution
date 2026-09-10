@@ -199,48 +199,48 @@
     try { window.localStorage.setItem(ST_KEY + '.at', v); } catch (e) { /* 무시 */ }
   }
 
-  /* 히트맵 · 743품목을 조치별로 묶고, 칸 색 농도는 그 품목이 걸고 있는 금액이다.
+  /* 히트맵 · 핵심예비품 25품목.
    *
-   * 금액의 뜻이 묶음마다 다르다 · 발주는 부족분 금액, 감축은 초과분 금액,
-   * 유지는 보유 금액이다. 한 칸이 한 품목이라 「어디에 돈이 걸렸나」 가 한눈에 보인다.
-   * 농도는 그 묶음 안 순위의 5분위다 · 절대 금액으로 나누면 큰 품목 몇 개만 진해진다 */
-  var HEAT_GROUPS = [
-    { key: '발주', label: '발주 필요', tone: 'core', amtLabel: '부족분 금액' },
-    { key: '유지', label: '적정 유지', tone: 'keep', amtLabel: '보유 금액' },
-    { key: '감축', label: '감축 대상', tone: 'cut', amtLabel: '초과분 금액' }
-  ];
+   * 자재 743품목을 다 깔면 한 칸이 13px 라 이름이 안 읽힌다. 설비 정지에 직접 걸리는
+   * 핵심예비품(102품목) 중 **과부족 금액이 큰 25품목**만 고른다 · 이 화면에서 손이
+   * 가야 하는 것이 그것이다.
+   *
+   * 상자 크기 = |보유 - 목표| × 단가 (과부족 금액) · 색 = 초과 빨강 · 부족 파랑.
+   * 과부족이 0 인 품목은 넓이가 0 이라 애초에 들어가지 않는다 (수를 따로 적는다) */
+  var HEAT_N = 25;
   function stockHeat() {
-    if (!live) { return { groups: [], items: 0, spec: null }; }
+    if (!live) { return { boxes: [], items: 0, csp: 0, fine: 0 }; }
     var all = DB.list();
-    var groups = HEAT_GROUPS.map(function (g) {
-      var cells = all.filter(function (r) { return r.actionNow === g.key; })
-        .map(function (r) {
-          var price = Number(r.price) || 0;
-          var over = Math.max(0, (Number(r.stock) || 0) - (Number(r.targetNow) || 0));
-          var amt = g.key === '발주' ? price * (Number(r.needNow) || 0)
-            : (g.key === '감축' ? price * over : price * (Number(r.stock) || 0));
-          return { q: r.q, dept: r.dept, name: r.name || '품명 미확인', type: r.type,
-                   grade: r.grade, stock: Number(r.stock) || 0, target: Number(r.targetNow) || 0,
-                   stale: !!r.stale, amt: amt, lvl: 0 };
-        });
-      /* 금액 순위를 5분위로 · 같은 금액이 많아도 칸 색이 뭉치지 않는다 */
-      var byAmt2 = cells.slice().sort(function (a, b) { return a.amt - b.amt; });
-      byAmt2.forEach(function (c, i) {
-        c.lvl = byAmt2.length < 2 ? 4 : Math.min(4, Math.floor(i / (byAmt2.length / 5)));
-      });
-      cells.sort(function (a, b) { return b.amt - a.amt; });
-      return { key: g.key, label: g.label, tone: g.tone, amtLabel: g.amtLabel,
-               cells: cells, n: cells.length,
-               amt: cells.reduce(function (t, c) { return t + c.amt; }, 0) };
+    var csp = all.filter(function (r) { return r.csp; });
+    var boxes = csp.map(function (r) {
+      var stock = Number(r.stock) || 0, target = Number(r.targetNow) || 0;
+      var gap = stock - target;
+      return {
+        q: r.q, dept: r.dept, name: r.name || '품명 미확인',
+        type: r.type, grade: r.grade, stock: stock, target: target,
+        gap: gap, dir: gap > 0 ? 'over' : (gap < 0 ? 'short' : 'fine'),
+        amt: Math.abs(gap) * (Number(r.price) || 0),
+        /* 목표 대비 몇 배로 어긋났나 · 색 농도에 쓴다. 목표 0 은 나눌 수 없어 최대로 본다 */
+        ratio: target > 0 ? Math.abs(gap) / target : (gap === 0 ? 0 : 9),
+        stale: !!r.stale
+      };
     });
-    var sp = spec(), s = DB.summary();
+    var fine = boxes.filter(function (b) { return b.dir === 'fine'; }).length;
+    boxes = boxes.filter(function (b) { return b.dir !== 'fine' && b.amt > 0; })
+      .sort(function (a, b) { return b.amt - a.amt; })
+      .slice(0, HEAT_N);
+    boxes.forEach(function (b) {
+      b.lvl = b.ratio >= 3 ? 4 : (b.ratio >= 1.5 ? 3 : (b.ratio >= 0.8 ? 2 : 1));
+      b.value = b.amt;
+    });
+    var s = DB.summary();
     return {
-      groups: groups, items: all.length,
-      /* 히트맵 아래 근거 줄 · 단계 1 · 2 · 6 에 있던 것을 여기로 옮겼다 */
-      formula: sp.formula || '', insFormula: sp.insFormula || [], plnFormula: sp.plnFormula || [],
-      z: sp.z || {}, zNote: sp.zNote || '', plnNote: sp.plnNote || '',
-      zeroTarget: s.zeroTarget || 0, staleN: s.staleN || 0, recalcN: s.recalcN || 0,
-      ins: s.type['보험품'] || 0, pln: s.type['계획품'] || 0
+      boxes: boxes, items: all.length, csp: csp.length, fine: fine, n: HEAT_N,
+      overN: boxes.filter(function (b) { return b.dir === 'over'; }).length,
+      shortN: boxes.filter(function (b) { return b.dir === 'short'; }).length,
+      overAmt: boxes.reduce(function (t, b) { return t + (b.dir === 'over' ? b.amt : 0); }, 0),
+      shortAmt: boxes.reduce(function (t, b) { return t + (b.dir === 'short' ? b.amt : 0); }, 0),
+      staleN: s.staleN || 0, ins: s.type['보험품'] || 0, pln: s.type['계획품'] || 0
     };
   }
 
@@ -444,6 +444,61 @@
     };
   }
 
+  // ================================================================ 공용 전환
+  /* 정체 자재 · 공용화 판정은 2층(파생)에 있다. 화면이 등급을 매기지 않는다.
+   *
+   * strong 즉시공용화 · medium 공용화권장 · review 보류.
+   * review 는 핵심예비품이면서 보험품이라 회수 금액에 넣지 않는다 ·
+   * 전부 더하면 회수액이 11.45억원으로 부풀려진다 (요약은 9.47억원이다) */
+  var POOL_TABS = [
+    { key: 'get', label: '회수 가능' },
+    { key: 'hold', label: '보류' },
+    { key: 'done', label: '전환 완료' },
+    { key: 'all', label: '전체' }
+  ];
+  function poolRows() {
+    if (!live) { return []; }
+    return DB.list().filter(function (r) { return !!r.poolGrade; }).map(function (r) {
+      var can = r.poolGrade === 'strong' || r.poolGrade === 'medium';
+      return {
+        q: r.q, dept: r.dept, name: r.name || '품명 미확인', eq: r.eq,
+        type: r.type, grade: r.grade, stock: r.stock,
+        age: r.poolAge === undefined || r.poolAge === null ? null : Number(r.poolAge),
+        amt: Number(r.staleValue) || 0, poolGrade: r.poolGrade,
+        can: can, done: !!r.pooled, price: r.price
+      };
+    }).sort(function (a, b) { return b.amt - a.amt; });
+  }
+  function poolList(tab, query) {
+    var out = poolRows();
+    if (tab === 'get') { out = out.filter(function (r) { return r.can && !r.done; }); }
+    if (tab === 'hold') { out = out.filter(function (r) { return !r.can && !r.done; }); }
+    if (tab === 'done') { out = out.filter(function (r) { return r.done; }); }
+    var q = String(query || '').trim().toLowerCase();
+    if (!q) { return out; }
+    return out.filter(function (r) {
+      return String(r.q).toLowerCase().indexOf(q) >= 0 ||
+        String(r.name).toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  function poolCounts() {
+    var all = poolRows();
+    var get = all.filter(function (r) { return r.can && !r.done; });
+    var hold = all.filter(function (r) { return !r.can && !r.done; });
+    var done = all.filter(function (r) { return r.done; });
+    function sum(a) { return a.reduce(function (t, r) { return t + r.amt; }, 0); }
+    return {
+      all: all.length, items: live ? DB.list().length : 0,
+      get: get.length, getAmt: sum(get),
+      hold: hold.length, holdAmt: sum(hold),
+      done: done.length, doneAmt: sum(done)
+    };
+  }
+  function poolSpec() {
+    var sp = spec();
+    return { stale: sp.stale || '', pool: sp.pool || [] };
+  }
+
   // ================================================================ 구매신청
   /* 원천에 EAM · ERP 상태 코드가 없다. 지어내지 않고
    * 우리 시스템이 실제로 하는 일만 단계로 둔다.
@@ -464,10 +519,39 @@
   }
 
   /* 구매 대상 목록. 정체는 정본에만 있으므로 코드로 조인한다 */
-  function prList() {
+  /* 다른 화면에서 넘어온 자재 한 건을 후보 목록 모양으로 만든다.
+   * 적정재고 분석의 「PR 초안」 이 이 화면으로 데려올 때 쓴다 ·
+   * 후보 목록(DB_BIZ.purchase)에 없는 자재도 신청할 수 있어야 한다 */
+  function prRow(q) {
+    if (!live || !q) { return null; }
+    var r = DB.item(q);
+    if (!r) { return null; }
+    /* 3층에 쌓인 초안이 있으면 그 수량을 쓴다. 없으면 목표 대비 부족분이다.
+     * data 칸은 문자열(JSON)로 들어간다 · 표가 선언한 컬럼만 통과하기 때문이다 */
+    var rows3 = (DB.changes().pr_drafts || []).filter(function (x) { return x.q === q; });
+    var last = rows3.length ? rows3[rows3.length - 1] : null;
+    var saved = 0;
+    if (last) {
+      try {
+        var body = typeof last.data === 'string' ? JSON.parse(last.data) : (last.data || {});
+        saved = Number((body.data || body).qty) || 0;
+      } catch (e) { saved = 0; }
+    }
+    var qty = saved || Number(r.needNow) || 0;
+    return {
+      q: r.q, name: r.name || '품명 미확인', qty: qty,
+      active: r.signal === 'red', warn: r.signal === 'red' ? '즉시 발주' : '',
+      wo: null, kind: null, eq: r.eq, planDate: r.dueDate,
+      price: r.price, amount: Math.round((Number(r.price) || 0) * qty),
+      ltMean: r.ltMean, grade: r.grade, type: r.type, csp: r.csp, unit: unitOf(r.q),
+      fromStock: true
+    };
+  }
+
+  function prList(extraQ) {
     var B = window.DB_BIZ;
     if (!B || !live) { return []; }
-    return (B.purchase || []).map(function (p) {
+    var out = (B.purchase || []).map(function (p) {
       var r = DB.item(p.q) || {};
       return {
         q: p.q, name: r.name || '품명 미확인', qty: p.qty, active: p.active, warn: p.warn,
@@ -476,6 +560,12 @@
         ltMean: r.ltMean, grade: r.grade, type: r.type, csp: r.csp, unit: unitOf(p.q)
       };
     });
+    /* 넘어온 자재가 후보에 없으면 맨 앞에 올린다 */
+    if (extraQ && !out.filter(function (x) { return x.q === extraQ; }).length) {
+      var ex = prRow(extraQ);
+      if (ex) { out.unshift(ex); }
+    }
+    return out;
   }
 
   function unitOf(q) {
@@ -618,9 +708,10 @@
     gap: gap,
     stockList: stockList, stockCounts: stockCounts, stockSteps: stockSteps, stockBreak: stockBreak,
     planList: planList, planCounts: planCounts, planLead: planLead, planMats: planMats, planAxis: planAxis,
-    prSteps: prSteps, prList: prList, prDraft: prDraft,
+    prSteps: prSteps, prList: prList, prDraft: prDraft, prRow: prRow,
     retTabs: retTabs, retList: retList, retEffect: retEffect,
     stage: stage, setStage: setStage, exportClassification: exportClassification,
+    POOL_TABS: POOL_TABS, poolList: poolList, poolCounts: poolCounts, poolSpec: poolSpec,
     stockStage: stockStage, setStockStage: setStockStage,
     stockStamp: stockStamp, setStockStamp: setStockStamp, stockHeat: stockHeat,
     stamp: stamp, setStamp: setStamp, nowStamp: nowStamp,

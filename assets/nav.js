@@ -35,6 +35,7 @@
     {
       label: '업무',
       items: [
+        { key: 'pool', name: '공용 전환', href: 'pool.html', ico: '⇄' },
         { key: 'purchase', name: '구매신청 (PR)', href: 'purchase.html', ico: '🛒', count: 'pr' },
         { key: 'return', name: '자재반납 (QR)', href: 'return.html', ico: '↩', count: 'ret' }
       ]
