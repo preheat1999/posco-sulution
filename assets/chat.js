@@ -10,7 +10,8 @@
  *   3) 근거를 못 찾은 답(no_answer)은 경고 톤으로 따로 보인다.
  *
  * 토큰(X-API-Token)은 코드에 두지 않는다 · 저장소가 공개라서다.
- * 이 브라우저의 localStorage 에 한 번 넣어 두고 쓴다 (서랍 안에서 넣을 수 있다).
+ * .env → serve.py → assets/config.local.js 로 내려온 값(CFG.CHAT_TOKEN)을 먼저 쓰고,
+ * 그 파일이 없는 환경에서는 서랍에서 한 번 넣어 이 브라우저에만 담아 둔다.
  */
 (function () {
   'use strict';
@@ -48,9 +49,13 @@
 
   function esc(s) { return window.UI ? UI.esc(s) : String(s); }
   function el(id) { return document.getElementById(id); }
+  /* 토큰을 찾는 순서 · .env 에서 내려온 값 → 이 브라우저에 넣어 둔 값.
+   * .env 가 있으면 매번 넣지 않아도 된다 · 없는 환경(배포 · 다른 PC)에서는 서랍에서 넣는다 */
   function token() {
+    if (CFG.CHAT_TOKEN) { return String(CFG.CHAT_TOKEN); }
     try { return window.localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
   }
+  function tokenFromEnv() { return !!CFG.CHAT_TOKEN; }
   function suggest() { return SUGGEST[PAGE] || SUGGEST.main; }
 
   // ---------------------------------------------------------------- 뼈대
@@ -173,8 +178,12 @@
             (busy || !live || !tk ? ' disabled' : '') + '>' +
             (busy ? '답변 중' : '보내기') + '</button>' +
         '</div>' +
-        (tk ? '<div class="chat-tools"><button class="linkbtn" type="button" id="tokenclear">' +
-          '토큰 지우기</button></div>' : '') +
+        (tk
+          ? '<div class="chat-tools">' + (tokenFromEnv()
+            ? '<span class="chat-tsrc">토큰 · .env</span>'
+            : '<button class="linkbtn" type="button" id="tokenclear">토큰 지우기</button>') +
+            '</div>'
+          : '') +
       '</div>';
     scrollEnd();
   }
@@ -405,7 +414,11 @@
 
   function friendly(e) {
     var m = String(e && e.message || e || '');
-    if (/401|403/.test(m)) { return '토큰이 맞지 않습니다 (' + m + ') · 아래 「토큰 지우기」 뒤 다시 넣어 주세요'; }
+    if (/401|403/.test(m)) {
+      return tokenFromEnv()
+        ? '토큰이 맞지 않습니다 (' + m + ') · .env 의 CHAT_TOKEN 을 확인하고 서버를 다시 띄우세요'
+        : '토큰이 맞지 않습니다 (' + m + ') · 아래 「토큰 지우기」 뒤 다시 넣어 주세요';
+    }
     if (/Failed to fetch|NetworkError|CORS/i.test(m)) {
       return '서버에 닿지 못했습니다 · 이 주소(' + location.origin + ')가 서버 허용 목록에 있는지, 같은 Wi-Fi 인지 확인하세요';
     }

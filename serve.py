@@ -11,10 +11,15 @@
     python -B serve.py --host 127.0.0.1 이 컴퓨터에서만
 
 띄우면 폰으로 열 주소와 QR 만드는 명령을 같이 적어 준다.
+
+또 하나 · .env 를 읽어 assets/config.local.js 를 만든다.
+화면은 정적 파일(빌드 없음)이라 브라우저가 .env 를 직접 읽을 수 없다 · 그 다리를 여기서 놓는다.
+.env 와 config.local.js 는 둘 다 .gitignore 다 (저장소가 공개라 토큰을 올리면 안 된다).
 """
 import argparse
 import functools
 import http.server
+import io
 import os
 import socket
 import socketserver
@@ -32,6 +37,52 @@ class H(http.server.SimpleHTTPRequestHandler):
     def log_message(self, fmt, *a):
         # 폰에서 붙었는지 봐야 하니 요청 줄만 짧게 남긴다
         print('  %s %s' % (self.address_string(), fmt % a))
+
+
+def read_env():
+    """.env 를 읽는다. 없으면 빈 사전이다 (연결값 없이도 화면은 떠야 한다)."""
+    path = os.path.join(ROOT, '.env')
+    out = {}
+    if not os.path.exists(path):
+        return out
+    with io.open(path, encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            k, v = line.split('=', 1)
+            out[k.strip()] = v.strip().strip('"').strip("'")
+    return out
+
+
+def write_local_config(env):
+    """.env 값을 화면이 읽을 수 있는 js 로 내려 준다.
+
+    CFG 를 덮지 않고 필요한 칸만 채운다 · assets/config.js 의 나머지 값은 그대로다.
+    이 파일이 없어도 화면은 돈다 (그때는 서랍에서 토큰을 손으로 넣는다).
+    """
+    api = env.get('CHAT_API', '')
+    token = env.get('CHAT_TOKEN', '')
+    body = [
+        '/* config.local.js · serve.py 가 .env 를 읽어 만든 파일이다.',
+        ' *',
+        ' * 손으로 고치지 않는다 · .env 를 고치고 서버를 다시 띄운다.',
+        ' * 저장소에 올라가지 않는다 (.gitignore) · 토큰이 여기 있다.',
+        ' */',
+        '(function () {',
+        "  'use strict';",
+        '  var C = window.CFG = window.CFG || {};',
+    ]
+    if api:
+        body.append("  C.CHAT_API = '%s';" % api)
+    if token:
+        body.append("  C.CHAT_TOKEN = '%s';" % token)
+        body.append("  C.CHAT_TOKEN_SRC = '.env';")
+    body.append('})();')
+    body.append('')
+    path = os.path.join(ROOT, 'assets', 'config.local.js')
+    io.open(path, 'w', encoding='utf-8', newline='\n').write('\n'.join(body))
+    return {'api': api, 'token': bool(token), 'path': path}
 
 
 def lan_ip():
@@ -52,6 +103,8 @@ def main():
     ap.add_argument('--port', type=int, default=8130)
     a = ap.parse_args()
 
+    env = read_env()
+    local = write_local_config(env)
     ip = lan_ip()
     base = 'http://%s:%d' % (ip, a.port)
     print('서버 · %s:%d (no-store)' % (a.host, a.port))
@@ -61,6 +114,13 @@ def main():
     print()
     print('이 주소로 QR 만들기 ·')
     print('  python -B make_qr.py --base %s --all' % base)
+    print()
+    print('RAG · %s · 토큰 %s → assets/config.local.js (저장소에 안 올라감)'
+          % (local['api'] or '주소 없음', '있음' if local['token'] else '없음'))
+    if local['api'] and a.port not in (3000, 5173, 8000):
+        print('  주의 · RAG 서버가 허용하는 주소는 localhost:3000 · 5173 · 8000 이다.')
+        print('        이 포트(%d)로 열면 챗봇이 CORS 로 막힌다 ·' % a.port)
+        print('        --port 3000 으로 띄우거나 백엔드에 이 주소를 추가해 달라고 요청한다.')
     print()
     print('폰이 안 붙으면 · 윈도 방화벽에서 이 포트를 한 번 허용해야 한다')
     print('  (관리자 명령창) netsh advfirewall firewall add rule '

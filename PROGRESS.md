@@ -79,6 +79,18 @@ test_screens.js        : 화면 8개 전수 PASS (실행 · undefined · 지어�
 2. `search.html` · `report.html` · 지금은 사이드바에 「준비 중」 으로 표시 중(눌러도 404 가 안 뜨게 막아 뒀다)
 3. `assets/qr.js` · 실제 QR 인코더(버전 3 · 바이트 모드 · ECC L). 지금은 자리표시라 스캔되지 않는다
 4. 알고리즘 결과 CSV 수령 → `validate_algorithm_csv.py` 통과 확인 → `feat/algo` 병합
-5. RAG 연동 완료 · 시연 순서: `python -B serve.py --port 3000` → `http://localhost:3000` → 서랍에 토큰 한 번 입력 → 추천 질문 클릭. 폰(IP origin)에서 쓰려면 백엔드 `allowed_origins` 에 `http://10.1.14.204:8130` 추가 요청 필요
+5. RAG 연동 완료 · 시연 순서: `python -B serve.py --port 3000` → `http://localhost:3000` → 추천 질문 클릭 (토큰은 `.env` 에 있어 입력 불필요). 폰(IP origin)에서 쓰려면 백엔드 `allowed_origins` 에 `http://10.1.14.204:8130` 추가 요청 필요
+
+### RAG 연결값 (토큰은 저장소에 없다)
+
+`.env` (gitignore) → `serve.py` 가 읽어 `assets/config.local.js` (gitignore) 로 내려 준다 → 화면이 그것을 읽는다.
+
+```
+CHAT_API=http://10.1.14.205:8000
+CHAT_TOKEN=<전달받은 토큰>
+```
+
+빌드 도구가 없어 브라우저가 `.env` 를 직접 못 읽는다 · 그 다리를 `serve.py` 가 놓는다.
+다른 PC · 배포 환경에서 `.env` 가 없으면 서랍에서 토큰을 한 번 넣는 화면이 그대로 뜬다.
 6. `verify.py`(5대 불변식 + 정적 검사) 미작성 · 전체 통합 전 마지막 게이트
    (화면 렌더 확인은 `test_screens.js` 가 대신하고 있다)

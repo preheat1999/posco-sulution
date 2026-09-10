@@ -1909,6 +1909,7 @@ td.num, th.num { text-align: right; }
   color: var(--muted); text-decoration: underline; cursor: pointer;
 }
 .linkbtn:hover { color: var(--text-2); }
+.chat-tsrc { font-size: 10px; color: var(--muted); }
 
 /* 진행 단계 · 스피너 대신 네 칸. 어디까지 왔는지가 보여야 6~11초를 기다린다 */
 .stages { display: grid; gap: 5px; margin-bottom: 8px; }
