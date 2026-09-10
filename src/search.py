@@ -82,7 +82,31 @@ class Searcher:
                 scored.append((cid, s * weights.get(cat, default)))
             fused = sorted(scored, key=lambda x: -x[1])
 
-        candidates = fused[:cfg.get("retrieval.candidate_k")]
+        candidate_k = cfg.get("retrieval.candidate_k")
+        candidates = fused[:candidate_k]
+
+        # 비-FAQ 후보 최소 보장.
+        # ★ FAQ 청크가 코퍼스의 83%(5,756/6,928)라 상위 후보를 통째로 잠식한다.
+        #   실제로 "자재 입하 검수 절차" 에서 지침 문서가 FAQ 에 밀려났다.
+        #   지침·계약·매뉴얼이 최소 몇 건은 후보에 남도록 하위 FAQ 와 교체한다.
+        min_non_faq = cfg.get("retrieval.category_weights.min_non_faq_candidates") or 0
+        if min_non_faq:
+            def is_faq(cid):
+                c = self.store.get(cid)
+                return bool(c) and c["metadata"]["doc_category"] == "faq"
+
+            n_non_faq = sum(1 for cid, _ in candidates if not is_faq(cid))
+            if n_non_faq < min_non_faq:
+                need = min_non_faq - n_non_faq
+                chosen = set(cid for cid, _ in candidates)
+                extra = [(cid, s) for cid, s in fused[candidate_k:]
+                         if cid not in chosen and not is_faq(cid)][:need]
+                if extra:
+                    keep = [(cid, s) for cid, s in candidates if not is_faq(cid)]
+                    faqs = [(cid, s) for cid, s in candidates if is_faq(cid)]
+                    faqs = faqs[:max(0, len(faqs) - len(extra))]   # 하위 FAQ 를 덜어낸다
+                    candidates = sorted(keep + faqs + extra, key=lambda x: -x[1])
+                    log.info("비-FAQ 후보 %d건 보강", len(extra))
 
         # 하이드레이션 — 로컬에 없는 chunk_id 는 조용히 버린다
         hydrated, dropped = [], 0

@@ -5,6 +5,7 @@
 # --- 대외비 사내 문서 (절대 커밋 금지) ---
 raw/
 data/
+!data/rehearsal.md
 
 # --- 대용량 산출물 ---
 models/
