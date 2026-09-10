@@ -28,7 +28,7 @@
       items: [
         { key: 'attr', name: '속성값 판단', href: 'attr.html', ico: '◐', count: 'gray' },
         { key: 'stock', name: '적정재고 분석', href: 'stock.html', ico: '▦', count: 'order' },
-        { key: 'plan', name: '정비계획 소요 발주', href: 'plan.html', ico: '⚙', count: 'over' },
+        { key: 'plan', name: '적정구매시점', href: 'plan.html', ico: '⚙', count: 'over' },
         { key: 'report', name: '주간 리포트', href: 'report.html', ico: '✉', soon: true }
       ]
     },

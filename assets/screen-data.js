@@ -260,9 +260,14 @@
   // ================================================================ 정비계획
   /* PLAN 은 생성기가 만든 2층 값이다. 화면이 쓸 모양으로만 바꾼다.
    * WO 번호는 원천에 없다 · 설비 · 휴지구분 · 정지시작일로 만든 표시용 식별자다 */
+  /* 정렬 세 가지 · 이번 주 WO 가 기본이다.
+   *
+   * 「마감 급한 순」 은 156건 중 55건이 이미 마감을 넘겨서 목록이 붉은 것만 나온다.
+   * 실제로 담당자가 아침에 보는 것은 이번 주에 손이 가는 WO 다 */
   function planList(sort) {
     var P = window.PLAN;
     if (!P) { return []; }
+    if (sort === 'week') { return planWeek(); }
     var out = P.wos.slice();
     out.sort(sort === 'stop'
       ? function (a, b) { return String(a.stopStart).localeCompare(String(b.stopStart)); }
@@ -276,15 +281,117 @@
     return out;
   }
 
+  /* 이번 주 WO · 시연용으로 정비계획일을 조정한 여섯 건이다.
+   *
+   * 원천 156건은 정비계획일이 기준일 뒤로 흩어져 있고 마감은 55건이 이미 넘겼다.
+   * 그래서 「이번 주」 로 좁히면 자재 확보 · 임박 · 초과가 한 화면에 같이 나오지 않는다.
+   * 시연에서 세 상태를 같이 보이기 위해 **날짜만** 이번 주로 옮긴다 ·
+   * 설비 · 자재 · 재고 · 부족분은 원천 값 그대로이고, 목록 아래에 그렇게 적는다.
+   * demo 표시를 행에 남겨 두어 화면이 이 사실을 숨기지 못하게 한다 */
+  var WEEK = null;
+  function planWeek() {
+    if (WEEK) { return WEEK; }
+    var P = window.PLAN;
+    if (!P) { return []; }
+    var asof = P.meta.asof;
+    var fine = P.wos.filter(function (w) { return w.needCount === 0 && w.matCount > 0; });
+    var need = P.wos.filter(function (w) { return w.needCount > 0; });
+    /* 설비가 겹치지 않게 골라야 여섯 줄이 서로 다른 일처럼 읽힌다 */
+    var seen = {};
+    function pick(pool, n) {
+      var out = [];
+      pool.forEach(function (w) {
+        if (out.length >= n || seen[w.eq]) { return; }
+        seen[w.eq] = true; out.push(w);
+      });
+      return out;
+    }
+    /* 이번 주(기준일 09-03 목요일 · 08-31 월 ~ 09-06 일).
+     * 마감일은 정비계획일보다 앞이라, 마감이 이번 주인 건은 정비가 두세 주 뒤다 */
+    var plan = [
+      { t: 'over', due: -3, stop: 18 },     // 마감 초과 1건 · 이번 주 월요일이 마감이었다
+      { t: 'soon', due: 2, stop: 25 },      // 마감 임박 1건 · 모레가 마감이다
+      { t: 'fine', due: null, stop: -2 },   // 자재 확보 4건 · 이번 주 정비
+      { t: 'fine', due: null, stop: -1 },
+      { t: 'fine', due: null, stop: 1 },
+      { t: 'fine', due: null, stop: 2 }
+    ];
+    var src = pick(need, 2).concat(pick(fine, 4));
+    WEEK = plan.map(function (p, i) {
+      var w = src[i];
+      if (!w) { return null; }
+      var row = {};
+      Object.keys(w).forEach(function (k) { row[k] = w[k]; });
+      row.demo = true;
+      row.planDate = shift(asof, p.stop);
+      /* WO 번호는 설비 · 휴지구분 · 정지시작일로 만든 표시용 식별자다(원천에 없다).
+       * 날짜를 옮겼으면 번호의 날짜도 같이 옮겨야 둘이 어긋나지 않는다 */
+      row.wo = 'M' + row.planDate.slice(2).replace(/-/g, '') + String(w.wo).slice(7);
+      row.stopStart = row.planDate;
+      row.reStart = shift(asof, p.stop + 4);
+      row.dueDate = p.due === null ? null : shift(asof, p.due);
+      row.left = p.due;
+      row.tone = p.t;
+      return row;
+    }).filter(Boolean);
+    return WEEK;
+  }
+
+  function shift(ymd, days) {
+    var p = String(ymd).split('-');
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    d.setDate(d.getDate() + Number(days));
+    function z(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+  }
+
+  /* 머리 카드 다섯 장이 쓰는 값. 화면은 세지 않는다.
+   *
+   * 이관 가능 · 예상 발주금액은 여기서 센다 · 발주가 필요한 자재 중 다른 부서에
+   * 남는 수량이 있으면 그만큼은 사지 않고 가져오면 된다 */
   function planCounts() {
     var P = window.PLAN;
-    if (!P) { return { wos: 0, over: 0, now: 0, mats: 0 }; }
+    if (!P) { return { wos: 0, over: 0, soon: 0, now: 0, mats: 0,
+                       moveN: 0, moveAmt: 0, orderAmt: 0, week: 0 }; }
     var c = P.meta.counts;
     /* 「지금 신청」 은 마감 초과가 아니라 재고가 예상 소요보다 적은 건이다.
      * 마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다르다 */
     var nowN = live ? DB.list({ dueDate: function (v) { return !!v; } })
       .filter(function (r) { return r.signal === 'red'; }).length : 0;
-    return { wos: c.wos, over: c.tone.over, now: nowN, mats: c.mats };
+
+    var moveN = 0, moveAmt = 0, orderAmt = 0;
+    if (live) {
+      /* 정비계획에 걸린 자재만 본다. 전체 743 을 세면 이 화면의 값이 아니다 */
+      var linked = {};
+      P.wos.forEach(function (w) { (w.mats || []).forEach(function (q) { linked[q] = true; }); });
+      DB.list().forEach(function (r) {
+        if (!linked[r.q]) { return; }
+        var need = Number(r.needNow) || 0;
+        if (need <= 0) { return; }
+        var price = Number(r.price) || 0;
+        var other = Math.max(0, (Number(r.stockAll) || 0) - (Number(r.stock) || 0));
+        var move = Math.min(need, other);      // 이관으로 덮을 수 있는 수량
+        if (move > 0) { moveN += 1; moveAmt += price * move; }
+        orderAmt += price * (need - move);     // 사야 하는 몫
+      });
+    }
+    return { wos: c.wos, over: c.tone.over, soon: c.tone.soon, now: nowN, mats: c.mats,
+             moveN: moveN, moveAmt: moveAmt, orderAmt: orderAmt,
+             week: planWeek().length };
+  }
+
+  /* 수리계획이 쓰이는 자리 · 마감일 산식의 선행일수다.
+   * 「대수리라서 45일 먼저 발주해야 한다」 가 이 화면의 요점이다 */
+  function planLead(kind) {
+    var P = window.PLAN;
+    var lead = (P && P.meta.leadDays) || {};
+    return {
+      kind: kind || '미확인',
+      days: lead[kind] === undefined ? null : lead[kind],
+      formula: (P && P.meta.formula) || '',
+      all: lead,
+      note: (P && P.meta.dueNote) || ''
+    };
   }
 
   /* WO 한 건에 걸린 자재. needQs 는 발주가 필요한 것만이다.
@@ -328,6 +435,8 @@
     return {
       due: due === null ? null : at(due), now: at(now), stop: at(stop),
       overdue: due !== null && due < now,
+      /* 휴지 착수까지 며칠 남았나 · 점 옆에 D-일수를 적는다 */
+      toStop: Math.round((stop - now) / 86400000),
       fill: due === null ? null : [Math.min(at(due), at(now)), Math.max(at(due), at(now))]
     };
   }
@@ -504,7 +613,7 @@
     attrBucket: attrBucket, attrList: attrList, attrCounts: attrCounts, attrDetail: attrDetail,
     gap: gap,
     stockList: stockList, stockCounts: stockCounts, stockSteps: stockSteps, stockBreak: stockBreak,
-    planList: planList, planCounts: planCounts, planMats: planMats, planAxis: planAxis,
+    planList: planList, planCounts: planCounts, planLead: planLead, planMats: planMats, planAxis: planAxis,
     prSteps: prSteps, prList: prList, prDraft: prDraft,
     retTabs: retTabs, retList: retList, retEffect: retEffect,
     stage: stage, setStage: setStage, exportClassification: exportClassification,

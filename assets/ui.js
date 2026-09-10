@@ -56,6 +56,18 @@
     return (isFinite(n) && Math.abs(n) >= 1e8) ? '억원' : '만원';
   }
 
+  /* 백만원 단위. 발주 금액은 결재 문서가 백만원으로 적으니 화면도 그렇게 맞춘다 */
+  function wonMNum(v) {
+    var n = Number(v);
+    if (!isFinite(n)) { return '미확인'; }
+    return (n / 1e6).toFixed(n !== 0 && Math.abs(n) < 1e7 ? 1 : 0);
+  }
+  function wonM(v) {
+    var n = Number(v);
+    if (!isFinite(n)) { return '미확인'; }
+    return (n / 1e6).toFixed(1) + '백만원';
+  }
+
   /* 날짜. 값이 없으면 「미확인」 이다. 절대 문자열을 그냥 이어 붙이지 않는다 */
   function date(v) {
     if (!v) { return '미확인'; }
@@ -215,6 +227,7 @@
 
   window.UI = {
     esc: esc, num: num, won: won, wonShort: wonShort, wonShortUnit: wonShortUnit,
+    wonM: wonM, wonMNum: wonMNum,
     date: date, dateShort: dateShort, dleft: dleft, tone: tone, isNow: isNow,
     face: face, verdict: verdict, typeBadge: typeBadge, verdictBadge: verdictBadge,
     gradeBadge: gradeBadge, signalBadge: signalBadge, srcLabel: srcLabel,

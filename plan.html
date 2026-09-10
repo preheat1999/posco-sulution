@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>정비계획 소요 발주 · AI 자재 솔루션</title>
+<title>적정구매시점 · AI 자재 솔루션</title>
 <link rel="stylesheet" href="assets/shell.css">
 <script>window.PAGE = 'plan';</script>
 </head>
@@ -18,7 +18,7 @@
         <button class="hamb" id="hamb" aria-label="메뉴" aria-expanded="false">&#9776;</button>
         <div>
           <div class="crumb" data-group="분석">&nbsp;</div>
-          <h1>정비계획 소요 발주</h1>
+          <h1>적정구매시점</h1>
         </div>
       </div>
       <div class="top-right">
@@ -27,19 +27,15 @@
       </div>
     </div>
 
-    <!-- 마감일이 무엇인지 먼저 말한다. 이 산식을 모르면 「초과 287일」 이 뜻을 잃는다.
-         카드로 두면 자리를 많이 먹어서 알약 한 줄로 줄이고 자세한 것은 ? 에 담았다 -->
-    <div class="phead" style="margin-bottom:14px">
-      <div class="rulepill" id="rule"></div>
-    </div>
-
-    <div class="statrow" id="stat"></div>
+    <!-- 머리 카드 다섯 장. 마감일 산식은 WO 머리의 수리계획 배지에서 본다 -->
+    <div class="statrow cards" id="stat"></div>
 
     <div class="phead">
       <div class="tabs" id="tabs"></div>
       <div class="ptools">
         <div class="seg" id="sort">
-          <button type="button" data-sort="due" class="on">마감 급한 순</button>
+          <button type="button" data-sort="week" class="on">이번 주 WO</button>
+          <button type="button" data-sort="due">마감 급한 순</button>
           <button type="button" data-sort="stop">휴지일 순</button>
         </div>
       </div>
@@ -78,8 +74,8 @@
   'use strict';
 
   var S = window.SCREEN;
-  var sort = 'due';
-  var tab = 'over';
+  var sort = 'week';        // 이번 주에 손이 가는 WO 부터 본다
+  var tab = 'all';
   var PAGE = 6;
   var page = 0;
   var open = {};        // 펼친 WO
@@ -95,30 +91,25 @@
 
   function paintStat() {
     var c = S.planCounts();
+    var asofTxt = UI.date(asof());
     el('stat').innerHTML =
-      cell(UI.num(c.wos), '건', '정비계획', '기준일 이후 · 우리 부서 설비') +
-      cell(UI.num(c.over), '건', '마감 초과', '발주 마감일을 넘겼습니다', 'ins') +
-      cell(UI.num(c.now), '건', '지금 신청',
-           c.now ? '재고가 예상 소요보다 적습니다' : '재고로 충당됩니다',
-           c.now ? 'core' : '') +
-      cell(UI.num(c.mats), '품목', '소요 자재', '정비계획에 걸린 자재');
+      cell(UI.num(c.wos), '건', '내 담당 WO 정비계획', asofTxt + ' 기준 향후 계획') +
+      cell(UI.num(c.mats), '종', '예상 소요 자재', '정비계획의 자재계획에 걸린 자재', '', true) +
+      cell(UI.num(c.over + c.soon), '건', '발주 마감 초과 및 임박',
+           '지금 신청해야 하는 정비계획', 'ins') +
+      /* 이관은 사지 않고 가져오는 것이다. 0 이면 0 이라고 적는다 */
+      cell(UI.num(c.moveN), '건', '타부서 이관 가능',
+           '공용자재 활용 · ' + UI.wonM(c.moveAmt) + ' 절감') +
+      cell(UI.wonMNum(c.orderAmt), '백만원', '예상 발주금액',
+           '이관분 ' + UI.wonM(c.moveAmt) + ' 제외');
   }
 
-  function cell(v, unit, k, x, cls) {
-    return '<div><div class="sv' + (cls ? ' ' + cls : '') + '">' + v +
+  function cell(v, unit, k, x, cls, ai) {
+    return '<div class="scard">' +
+      '<div class="sk">' + UI.esc(k) + (ai ? '<i class="ai">✦</i>' : '') + '</div>' +
+      '<div class="sv' + (cls ? ' ' + cls : '') + '">' + v +
       (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
-      '<div class="sk">' + k + '</div><div class="sx">' + x + '</div></div>';
-  }
-
-  /* 마감일 산식. 상수는 명세에서 읽는다 · 화면이 만들지 않는다 */
-  function paintRule() {
-    var P = window.PLAN;
-    if (!P) { el('rule').innerHTML = '<div class="empty"><strong>정비계획 데이터가 없습니다</strong>' +
-      'assets/plan-data.js 를 확인하세요</div>'; return; }
-    el('rule').innerHTML =
-      '<span class="ri">∑</span>' +
-      '<code>' + UI.esc(P.meta.formula) + '</code>' +
-      '<button class="askbtn" type="button" id="rule-why" aria-label="산식 근거">?</button>';
+      '<div class="sx">' + UI.esc(x) + '</div></div>';
   }
 
   // ------------------------------------------------------------ 목록
@@ -130,7 +121,8 @@
   }
 
   function paintTabs() {
-    var all = S.planList('due');
+    /* 지금 정렬로 나온 목록에서 센다. 이번 주 WO 를 보면서 전체 156건 수를 적으면 안 맞는다 */
+    var all = S.planList(sort);
     var n = {
       over: all.filter(function (w) { return w.tone === 'over'; }).length,
       need: all.filter(function (w) { return w.needCount > 0; }).length,
@@ -151,21 +143,31 @@
     el('list').innerHTML = view.length ? view.map(function (w) {
       var on = !!open[w.wo];
       var tone = w.tone || 'fine';
+      /* 설비명이 제일 크다. WO 번호는 표시용 식별자라 알약으로 앞에 붙이고,
+       * 수리계획은 마감일 산식의 선행일수를 정하는 값이라 배지로 세우고 ? 를 붙인다 */
       return '<div class="wo' + (on ? ' open' : '') + '" data-wo="' + UI.esc(w.wo) + '">' +
         '<div class="wo-head" role="button" tabindex="0">' +
           UI.face(tone) +
-          '<div style="min-width:0">' +
-            '<div class="wo-code">' + UI.esc(w.wo) + '</div>' +
-            '<div class="wo-name">' + UI.esc(w.eq || '설비 미확인') + '</div>' +
-            '<div class="wo-sub">' + UI.esc(w.kind || '휴지구분 미확인') + ' · ' +
-              UI.esc(w.factory || '') + ' · 자재 ' + UI.num(w.matCount) + '품목' +
-              (w.needCount ? ' · 발주 필요 ' + UI.num(w.needCount) + '품목' : '') + '</div>' +
+          '<div class="wo-main">' +
+            '<div class="wo-t1">' +
+              '<span class="wo-chip">' + UI.esc(w.wo) + '</span>' +
+              '<span class="wo-name">' + UI.esc(w.eq || '설비 미확인') + '</span>' +
+              '<span class="badge rep">' + UI.esc(w.kind || '수리계획 미확인') +
+                '<button class="askbtn" type="button" data-lead="' + UI.esc(w.kind || '') +
+                  '" aria-label="수리계획과 마감일">?</button></span>' +
+              (w.demo ? '<span class="badge">시연 일정</span>' : '') +
+            '</div>' +
+            '<div class="wo-sub">' + UI.esc(w.factory || '공장 미확인') + ' · ' +
+              UI.esc(w.line || '라인 미확인') + ' · 자재 ' + UI.num(w.matCount) + '품목' +
+              (w.needCount ? ' · 발주 필요 ' + UI.num(w.needCount) + '품목' : ' · 자재 확보') +
+              '</div>' +
           '</div>' +
           '<div class="wo-right">' +
-            '<div class="due-d tone-' + tone + '" style="font-size:13px">' +
-              UI.esc(UI.dleft(w.left)) + '</div>' +
-            '<div class="due-date">마감 ' + UI.esc(UI.date(w.dueDate)) + '</div>' +
-            '<div class="due-date">휴지 ' + UI.esc(UI.date(w.stopStart)) + '</div>' +
+            '<div class="due-d tone-' + tone + '" style="font-size:15px">' +
+              UI.esc(w.left === null ? '자재 확보' : UI.dleft(w.left)) + '</div>' +
+            '<div class="due-date">마감 ' +
+              UI.esc(w.dueDate ? UI.date(w.dueDate) : '없음') +
+              ' · 휴지 ' + UI.esc(UI.date(w.stopStart)) + '</div>' +
           '</div>' +
           '<span class="sect-arrow" style="margin-left:10px">' + (on ? '∧' : '∨') + '</span>' +
         '</div>' +
@@ -183,6 +185,15 @@
     el('next').disabled = page >= max;
 
     var c = S.planCounts();
+    if (sort === 'week') {
+      /* 이번 주 목록은 날짜를 시연용으로 옮긴 값이다. 그 사실을 목록 아래에 적는다 */
+      el('foot').innerHTML = '<b>이번 주 WO ' + UI.num(rows.length) + '건</b>은 ' +
+        '이번 주에 정비하는 건(자재 확보)과 이번 주가 발주 마감인 건을 함께 봅니다. ' +
+        '<b>시연을 위해 정비계획일 · 발주 마감일만 이번 주로 옮긴 값</b>이며, ' +
+        '설비 · 수리계획 · 자재 · 재고 · 부족분은 원천 값 그대로입니다. ' +
+        '전체 156건은 「마감 급한 순」 에서 봅니다.';
+      return;
+    }
     el('foot').innerHTML = c.now
       ? ('마감을 넘긴 ' + UI.num(c.over) + '건 중 <b>지금 신청해야 하는 것은 ' +
          UI.num(c.now) + '건</b>입니다. 나머지는 마감을 넘겼지만 재고로 충당됩니다. ' +
@@ -211,6 +222,16 @@
       last = m[1];
     });
 
+    /* 점 세 개가 무엇인지 위에 먼저 적는다. 색만 있으면 점의 뜻을 알 수 없다 */
+    var legend = '<div class="tlegend">' +
+      (ax.due !== null
+        ? '<span class="tl due"><i></i>발주 마감선 ' + UI.esc(UI.date(w.dueDate)) + '</span>'
+        : '<span class="tl"><i></i>발주 마감선 없음 · 자재 확보</span>') +
+      '<span class="tl now"><i></i>기준일 (오늘) ' + UI.esc(UI.date(asof())) + '</span>' +
+      '<span class="tl stop"><i></i>휴지 착수 ' + UI.esc(UI.date(w.stopStart)) +
+        (ax.toStop === null ? '' : ' (' + UI.esc(UI.dleft(ax.toStop)) + ')') + '</span>' +
+      '</div>';
+
     var line = '<div class="tline">' +
       '<div class="tline-bar"></div>' +
       (ax.fill ? '<div class="tline-fill" style="left:' + ax.fill[0].toFixed(1) +
@@ -220,32 +241,32 @@
 
     var table = mats.length ?
       '<div class="tablewrap"><table><thead><tr>' +
-        '<th>자재 · 코드</th><th>속성</th><th class="num">예상 소요</th>' +
-        '<th class="num">현재고 → 목표</th><th>부족</th><th>조치</th>' +
+        '<th>자재명 / 자재코드</th><th class="num">소요 수량</th>' +
+        '<th class="num">현재 재고</th><th>과부족</th><th>긴급 조치</th>' +
       '</tr></thead><tbody>' +
       mats.map(function (m) {
         if (m.missing) {
-          return '<tr><td data-label="자재 · 코드">' + UI.esc(m.q) +
-            '</td><td data-label="속성" colspan="5">정본에 없는 코드입니다</td></tr>';
+          return '<tr><td data-label="자재명 / 자재코드">' + UI.esc(m.q) +
+            '</td><td data-label="소요 수량" colspan="4">정본에 없는 코드입니다</td></tr>';
         }
+        /* 소요 수량은 이 정비 건의 예상 소요다. 원천에 없는 행은 목표재고를 쓰고 그렇게 적는다 ·
+         * 과부족도 같은 기준이라 표 안에서 두 숫자가 어긋나지 않는다 */
+        var qty = m.expect === null ? m.target : m.expect;
         return '<tr>' +
-          '<td data-label="자재 · 코드"><div class="cell-2">' +
-            '<div class="cell-1st">' + UI.esc(m.name || '품명 미확인') + '</div>' +
+          '<td data-label="자재명 / 자재코드"><div class="cell-2">' +
+            '<div class="cell-1st">' + UI.esc(m.name || '품명 미확인') + ' ' +
+              UI.typeBadge(m.type) + ' ' + UI.gradeBadge(m.grade) + '</div>' +
             '<div class="cell-2nd">' + UI.esc(m.q) + '</div></div></td>' +
-          '<td data-label="속성">' + UI.typeBadge(m.type) + ' ' + UI.gradeBadge(m.grade) + '</td>' +
-          /* 예상 소요는 정비계획에 걸린 행만 원천에 있다. 없으면 그대로 적는다 */
-          '<td class="num" data-label="예상 소요">' +
-            (m.expect === null ? '<span class="sub">원천에 없음</span>' : UI.num(m.expect)) +
-            '</td>' +
-          '<td class="num" data-label="현재고 → 목표"><span>' + UI.num(m.stock) +
-            '<span class="arrow">→</span>' + UI.num(m.target) + '</span></td>' +
-          '<td data-label="부족">' + (m.need > 0
-            ? '<span class="badge insur">' + UI.num(m.need) + ' 부족</span>'
-            : '<span class="badge ok">충당</span>') + '</td>' +
-          '<td data-label="조치">' + (m.needOrder
+          '<td class="num" data-label="소요 수량">' + UI.num(qty) + ' 개' +
+            (m.expect === null ? '<span class="sub"> (목표)</span>' : '') + '</td>' +
+          '<td class="num" data-label="현재 재고">' + UI.num(m.stock) + ' 개</td>' +
+          '<td data-label="과부족">' + (m.need > 0
+            ? '<span class="badge insur">' + UI.num(m.need) + '개 부족</span>'
+            : '<span class="sub">0 (정상)</span>') + '</td>' +
+          '<td data-label="긴급 조치">' + (m.needOrder
             ? '<button class="btn sm" type="button" data-draft="' + UI.esc(m.q) +
-              '" data-wo="' + UI.esc(w.wo) + '">구매신청 초안</button>'
-            : '<span class="sub">준비 완료</span>') + '</td>' +
+              '" data-wo="' + UI.esc(w.wo) + '">구매신청 초안 만들기 →</button>'
+            : '<span class="badge ok">준비 완료</span>') + '</td>' +
           '</tr>';
       }).join('') + '</tbody></table></div>' :
       '<div class="empty"><strong>이 정비계획에 걸린 자재가 없습니다</strong>' +
@@ -253,14 +274,20 @@
 
     var noExpect = mats.filter(function (m) { return !m.missing && m.expect === null; }).length;
 
-    return line +
-      '<p class="note" style="margin:10px 0 12px">마감 ' + UI.esc(UI.date(w.dueDate)) +
-        ' · 오늘 ' + UI.esc(UI.date(asof())) + ' · 휴지 착수 ' + UI.esc(UI.date(w.stopStart)) +
-        ' · 리드타임 평균 ' + UI.num(w.ltMean) + '일' +
-        (w.driver ? ' · 마감을 정한 자재 ' + UI.esc(w.driver) : '') + '</p>' +
-      '<p class="gt"><span>소요 자재 ' + UI.num(mats.length) + '품목' +
-        (need.length ? ' · 발주 필요 ' + UI.num(need.length) + '품목' : '') + '</span>' +
-        '<span class="gt-sub">부족은 목표재고 기준입니다</span></p>' +
+    var shortSum = mats.reduce(function (t, m) { return t + (m.missing ? 0 : m.need); }, 0);
+
+    return legend + line +
+      '<p class="note" style="margin:10px 0 14px">리드타임 평균 ' + UI.num(w.ltMean) + '일 · ' +
+        '수리계획 ' + UI.esc(w.kind || '미확인') + '' +
+        (w.driver ? ' · 마감을 정한 자재 ' + UI.esc(w.driver) : '') +
+        (w.hours ? ' · 작업 ' + UI.num(w.hours) + '시간' : '') + '</p>' +
+      '<div class="phead" style="margin-bottom:10px">' +
+        '<p class="gt" style="margin:0"><span>소요 필수 자재 현황 (' +
+          UI.num(mats.length) + '건)</span></p>' +
+        '<span class="wo-short' + (shortSum ? ' bad' : '') + '">' +
+          (shortSum ? '총 ' + UI.num(shortSum) + '개 부족 · 발주 필요 ' +
+            UI.num(need.length) + '품목' : '자재 확보 완료') + '</span>' +
+      '</div>' +
       table +
       (noExpect ? '<p class="note" style="margin-top:10px"><b>' + UI.num(noExpect) +
         '품목은 이 정비 건의 예상 소요가 원천에 없습니다.</b> ' +
@@ -275,25 +302,7 @@
   function short(d) { return window.UI ? UI.dateShort(d) : String(d); }
 
   // ------------------------------------------------------------ 이벤트
-  /* 선행일수와 주의사항은 ? 안에 담는다. 화면에 다 적으면 목록이 밀려 내려간다 */
-  function wireRule() {
-    el('rule').addEventListener('click', function (e) {
-      var b = e.target.closest && e.target.closest('#rule-why');
-      if (!b || !window.PLAN) { return; }
-      var lead = PLAN.meta.leadDays || {};
-      POP.show(b, {
-        title: '발주 마감일 산식',
-        rows: Object.keys(lead).map(function (k) {
-          return ['선행일수 · ' + k, lead[k] + '일'];
-        }).concat([['내림 처리', 'floor · 하루라도 늦으면 휴지에 못 맞춘다']]),
-        formula: PLAN.meta.formula,
-        note: PLAN.meta.dueNote + ' · ' + PLAN.meta.woNote
-      });
-    });
-  }
-
   function wire() {
-    wireRule();
     el('tabs').addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('.tab');
       if (!b) { return; }
@@ -301,10 +310,31 @@
       paintTabs(); paintList();
     });
 
+    /* 수리계획 배지의 ? · 마감일 산식과 그 계획의 선행일수를 여기서 본다
+     * (옛 산식 알약이 있던 자리다) */
+    el('list').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-lead]');
+      if (!b) { return; }
+      e.stopPropagation();          // WO 를 펼치지 않는다
+      var L = S.planLead(b.getAttribute('data-lead'));
+      POP.show(b, {
+        title: '수리계획 · ' + L.kind,
+        rows: [['이 계획의 선행일수', L.days === null ? '명세에 없습니다' : L.days + '일']]
+          .concat(Object.keys(L.all).map(function (k) {
+            return ['선행일수 · ' + k, L.all[k] + '일'];
+          }))
+          .concat([['내림 처리', 'floor · 하루라도 늦으면 휴지에 못 맞춘다']]),
+        formula: L.formula,
+        note: L.note
+      });
+    });
+
     el('sort').addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('button');
       if (!b) { return; }
       sort = b.getAttribute('data-sort'); page = 0;
+      /* 이번 주 WO 는 여섯 건이라 칸을 좁히면 빈 목록이 된다 */
+      if (sort === 'week') { tab = 'all'; }
       [].forEach.call(el('sort').children, function (x) { x.classList.toggle('on', x === b); });
       paintList();
     });
@@ -342,7 +372,7 @@
   function paintAll() {
     var m = window.DB ? DB.meta() : null;
     el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
-    paintStat(); paintRule(); paintTabs(); paintList();
+    paintStat(); paintTabs(); paintList();
   }
 
   paintAll();

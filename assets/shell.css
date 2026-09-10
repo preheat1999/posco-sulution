@@ -1531,7 +1531,7 @@ td.num, th.num { text-align: right; }
 .stageline {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 18px;
   padding: 14px 18px; margin-bottom: 16px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
 .stageline .prstep .sv { font-size: 12px; }
@@ -1576,7 +1576,36 @@ td.num, th.num { text-align: right; }
 .wo { background: var(--surface-2); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
 .wo-head { display: flex; align-items: center; gap: 12px; padding: 13px 15px; cursor: pointer; }
 .wo-code { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; color: var(--muted); }
-.wo-name { font-size: 13.5px; font-weight: 600; letter-spacing: -.3px; }
+
+/* 설비명이 제일 크다 · WO 번호는 표시용 식별자라 앞에 알약으로 붙인다 */
+.wo-main { min-width: 0; }
+.wo-t1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wo-chip {
+  font-family: ui-monospace, Consolas, monospace; font-size: 10px; color: var(--text-2);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 2px 6px; white-space: nowrap; flex: none;
+}
+.wo-name { font-size: 16px; font-weight: 600; letter-spacing: -.4px; }
+/* 수리계획 배지 · 마감일 산식의 선행일수를 정하는 값이라 ? 를 안에 둔다 */
+.badge.rep {
+  background: var(--brand-weak); color: var(--b1);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.badge.rep .askbtn { width: 14px; height: 14px; font-size: 9px; }
+/* 부족 합계 · 표 머리 오른쪽 */
+.wo-short { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.wo-short.bad { color: var(--insur); font-weight: 600; }
+
+/* 세 점의 뜻을 막대 위에 먼저 적는다 */
+.tlegend {
+  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+  padding: 10px 0 2px; font-size: 10.5px; color: var(--muted);
+}
+.tlegend .tl { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tlegend .tl i { width: 8px; height: 8px; border-radius: 999px; background: var(--slate-2); }
+.tlegend .tl.due i { background: var(--insur); } .tlegend .tl.due { color: var(--insur); }
+.tlegend .tl.now i { background: var(--text); } .tlegend .tl.now { color: var(--text-2); }
+.tlegend .tl.stop i { background: var(--brand); } .tlegend .tl.stop { color: var(--b2); }
 .wo-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
 .wo-right { margin-left: auto; text-align: right; flex: none; }
 .wo-body { padding: 0 15px 14px; }
@@ -1635,6 +1664,30 @@ td.num, th.num { text-align: right; }
 .statrow .sx { font-size: 10px; color: var(--muted); margin-top: 5px; }
 .statrow .sv.ins { color: var(--insur); } .statrow .sv.core { color: var(--core); }
 .statrow .sv.ok { color: var(--ok); } .statrow .sv.plan { color: var(--brand); }
+
+/* 적정구매시점 머리 · 카드 다섯 장.
+ * 한 카드 안에 칸을 나누던 것을 카드 다섯 장으로 떼어 놓았다 ·
+ * 값의 성격이 서로 달라서(건수 · 종수 · 금액) 한 상자에 묶으면 같은 축처럼 읽힌다 */
+.statrow.cards {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px;
+  background: none; border: 0; box-shadow: none; padding: 0; margin-bottom: 18px;
+}
+.statrow.cards > .scard {
+  padding: 15px 17px; border: 1px solid var(--line); border-left: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--surface);
+  box-shadow: var(--shadow), var(--edge); min-width: 0;
+}
+.statrow.cards .sk {
+  display: flex; align-items: center; gap: 5px; margin: 0 0 8px;
+  font-size: 11px; color: var(--muted);
+}
+.statrow.cards .sk .ai { color: var(--b1); font-style: normal; font-size: 10px; }
+.statrow.cards .sv { font-size: 28px; }
+.statrow.cards .sx { margin-top: 7px; }
+
+@media (max-width: 1180px) { .statrow.cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .statrow.cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .statrow.cards { grid-template-columns: 1fr; } }
 
 /* 단계 안에서 둘로 나눌 때 쓰는 상자. 카드 안의 카드라 테두리를 주지 않는다 */
 .fbox { min-width: 0; }
