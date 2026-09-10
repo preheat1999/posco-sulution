@@ -142,12 +142,35 @@ def health(request: Request):
 LOCALHOST = {"127.0.0.1", "::1", "localhost"}
 
 
+def _own_ips():
+    """이 서버가 실행 중인 컴퓨터 자신의 IP 목록 (Wi-Fi·Tailscale 등 모든 인터페이스).
+
+    ★ 노트북을 LAN 주소(예: 10.1.14.205)로 스스로 접속하면 Windows 특성상
+      127.0.0.1 이 아니라 그 LAN 주소 자체가 소스 IP로 잡힌다(실측으로 확인).
+      127.0.0.1 만 검사하면 "내 컴퓨터에서 내 LAN 주소로 접속"이 남처럼 취급되어
+      토큰을 요구하게 된다 — 실제로 겪은 문제. 그래서 하나로 고정하지 않고
+      기동 시점에 이 컴퓨터의 진짜 인터페이스 IP를 전부 모아 둔다.
+      다른 컴퓨터는 이 목록에 있을 수 없으므로(TCP 는 IP 스푸핑으로 핸드셰이크를
+      완성할 수 없다) 보안 경계는 그대로 유지된다."""
+    ips = set(LOCALHOST)
+    try:
+        import socket
+        for info in socket.getaddrinfo(socket.gethostname(), None):
+            ips.add(info[4][0])
+    except socket.gaierror:
+        pass
+    return ips
+
+
+_OWN_IPS = _own_ips()
+
+
 def _is_local(request):
-    """요청의 실제 소스 IP 로만 판단한다.
+    """요청의 실제 소스 IP 로만 판단한다 (이 컴퓨터 자신의 인터페이스 IP 포함).
 
     X-Forwarded-For 같은 헤더는 클라이언트가 마음대로 넣을 수 있으므로 믿지 않는다."""
     client = getattr(request, "client", None)
-    return bool(client) and client.host in LOCALHOST
+    return bool(client) and client.host in _OWN_IPS
 
 
 def _auth_ok(request, x_api_token):
