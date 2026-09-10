@@ -136,7 +136,6 @@
     h.hidden = false;
     h.innerHTML =
       '<div class="rh-left">' +
-        '<p class="gt"><span>지금 보고 있는 것</span></p>' +
         '<h2>아직 분석하지 않았습니다</h2>' +
         '<p class="sub">보유 수량과 속성만 있는 상태입니다. 목표재고 · 조치 · 금액은 ' +
           '분석을 실행하면 올라옵니다.</p>' +
@@ -148,6 +147,9 @@
           '없으면 알고리즘 판정 속성으로 분석합니다</p>') +
       '</div>' +
       '<div class="rh-right">' +
+        /* 왼쪽 제목과 같은 크기 · 같은 높이 · 「이건 지금 상태」 「이건 다음 할 일」 이
+         * 마주 봐야 무엇을 누르면 되는지 바로 읽힌다 (보유목적 판단 화면과 같은 짝) */
+        '<h2>AI의 도움을 받아볼까요?</h2>' +
         '<button class="btn" type="button" id="ana" style="min-height:52px;padding:0 26px">' +
           '<span class="cbi">✦</span> 적정재고 분석</button>' +
         '<p class="note" style="margin-top:10px">확정 속성별 공식으로 목표재고를 잡고, ' +
@@ -502,6 +504,143 @@
     return '<span class="sub">적정 운용중</span>';
   }
 
+  /* 공용 전환 확인 창.
+   *
+   * 여기가 재고를 실제로 움직이는 자리다 · 그래서 수량을 손으로 받고,
+   * 그 수량으로 계산한 기대효과를 누르기 전에 보여 준다.
+   * UI.confirm 을 쓰지 않는 이유 · 입력칸이 없다.
+   *
+   * 절감율은 화면이 만들지 않는다 · 명세에서 읽은 가여율 × 이자율이다
+   * (목업의 「연 재고유지비율 12%」 는 우리 명세 값이 아니라 쓰지 않는다) */
+  var poolBox = null;
+
+  function poolRate() {
+    var w = A.money();
+    var rate = Number(w.rate), it = Number(w.interest);
+    if (!(rate > 0) || !(it > 0)) { return null; }
+    return rate * it;
+  }
+
+  function poolSum(r, qty) {
+    var rt = poolRate();
+    var asset = qty * (Number(r.price) || 0);
+    var gain = rt === null ? null : asset * rt;
+    var m = window.DB ? DB.meta() : null;
+    var spec = (m && m.spec && m.spec.finance) || '';
+    return '<div class="pm-row"><span>전환 자산</span><b>' + UI.won(asset) + '</b></div>' +
+      '<div class="pm-row"><span>연 절감율 · 명세</span><b>' +
+        (rt === null ? '명세에서 못 읽었습니다'
+          : (A.money().rate + ' × ' + A.money().interest + ' = ' +
+             (rt * 100).toFixed(2) + '%')) + '</b></div>' +
+      '<div class="pm-row"><span>연간 기대효과</span><b class="ok">' +
+        (gain === null ? '계산 불가' : UI.won(Math.round(gain))) + '</b></div>' +
+      (spec ? '<p class="pm-f">' + UI.esc(spec) + '</p>' : '');
+  }
+
+  function poolOpen(q) {
+    var r = window.DB ? DB.item(q) : null;
+    if (!r) { return; }
+    var over = Math.max(0, (Number(r.stock) || 0) - (Number(r.targetNow) || 0));
+    if (!over) { return; }
+    poolClose();
+    poolBox = document.createElement('div');
+    poolBox.className = 'modal-back on';
+    poolBox.innerHTML =
+      '<div class="modal" role="dialog" aria-modal="true">' +
+        '<div class="modal-head">' +
+          '<div style="min-width:0">' +
+            '<h3>' + UI.esc(r.name || '품명 미확인') + ' 공용자재 전환</h3>' +
+            '<p class="sub">전환 수량을 입력하면 기대효과가 계산됩니다</p></div>' +
+          '<button class="modal-x" type="button" data-x aria-label="닫기">&times;</button>' +
+        '</div>' +
+        '<div class="pm-stats">' +
+          '<div class="pm-s"><span class="pk">현재고</span>' +
+            '<b>' + UI.num(r.stock) + '</b>' +
+            '<span class="px">' + UI.won(r.stock * r.price) + '</span></div>' +
+          '<div class="pm-s"><span class="pk">AI 목표재고</span>' +
+            '<b class="ok">' + UI.num(r.targetNow) + '</b>' +
+            '<span class="px">초과 ' + UI.num(over) + '개</span></div>' +
+        '</div>' +
+        '<label class="pm-l" for="poolqty">전환 수량</label>' +
+        '<input class="input" id="poolqty" type="number" inputmode="numeric" ' +
+          'min="1" max="' + over + '" step="1" value="' + over + '">' +
+        '<p class="note" style="margin-top:6px">최대 ' + UI.num(over) +
+          '개 · 목표재고 ' + UI.num(r.targetNow) + '개는 남깁니다</p>' +
+        '<div class="pm-sum" id="poolsum">' + poolSum(r, over) + '</div>' +
+        '<div class="ask-acts">' +
+          '<button class="btn line" type="button" data-x>취소</button>' +
+          '<button class="btn" type="button" data-ok>승인하고 전환</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(poolBox);
+
+    function qty() {
+      var v = Math.round(Number(document.getElementById('poolqty').value));
+      if (!(v > 0)) { v = 1; }
+      return Math.min(over, v);
+    }
+    poolBox.addEventListener('input', function (e) {
+      if (e.target.id !== 'poolqty') { return; }
+      document.getElementById('poolsum').innerHTML = poolSum(r, qty());
+    });
+    poolBox.addEventListener('click', function (e) {
+      if (e.target.closest('[data-x]') || e.target === poolBox) { poolClose(); return; }
+      if (!e.target.closest('[data-ok]')) { return; }
+      var n = qty();
+      try {
+        /* 의사(3층 pooling_overrides)와 재고 이동(3층 stock_transactions)을 같이 남긴다 ·
+         * 공용 전환 화면과 같은 길이다. 정본과 판정값은 손대지 않는다 */
+        DB.pool({ q: r.q, dept: r.dept, action: '공용전환',
+                  note: '적정재고 분석 · 전환 ' + n + '개' });
+        DB.txn({ q: r.q, dept: r.dept, txnType: '공용전환', qty: n,
+                 note: '적정재고 분석에서 공용 전환' });
+        /* 결과는 이 창 안에서 보여 준다 · 창을 닫고 팝오버를 띄우면
+         * 전환 때문에 화면이 다시 그려지면서 그 팝오버가 같이 지워진다 (실제로 그랬다) */
+        poolDone(r, n);
+      } catch (err) {
+        POP.show(e.target, { title: '전환하지 못했습니다',
+          rows: [['이유', String(err.message || err)]] });
+      }
+    });
+    document.addEventListener('keydown', poolEsc);
+    var inp = document.getElementById('poolqty');
+    if (inp && inp.focus) { inp.focus(); inp.select(); }
+  }
+
+  /* 전환한 뒤 · 무엇이 어떻게 됐는지 그 자리에서 적는다 */
+  function poolDone(r, n) {
+    if (!poolBox) { return; }
+    var rt = poolRate();
+    var left = Math.max(0, (Number(r.stock) || 0) - n);
+    poolBox.querySelector('.modal').innerHTML =
+      '<div class="modal-head">' +
+        '<div style="min-width:0"><h3>공용 전환 ' + UI.num(n) + '개를 기록했습니다</h3>' +
+        '<p class="sub">' + UI.esc(r.name || '품명 미확인') + ' · ' + UI.esc(r.q) + '</p></div>' +
+        '<button class="modal-x" type="button" data-x aria-label="닫기">&times;</button>' +
+      '</div>' +
+      '<div class="pm-sum" style="margin-top:4px">' +
+        '<div class="pm-row"><span>보유</span><b>' + UI.num(r.stock) + ' → ' +
+          UI.num(left) + '</b></div>' +
+        '<div class="pm-row"><span>전환 자산</span><b>' + UI.won(n * r.price) + '</b></div>' +
+        '<div class="pm-row"><span>연간 기대효과</span><b class="ok">' +
+          (rt === null ? '계산 불가' : UI.won(Math.round(n * r.price * rt))) + '</b></div>' +
+        '<p class="pm-f">정본과 판정값은 그대로입니다 · 사람이 한 일만 3층에 남습니다 ' +
+          '(공용 전환 1건 · 재고 거래 1건) · 시연 초기화로 되돌릴 수 있습니다</p>' +
+      '</div>' +
+      '<div class="ask-acts">' +
+        '<a class="btn line" href="pool.html">공용 전환 화면에서 보기</a>' +
+        '<button class="btn" type="button" data-x>닫기</button>' +
+      '</div>';
+  }
+
+  function poolEsc(e) { if (e.key === 'Escape') { poolClose(); } }
+
+  function poolClose() {
+    if (poolBox && poolBox.parentNode) { poolBox.parentNode.removeChild(poolBox); }
+    poolBox = null;
+    document.removeEventListener('keydown', poolEsc);
+  }
+
   /* 4 · 공용화 후보 · 회수액을 두 값으로 나눈다.
    * review 는 핵심이고 보험품이라 공용화 대상이 아니다. 전부 더하면 회수액이 부풀려진다 */
   function poolBody(st) {
@@ -624,22 +763,7 @@
       }
 
       var pq = t.closest && t.closest('[data-pool]');
-      if (pq) {
-        var q2 = pq.getAttribute('data-pool');
-        var m2 = DB.item(q2);
-        try {
-          DB.pool({ q: q2, action: '공용전환', note: '적정재고 분석 · 감축 대상' });
-          POP.show(pq, {
-            title: '공용 전환으로 표시했습니다',
-            rows: [['자재', m2.name + ' · ' + q2],
-                   ['넘치는 수량', UI.num(Math.max(0, m2.stock - m2.target))],
-                   ['회수 금액', UI.won(Math.max(0, m2.stock - m2.target) * m2.price)]],
-            note: '재고를 바꾸지 않습니다. 공용 전환 의사만 3층에 기록합니다.'
-          });
-        } catch (err) {
-          POP.show(pq, { title: '기록하지 못했습니다', rows: [['이유', String(err.message)]] });
-        }
-      }
+      if (pq) { poolOpen(pq.getAttribute('data-pool')); }
     });
 
     /* 검색은 입력할 때마다 다시 센다. 743행이라 눌러도 바로 나온다 */

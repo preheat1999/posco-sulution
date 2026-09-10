@@ -1231,14 +1231,15 @@ td.num, th.num { text-align: right; }
 .cmp-fill {
   position: absolute; left: 0; top: 0; bottom: 0; border-radius: 12px;
 }
-/* 두 막대를 같은 파랑 계열의 다른 단계로 둔다. 다른 색을 쓰면 딴 값처럼 보인다 */
-.cmp-fill.now { background: var(--b3); }
+/* 지금 보유는 흰색 · 목표(AI 제안)는 파랑이다.
+ * 둘을 같은 파랑으로 두면 「지금」 과 「제안」 이 한 값처럼 보인다 */
+.cmp-fill.now { background: var(--text); }
 .cmp-fill.tgt { background: var(--b5); }
 /* 빗금 칸 · 목표를 넘는 몫. 여기가 비어야 돈이 남는다는 뜻이다 */
 .cmp-gap {
   position: absolute; top: 0; bottom: 0; right: 0;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 12px; border: 1px dashed rgba(242, 176, 78, .5);
+  border-radius: 12px;
   background: repeating-linear-gradient(-45deg,
     rgba(242, 176, 78, .26) 0 7px, transparent 7px 14px);
   font-size: 11px; font-weight: 600; color: var(--core); white-space: nowrap;
@@ -1560,7 +1561,10 @@ td.num, th.num { text-align: right; }
 /* 판 · 상자가 직사각형 하나를 빈틈없이 채운다.
  * 배경을 본문보다 어둡게 두어 상자 사이 2px 틈이 선처럼 읽힌다 */
 .tmap {
-  position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 380px;
+  /* 가로는 꽉 채우고 세로는 낮게 · 16/9(≈550px)로 두면 이 판 하나가 화면을 다 먹었다.
+   * 3.4/1 이면 1000px 폭에서 290px 쯤이라 아래 단계(조치 판정)가 같이 보인다 */
+  position: relative; width: 100%; aspect-ratio: 3.4 / 1;
+  min-height: 210px; max-height: 320px;
   background: var(--bg); border-radius: 12px; overflow: hidden;
 }
 .tm {
@@ -1641,11 +1645,11 @@ td.num, th.num { text-align: right; }
 .heat-foot .sw.over.l4 { background: #F0716F; }
 
 @media (max-width: 1180px) {
-  .tmap { aspect-ratio: 3 / 2; }
+  .tmap { aspect-ratio: 2.4 / 1; max-height: 300px; }
 }
 @media (max-width: 760px) {
   .heat { padding: 16px 14px; }
-  .tmap { aspect-ratio: 4 / 5; min-height: 420px; }
+  .tmap { aspect-ratio: 1 / 1.15; min-height: 360px; max-height: none; }
   .heat-head { align-items: flex-start; }
   .heat-head .hh-r { gap: 16px; }
   .heat-foot { gap: 4px; }
@@ -1720,6 +1724,35 @@ td.num, th.num { text-align: right; }
 .stageline .prstep:hover { background: var(--surface-2); }
 .stageline .prstep.wait { cursor: default; }
 .stageline .prstep.wait:hover { background: none; }
+
+/* 공용 전환 확인 창 · 수량을 받고 기대효과를 그 자리에서 계산해 보여 준다 */
+.pm-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 16px; }
+.pm-s {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 14px; min-width: 0;
+}
+.pm-s .pk { display: block; font-size: 10.5px; color: var(--muted); }
+.pm-s b {
+  display: block; font-size: 26px; font-weight: 700; letter-spacing: -1px;
+  line-height: 1.2; font-variant-numeric: tabular-nums;
+}
+.pm-s b.ok { color: var(--ok); }
+.pm-s .px { display: block; font-size: 10.5px; color: var(--muted); }
+.pm-l { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.pm-sum {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 14px; margin-top: 14px;
+}
+.pm-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  font-size: 12px; color: var(--text-2); padding: 3px 0;
+}
+.pm-row b { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.pm-row b.ok { color: var(--ok); }
+.pm-f {
+  font-size: 10.5px; line-height: 1.6; color: var(--muted);
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line);
+}
 
 /* 월별 불출량 · 오른쪽 카드 안의 작은 그림.
  * 축 이름 · 격자 셋 · 선 하나 · 점만 둔다 · 카드 안이라 그림이 크면 값이 안 읽힌다 */

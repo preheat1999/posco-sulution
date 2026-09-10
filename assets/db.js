@@ -493,7 +493,10 @@
       o = o || {};
       var dept = o.dept || DEFAULT_DEPT;
       needMat(o.q, dept);
-      if (TXN_SIGN[o.type] === undefined) {
+      /* 3층 표의 칸 이름이 txnType 이라 부르는 쪽은 대개 txnType 으로 쓴다 ·
+       * type 만 받으면 공용 전환이 조용히 오류가 된다 (실제로 그랬다). 둘 다 받는다 */
+      var kind = o.type || o.txnType;
+      if (TXN_SIGN[kind] === undefined) {
         throw new Error('반납 · 불출 · 입고 · 공용전환 중 하나여야 한다');
       }
       var qty = Number(o.qty);
@@ -501,7 +504,7 @@
         throw new Error('수량은 양수여야 한다. 부호는 종류가 정한다');
       }
       var row = C.add('stock_transactions', {
-        q: o.q, dept: dept, txnType: o.type, qty: qty,
+        q: o.q, dept: dept, txnType: kind, qty: qty,
         txnAt: o.at || nowStamp(), processedBy: o.by || '담당자', note: o.note || ''
       });
       invalidate();

@@ -125,6 +125,16 @@ r = ACTIONS.run('returnMaterial', { code: Q, qty: 2 }, {});
 ok(r && !r.unknown && DB.changes().qr_returns.length === n0.ret + 1, '반납이 qr_returns 에 한 줄 는다');
 ok(DB.item(Q).stock === stock0 + 2, '정본 자재 반납은 보유 수량도 움직인다 (' + stock0 + ' → ' + DB.item(Q).stock + ')');
 ok(DB.changes().qr_returns.slice(-1)[0].cond === '', '물품 상태는 비어 있다 (반납 뒤 사람이 정한다)');
+/* 공용 전환은 의사(pool_actions)와 재고 이동(stock_transactions)을 같이 남긴다 ·
+ * DB.txn 이 txnType 을 못 받아 조용히 오류가 나던 자리라 여기서 지킨다 */
+const pool0 = { p: DB.changes().pooling_overrides.length, t: DB.changes().stock_transactions.length };
+const st0 = DB.item(Q).stock;
+r = ACTIONS.run('convertToPool', { code: Q }, {});
+ok(r && !r.unknown, '공용 전환이 오류 없이 기록된다' + (r && r.unknown ? ' · ' + r.text : ''));
+ok(DB.changes().pooling_overrides.length === pool0.p + 1, '공용 전환 의사가 3층에 한 줄 는다');
+ok(DB.changes().stock_transactions.length === pool0.t + 1, '재고 거래도 한 줄 는다');
+ok(DB.item(Q).stock === st0 - 1, '공용 전환은 보유를 줄인다 (' + st0 + ' → ' + DB.item(Q).stock + ')');
+
 r = ACTIONS.run('judgeMaterial', { code: Q, type: '계획품' }, {});
 ok(r && !r.unknown && DB.item(Q).judged === '계획품', '속성 판단이 attribute_overrides 에 남고 judged 로 보인다');
 ok(DB.item(Q).pending, '확정 전에는 대기(pending)다 · 다른 화면은 아직 옛 속성');
