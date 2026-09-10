@@ -53,7 +53,12 @@
       </div>
     </div>
 
-    <div class="split">
+    <!-- 원본 단계에서 칸을 누르기 전에는 이 아래가 접혀 있다 -->
+    <p class="foldhint" id="foldhint" hidden>
+      위 칸(<b>전체 · 보험품 · 계획품</b>)을 누르면 그 칸의 자재 목록이 열립니다
+    </p>
+
+    <div class="split" id="split">
       <div>
         <div class="noticebar" id="notice"></div>
         <!-- 여러 건을 한 번에 판단한다. 회색지대 31품목을 하나씩 누르면 손이 너무 많이 간다 -->
@@ -98,10 +103,16 @@
   var S = window.SCREEN;
   var PAGE = 12;
   var stage = S.stage();          // 'raw' · 원본만 | 'algo' · 알고리즘 결과가 올라와 있다
-  var tab = 'all';                // 실행 직후에도 「전체」 부터 본다
+  /* 원본 단계에서는 아무 칸도 눌려 있지 않다(null) · 눌러야 목록이 열린다.
+   * algo 단계는 「전체」 부터 본다 */
+  var tab = stage === 'algo' ? 'all' : null;
   var sort = 'amt';
   var page = 0;
   var picked = null;
+  /* 원본 단계에서만 쓰는 두 개 · 목록과 오른쪽 카드를 펼쳤나.
+   * algo 단계에서는 늘 펼쳐 둔다 (판단이 그 화면의 일이다) */
+  var openList = false;
+  var openPanel = false;
   var listRows = [];
   var running = false;
   var sel = {};             // 체크한 자재 · key 집합
@@ -120,6 +131,17 @@
   ];
 
   function el(id) { return document.getElementById(id); }
+
+  /* 지금 무엇을 펼칠지 한 곳에서 정한다 · 화면 두 군데에서 hidden 을 만지면 어긋난다 */
+  function applyFold() {
+    var raw = stage === 'raw';
+    var listOn = !raw || openList;
+    var panelOn = !raw || openPanel;
+    el('split').hidden = !listOn;
+    el('split').classList.toggle('nopanel', !panelOn);
+    el('panel').hidden = !panelOn;
+    el('foldhint').hidden = listOn;
+  }
   function byAmt(a, b) { return (b.stock * b.price) - (a.stock * a.price); }
 
   // ------------------------------------------------------------ 단계 표시
@@ -254,7 +276,10 @@
     var max = Math.max(0, Math.ceil(total / PAGE) - 1);
     if (page > max) { page = max; }
     var view = listRows.slice(page * PAGE, page * PAGE + PAGE);
-    if (!view.filter(function (r) { return r.key === picked; }).length) {
+    /* algo 단계는 첫 자재를 골라 둔다 · 오른쪽 카드가 비어 있으면 화면 절반이 빈다.
+     * 원본 단계는 사람이 누른 것만 고른다 · 자동으로 고르면 접어 둔 카드가 저절로 열린다 */
+    if (stage === 'algo' &&
+        !view.filter(function (r) { return r.key === picked; }).length) {
       picked = view.length ? view[0].key : null;
     }
 
@@ -504,6 +529,7 @@
       if (i >= STEPS.length) {
         S.setStage('algo'); S.setStamp(S.nowStamp());
         stage = 'algo'; tab = 'all'; page = 0; picked = null; running = false; sel = {};
+        openList = true; openPanel = true;      // 판단이 일이다 · 실행 뒤에는 펼쳐 둔다
         location.hash = 'all';        // 실행 직후에는 「전체」 가 눌린 화면을 본다
         paintAll();
         return;
@@ -606,7 +632,8 @@
       if (!b) { return; }
       var act = b.getAttribute('data-act');
       if (act === 'raw') {
-        S.setStage('raw'); stage = 'raw'; tab = 'all'; page = 0; sel = {};
+        S.setStage('raw'); stage = 'raw'; tab = null; page = 0; sel = {};
+        picked = null; openList = false; openPanel = false;   // 원본으로 돌아오면 다시 접는다
         location.hash = '';
         paintAll();
         return;
@@ -654,7 +681,8 @@
         onOk: function () {
           DB.clearAttr();
           S.setStage('raw');
-          stage = 'raw'; tab = 'all'; page = 0; sel = {}; picked = null;
+          stage = 'raw'; tab = null; page = 0; sel = {}; picked = null;
+          openList = false; openPanel = false;
           location.hash = '';
           paintAll();
         }
@@ -682,9 +710,17 @@
     el('export').addEventListener('click', function (e) { exportCsv(e.currentTarget); });
     el('tabs').addEventListener('click', function (e) {
       var b = e.target.closest('.tab'); if (!b) { return; }
-      tab = b.getAttribute('data-tab'); page = 0;
+      var key = b.getAttribute('data-tab');
+      /* 원본 단계 · 같은 칸을 다시 누르면 접는다 (토글) */
+      if (stage === 'raw' && openList && tab === key) {
+        openList = false; openPanel = false; picked = null; tab = null;
+        paintTabs(); paintList(); paintPanel(); applyFold();
+        return;
+      }
+      tab = key; page = 0;
+      if (stage === 'raw') { openList = true; }
       if (stage === 'algo') { location.hash = tab; }
-      paintTabs(); paintList(); paintPanel();
+      paintTabs(); paintList(); paintPanel(); applyFold();
     });
     el('sort').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) { return; }
@@ -701,7 +737,14 @@
         return;
       }
       var b = e.target.closest('[data-open]'); if (!b) { return; }
-      picked = b.getAttribute('data-open'); paintList(); paintPanel();
+      var key = b.getAttribute('data-open');
+      /* 원본 단계 · 같은 자재를 다시 누르면 오른쪽 카드를 접는다 (토글) */
+      if (stage === 'raw' && openPanel && picked === key) {
+        openPanel = false; picked = null;
+      } else {
+        picked = key; openPanel = true;
+      }
+      paintList(); paintPanel(); applyFold();
     });
     el('prev').addEventListener('click', function () { page -= 1; paintList(); paintPanel(); });
     el('next').addEventListener('click', function () { page += 1; paintList(); paintPanel(); });
@@ -719,7 +762,7 @@
   function paintAll() {
     var m = window.DB ? DB.meta() : null;
     el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
-    paintStage(); paintHero(); paintTabs(); paintList(); paintPanel();
+    paintStage(); paintHero(); paintTabs(); paintList(); paintPanel(); applyFold();
   }
 
   paintAll();

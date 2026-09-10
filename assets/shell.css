@@ -134,42 +134,59 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* 좁힌 사이드바 · 아이콘만 남기고 66px 로 줄인다. 이게 기본값이다.
  *
- * 폭 0(통째로 감추기)으로 두면 다른 화면으로 갈 길이 사라져서
- * 단추를 한 번 더 눌러야 이동할 수 있다 · 아이콘 줄은 그대로 누를 수 있다.
- * 글자는 감추고 글리프만 남긴다 · 이름은 title 로 뜬다 */
-.layout.folded { grid-template-columns: var(--side-w-min) 1fr; }
-.layout.folded .top { left: var(--side-w-min); }
-.layout.folded .side { padding: 0 8px 14px; }
-.layout.folded .side-logo { justify-content: center; padding: 0; margin: 0 -8px 10px; }
-.layout.folded .side-logo-text,
-.layout.folded .navgroup-label,
-.layout.folded .navitem-body,
-.layout.folded .side-me-name,
-.layout.folded .side-me-dept,
-.layout.folded .navlink .lk-t { display: none; }
-.layout.folded .navitem {
-  justify-content: center; padding: 10px 0; gap: 0;
-  border-left: 0; border-radius: 12px; position: relative;
+ * 폭 0(통째로 감추기)으로 두면 다른 화면으로 갈 길이 사라져서 단추를 한 번 더 눌러야
+ * 이동할 수 있다 · 아이콘 줄은 그대로 누를 수 있다.
+ *
+ * **마우스를 올리면 넓어진다.** 그때 본문을 밀지 않는다 · 그리드 칸은 66px 그대로 두고
+ * 사이드바만 본문 위로 덮는다(z-index 50). 밀면 마우스가 지나갈 때마다 화면이 출렁이고
+ * 커서가 카드에서 벗어나 팝오버가 닫힌다.
+ *
+ * 좁은 모양(글자 감추기)은 :not(:hover) 에만 둔다 · 올리면 스크립트 없이 원래 모양이 된다.
+ * 이 묶음은 넓은 화면(≥961px)에만 쓴다 · 좁은 화면의 서랍은 늘 넓게 뜬다 */
+@media (min-width: 961px) {
+  .layout.folded { grid-template-columns: var(--side-w-min) 1fr; }
+  .layout.folded .top { left: var(--side-w-min); }
+  .layout.folded .side {
+    width: var(--side-w-min); padding: 0 8px 14px;
+    transition: width .18s ease, padding .18s ease, box-shadow .18s ease;
+  }
+  /* 넓어지는 순간만 그림자를 준다 · 본문 위에 떠 있다는 표시다 */
+  .layout.folded .side:hover {
+    width: var(--side-w); padding: 0 10px 16px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+  }
+
+  .layout.folded .side:not(:hover) .side-logo { justify-content: center; padding: 0; margin: 0 -8px 10px; }
+  .layout.folded .side:not(:hover) .side-logo-text,
+  .layout.folded .side:not(:hover) .navgroup-label,
+  .layout.folded .side:not(:hover) .navitem-body,
+  .layout.folded .side:not(:hover) .side-me-name,
+  .layout.folded .side:not(:hover) .side-me-dept,
+  .layout.folded .side:not(:hover) .navlink .lk-t { display: none; }
+  .layout.folded .side:not(:hover) .navitem {
+    justify-content: center; padding: 10px 0; gap: 0;
+    border-left: 0; border-radius: 12px; position: relative;
+  }
+  .layout.folded .side:not(:hover) .navitem.on {
+    border-left: 0; box-shadow: inset 0 0 0 1px var(--brand);
+  }
+  .layout.folded .side:not(:hover) .navitem-ico { width: auto; font-size: 15px; }
+  /* 배지는 숫자를 넣을 자리가 없다 · 「할 일이 있다」 만 점으로 남긴다 */
+  .layout.folded .side:not(:hover) .navcount {
+    position: absolute; top: 5px; right: 8px;
+    min-width: 0; width: 7px; height: 7px; padding: 0;
+    overflow: hidden; text-indent: -99px; background: var(--insur);
+  }
+  .layout.folded .side:not(:hover) .side-foot { padding: 12px 0 0; }
+  .layout.folded .side:not(:hover) .side-links { gap: 6px; justify-content: center; }
+  .layout.folded .side:not(:hover) .navlink {
+    width: 42px; padding: 0; min-height: 30px; justify-content: center;
+  }
+  .layout.folded .side:not(:hover) .navlink .lk-i { display: block; font-size: 13px; }
 }
-.layout.folded .navitem.on { border-left: 0; box-shadow: inset 0 0 0 1px var(--brand); }
-.layout.folded .navitem-ico { width: auto; font-size: 15px; }
-/* 배지는 숫자를 넣을 자리가 없다 · 「할 일이 있다」 만 점으로 남긴다 */
-.layout.folded .navcount {
-  position: absolute; top: 5px; right: 8px;
-  min-width: 0; width: 7px; height: 7px; padding: 0;
-  overflow: hidden; text-indent: -99px; background: var(--insur);
-}
-.layout.folded .side-foot { padding: 12px 0 0; }
-.layout.folded .side-links { gap: 6px; justify-content: center; }
-.layout.folded .navlink {
-  width: 42px; padding: 0; min-height: 30px; justify-content: center;
-}
-.layout.folded .navlink .lk-i { display: block; font-size: 13px; }
 /* 넓을 때는 글자만 · 글리프를 같이 두면 단추가 넓어져 두 줄로 접힌다 */
 .navlink .lk-i { display: none; }
-.side { transition: padding .16s ease; }
 .top { transition: left .16s ease; }
-
 
 /* 햄버거용 어두운 막. 이게 없으면 햄버거가 동작하지 않는다 */
 .overlay {
@@ -897,27 +914,9 @@ td.num, th.num { text-align: right; }
   .side.on { transform: none; }
   /* 오버레이 방식에서는 접기가 뜻이 없다. 폭 · 여백을 되돌린다 */
   .layout.folded { grid-template-columns: 1fr; }
-  /* 서랍으로 뜰 때는 좁히지 않는다 · 손가락으로 아이콘만 짚기는 어렵다 */
+  /* 서랍으로 뜰 때는 좁히지 않는다 · 손가락으로 아이콘만 짚기는 어렵다.
+   * 좁은 모양은 ≥961px 묶음 안에만 있으니 여기서 되돌릴 것이 없다 */
   .layout.folded .side { width: 264px; padding: 0 10px 16px; }
-  .layout.folded .side-logo { justify-content: flex-start; padding: 0 8px; margin: 0 -10px 10px; }
-  .layout.folded .side-logo-text,
-  .layout.folded .navgroup-label,
-  .layout.folded .navitem-body,
-  .layout.folded .side-me-name,
-  .layout.folded .side-me-dept,
-  .layout.folded .navlink .lk-t { display: block; }
-  .layout.folded .navitem {
-    justify-content: flex-start; padding: 9px 10px; gap: 9px;
-    border-left: 2px solid transparent; border-radius: 10px;
-  }
-  .layout.folded .navitem.on { border-left-color: var(--brand); box-shadow: none; }
-  .layout.folded .navcount {
-    position: static; width: auto; height: auto; min-width: 20px;
-    padding: 1px 6px; text-indent: 0; background: var(--insur-weak);
-  }
-  .layout.folded .navlink { width: auto; padding: 0 10px; }
-  .layout.folded .navlink .lk-i { display: none; }
-  .layout.folded .side-links { justify-content: flex-start; }
   .main { padding: calc(var(--top-h) + 16px) 16px 40px; }
   .grid2 { grid-template-columns: 1fr; }
   .kpiwrap, .kpiwrap.viz { grid-template-columns: 1fr 1fr; }
@@ -1721,6 +1720,17 @@ td.num, th.num { text-align: right; }
 .stageline .prstep:hover { background: var(--surface-2); }
 .stageline .prstep.wait { cursor: default; }
 .stageline .prstep.wait:hover { background: none; }
+
+/* 원본 단계 · 접혀 있을 때 무엇을 누르면 되는지 한 줄로 알린다.
+ * 접었다는 말을 안 적으면 「목록이 안 뜬다」 로 읽힌다 */
+.foldhint {
+  font-size: 12px; line-height: 1.6; color: var(--muted);
+  border: 1px dashed var(--line-2); border-radius: 12px;
+  padding: 13px 15px; margin-bottom: 16px;
+}
+.foldhint b { color: var(--text-2); font-weight: 600; }
+/* 오른쪽 카드를 접으면 목록이 그 폭을 다 쓴다 · 빈 칸을 남기면 접은 것처럼 안 보인다 */
+.split.nopanel { grid-template-columns: 1fr; }
 
 /* 판정에서 빠진 것 · 조용한 회색이다. 할 일이 아니라 「대상이 아님」 이라서 그렇다 */
 .excl { color: var(--muted); font-weight: 600; }
