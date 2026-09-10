@@ -69,9 +69,16 @@
     box.style.top = Math.round(top) + 'px';
   }
 
+  /* 바깥을 누르면 닫는다.
+   *
+   * 단, **자기를 연 그 클릭으로는 닫지 않는다.** 화면이 누름을 받아 POP.show 를 부르면
+   * 그 클릭이 계속 올라와 여기까지 닿는다 · 그대로 hide 하면 열렸다가 같은 순간 닫혀
+   * 「눌러도 아무 일이 없다」 가 된다 (적정재고의 보유 수량 · 히트맵 상자가 그랬다).
+   * 그래서 팝오버를 띄운 그 요소(anchor) 안에서 온 클릭은 그냥 둔다 */
   document.addEventListener('click', function (e) {
     var t = e.target;
     if (box && (t === box || box.contains(t))) { return; }
+    if (anchor && t && anchor.contains && anchor.contains(t)) { return; }
     if (t && t.closest && t.closest('.askbtn')) { return; }   // 열기는 각 화면이 한다
     hide();
   });

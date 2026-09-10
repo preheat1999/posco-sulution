@@ -519,10 +519,16 @@ tbody tr.click:hover td { background: var(--bg); }
 td.num, th.num { text-align: right; }
 
 /* 누르면 자재 상세로 간다 */
+/* 표 안에서 누를 수 있는 숫자 (보유 수량 → 목표재고 산식이 열린다).
+ * 파랑 + 점선으로 두었더니 표의 다른 숫자들과 색이 갈려 「이 숫자만 딴 값」 처럼 보였다 ·
+ * 평소에는 흰 숫자로 두고, 누를 수 있다는 표시는 마우스를 올릴 때만 낸다 */
 .linkq {
-  color: var(--brand); font-weight: 700;
-  border-bottom: 1px dotted var(--brand); cursor: pointer;
-  background: none; border-left: 0; border-right: 0; border-top: 0; padding: 0;
+  color: var(--text); font-weight: 700; cursor: pointer;
+  background: none; border: 0; padding: 0; font: inherit; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.linkq:hover, .linkq:focus-visible {
+  color: var(--b1); text-decoration: underline; text-underline-offset: 3px;
 }
 
 /* 「없음」 대신 무엇을 하면 되는지 적는다 */
@@ -1231,15 +1237,14 @@ td.num, th.num { text-align: right; }
 .cmp-fill {
   position: absolute; left: 0; top: 0; bottom: 0; border-radius: 12px;
 }
-/* 지금 보유는 흰색 · 목표(AI 제안)는 파랑이다.
- * 둘을 같은 파랑으로 두면 「지금」 과 「제안」 이 한 값처럼 보인다 */
-.cmp-fill.now { background: var(--text); }
+/* 두 막대를 같은 파랑 계열의 다른 단계로 둔다. 다른 색을 쓰면 딴 값처럼 보인다 */
+.cmp-fill.now { background: var(--b3); }
 .cmp-fill.tgt { background: var(--b5); }
 /* 빗금 칸 · 목표를 넘는 몫. 여기가 비어야 돈이 남는다는 뜻이다 */
 .cmp-gap {
   position: absolute; top: 0; bottom: 0; right: 0;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 12px;
+  border-radius: 12px; border: 1px dashed rgba(242, 176, 78, .5);
   background: repeating-linear-gradient(-45deg,
     rgba(242, 176, 78, .26) 0 7px, transparent 7px 14px);
   font-size: 11px; font-weight: 600; color: var(--core); white-space: nowrap;
