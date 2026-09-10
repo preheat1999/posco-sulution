@@ -107,9 +107,10 @@
   var sort = 'amt';
   var page = 0;
   var picked = null;
-  /* 원본 단계에서만 쓰는 두 개 · 목록은 펼쳐 두고 오른쪽 카드는 접어 둔다.
-   * 오른쪽 카드는 자재를 눌러야 열린다 · algo 단계에서는 둘 다 늘 펼쳐 둔다 */
-  var openList = true;
+  /* 원본 단계에서만 쓰는 두 개 · 목록과 오른쪽 카드를 **둘 다 접어** 둔다.
+   * 칸(전체)은 눌린 채로 두고, 그 칸을 누르면 목록이 열린다 · 자재를 누르면 오른쪽이 열린다.
+   * algo 단계에서는 둘 다 늘 펼쳐 둔다 (판단이 그 화면의 일이다) */
+  var openList = false;
   var openPanel = false;
   var listRows = [];
   var running = false;
@@ -705,8 +706,8 @@
       var act = b.getAttribute('data-act');
       if (act === 'raw') {
         S.setStage('raw'); stage = 'raw'; tab = 'all'; page = 0; sel = {};
-        /* 원본으로 돌아오면 목록은 펼치고 오른쪽 카드만 접는다 */
-        picked = null; openList = true; openPanel = false;
+        /* 원본으로 돌아오면 둘 다 다시 접는다 · 여기서 할 일은 「실행」 하나다 */
+        picked = null; openList = false; openPanel = false;
         location.hash = '';
         paintAll();
         return;
@@ -755,7 +756,7 @@
           DB.clearAttr();
           S.setStage('raw');
           stage = 'raw'; tab = 'all'; page = 0; sel = {}; picked = null;
-          openList = true; openPanel = false;
+          openList = false; openPanel = false;
           location.hash = '';
           paintAll();
         }
