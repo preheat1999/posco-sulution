@@ -83,12 +83,15 @@ def make_one(code, item, base, page):
     url = payload(base, code, page)
     qr = segno.make(url, error=ERROR)
 
-    png = os.path.join(OUT, code + '_qr.png')
-    svg = os.path.join(OUT, code + '_qr.svg')
+    # 기본(모바일 반납)은 그냥 <코드>_qr.png, 다른 화면으로 보내면 이름에 그 화면을 적는다.
+    # 같은 이름으로 덮어쓰면 어느 QR 이 어디로 가는지 알 수 없게 된다
+    tag = '' if page == DEFAULT_PAGE else '_' + page.replace('.html', '')
+    png = os.path.join(OUT, code + tag + '_qr.png')
+    svg = os.path.join(OUT, code + tag + '_qr.svg')
     qr.save(png, scale=SCALE, border=BORDER, dark='#000000', light='#FFFFFF')
     qr.save(svg, scale=SCALE, border=BORDER, dark='#000000', light='#FFFFFF')
 
-    label = os.path.join(OUT, code + '_label.png')
+    label = os.path.join(OUT, code + tag + '_label.png')
     draw_label(label, png, code, item, url)
     return {'url': url, 'qr': qr, 'png': png, 'svg': svg, 'label': label}
 
