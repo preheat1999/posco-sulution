@@ -119,7 +119,13 @@
     if (noTour) { return; }
     var seen = null;
     try { seen = window.localStorage.getItem(SEEN); } catch (e) { seen = '1'; }
-    if (!seen && STEPS[window.PAGE || '']) { open(); }
+    /* 채팅 서랍이 열려 있으면 자동으로 열지 않는다 · 겹치면 둘 다 못 읽는다.
+     * 버튼은 남아 있으니 서랍을 닫고 눌러 보면 된다 */
+    var chatOpen = (function () {
+      var p = document.getElementById('chatpane');
+      return !!(p && !p.hidden);
+    })();
+    if (!seen && !chatOpen && STEPS[window.PAGE || '']) { open(); }
   }
 
   if (document.readyState === 'loading') {
