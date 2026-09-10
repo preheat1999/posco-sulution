@@ -51,7 +51,7 @@ test_screens.js        : 화면 8개 전수 PASS (실행 · undefined · 지어�
 | 자재 확인 · QR 진입 (`material-view.html`) | ✅ 완료 | 자재식별표 QR(`?code=Q0000000`) → 코드 검증 → 식별표 항목 카드 → **반납자(사번 · 이름) 확인** → 확인 팝업 → 모바일 반납 2단계로 인계 |
 | 자재반납 (`return.html`) | ✅ 완료 | 상태별 칸 · 반납 실행(재고 재계산) · 효과 미리보기 |
 | 현장 반납 (`mobile-return.html`) | ✅ 완료 | 375px 전용 · 큰 스테퍼 · 상태 선택 · 완료 화면 |
-| AI 질의 서랍 (`assets/chat.js`) | 🟡 껍데기 | 380px 패널 · `CFG.CHAT_API` 비면 「연동 예정」 표시 (RAG 담당 대기) |
+| AI 질의 서랍 (`assets/chat.js`) | ✅ 연동 | 사내 RAG(`10.1.14.205:8000`) 스트림 연결 · 진행 4단계 표시 · 글자 실시간 · `[n]` 인용 ↔ 출처 카드 · `no_answer` 경고 톤 · sql 표 · 화면별 추천 질문 · 최근 4턴 맥락. 토큰은 서랍에서 한 번 넣어 브라우저에만 저장(저장소에 없음). **CORS: `localhost:3000`(또는 5173 · 8000)으로 열어야 붙는다** → `python -B serve.py --port 3000` |
 | 데이터 근거 (`evidence.html`) | ⏳ 예정 | 심사 임팩트 가장 큰 화면 · **다음 작업** |
 | 주간 리포트 (`report.html`) | ⏳ 예정 | 사이드바에 「준비 중」 으로 표시 중 |
 | 자재 검색 (`search.html`) | ⏳ 예정 | 사이드바에 「준비 중」 으로 표시 중 |
@@ -79,6 +79,6 @@ test_screens.js        : 화면 8개 전수 PASS (실행 · undefined · 지어�
 2. `search.html` · `report.html` · 지금은 사이드바에 「준비 중」 으로 표시 중(눌러도 404 가 안 뜨게 막아 뒀다)
 3. `assets/qr.js` · 실제 QR 인코더(버전 3 · 바이트 모드 · ECC L). 지금은 자리표시라 스캔되지 않는다
 4. 알고리즘 결과 CSV 수령 → `validate_algorithm_csv.py` 통과 확인 → `feat/algo` 병합
-5. RAG 엔드포인트 완료 → `assets/config.js` 의 `CHAT_API` 에 주소만 넣으면 서랍이 살아난다
+5. RAG 연동 완료 · 시연 순서: `python -B serve.py --port 3000` → `http://localhost:3000` → 서랍에 토큰 한 번 입력 → 추천 질문 클릭. 폰(IP origin)에서 쓰려면 백엔드 `allowed_origins` 에 `http://10.1.14.204:8130` 추가 요청 필요
 6. `verify.py`(5대 불변식 + 정적 검사) 미작성 · 전체 통합 전 마지막 게이트
    (화면 렌더 확인은 `test_screens.js` 가 대신하고 있다)
