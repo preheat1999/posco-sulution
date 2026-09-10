@@ -1,0 +1,91 @@
+# 02_프롬프트/00_마스터_구현_프롬프트.md 5절 확정 파라미터. 재튜닝 금지(실측 확정값).
+embedding:
+  provider: "local"
+  model_name: "BAAI/bge-m3"
+  dimension: 1024
+  max_seq_length: 2048
+  normalize: true
+  device: "auto"
+  query_prefix: ""
+  torch_threads: null
+
+vectorstore:
+  provider: "qdrant"
+  mode: "server"
+  collection_name: "material_rag"
+  dense_vector_name: "dense"
+  sparse_vector_name: "bm25"
+  use_sparse: false
+  distance: "cosine"
+  store_text: false
+  timeout_seconds: 60
+  read_only: true
+
+retrieval:
+  mode: "hybrid"          # hybrid | bm25
+  fusion: "rrf"
+  rrf_k: 10
+  dense_limit: 20
+  bm25_limit: 20
+  candidate_k: 20
+  top_k: 5
+  similarity_threshold: 0.0
+  bm25:
+    tokenizer: "kiwi"
+    k1: 1.2
+    b: 0.75
+    keep_pos: ["NNG","NNP","NNB","NR","SL","SN","VV","VA","XR"]
+  category_weights:
+    enabled: true
+    default_weight: 0.90
+    weights: {guideline: 1.00, contract: 0.95, manual: 0.90, training: 0.85, faq: 0.75}
+    min_non_faq_candidates: 3
+  metadata_filter:
+    enabled: true
+    auto_category_filter: false
+
+reranker:
+  enabled: true
+  model_name: "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+  rerank_top_k: 5
+  batch_size: 8
+  max_length: 512
+  device: "auto"
+  score_threshold: null
+
+llm:
+  provider: "openrouter"
+  model: "google/gemini-3.1-flash-lite"
+  fallback_models:
+    - "google/gemini-2.5-flash-lite"
+    - "qwen/qwen3-next-80b-a3b-instruct"
+    - "anthropic/claude-haiku-4.5"
+  temperature: 0.0
+  max_tokens: 1024
+  timeout_seconds: 120
+  max_retries: 3
+  max_context_chars: 24000
+  min_citation_coverage: 0.5
+
+workflow:
+  query_rewrite: false
+  self_check: false
+  max_retry_on_low_recall: 1
+  no_answer_message: "제공된 사내 문서에서 해당 내용을 찾을 수 없습니다."
+
+api:
+  preload_models: true
+  allowed_origins: ["null","http://localhost:8000","http://127.0.0.1:8000",
+                    "http://localhost:5173","http://localhost:3000"]
+  allowed_origin_regex: null
+
+security:
+  mask_pii: true
+  audit_log: true
+  log_raw_query: false
+  allow_external_embedding: false
+
+paths:
+  chunks_file: "data/chunks/chunks.jsonl"
+  bm25_index: "data/index/bm25_index.json"
+  models_cache_dir: "models"
