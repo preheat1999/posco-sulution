@@ -279,11 +279,33 @@ pr_drafts            q dept data by at
 
 ### 8-1. 확정 속성 → 적정재고 (어떤 조합이든)
 
-`06` 의 `target` 은 엔진이 **그 행의 `type` 으로** 계산한 값이다. 담당자가 화면에서 속성을 바꾸면
-그 목표는 「다른 속성으로 계산한 값」 이 된다. `db.js merge()` 가 행마다 이걸 표시한다.
+**판단과 확정은 다른 일이다.** 사람이 화면에서 고른 값은 3층에 쌓이지만, 다른 화면은
+「담당자 확정」 을 누른 것까지만 쓴다. 확정은 `attribute_overrides` 의 **seq 하나**로 적는다.
 
-| 필드 | 뜻 |
-|---|---|
+```python
+db.item('Q1000745')['judged']      # 사람이 고른 값
+db.item('Q1000745')['committed']   # 확정됐는가
+db.item('Q1000745')['type']        # 다른 화면이 쓰는 속성 (확정된 것만)
+db.item('Q1000745')['targetNow']   # 확정 속성의 목표재고
+```
+
+목표재고는 **속성 두 가지 각각을 엔진으로 미리 구워** 2층에 실었다
+(`targetIns` · `targetPln`). 06 의 target 은 그 행의 속성으로 계산된 값 하나뿐이라
+속성을 바꾸면 화면이 다시 계산할 수 없기 때문이다 (μ_LT + SS 에 소요 이력이 필요하다).
+
+굽는 방법 · 기준 재현 743/743 일치 · `PYTHONHASHSEED=0` 고정 필수 ·
+자세한 것은 [FLOW_CHECK.md](FLOW_CHECK.md) 2절, 기록은 `ENGINE_REPRO.txt`.
+
+| 확정 | 06 의 속성 | 처리 |
+|---|---|---|
+| 같다 | 같다 | 06 의 target 그대로 (`stale=false`) |
+| 보험품 | 계획품 | `targetIns` · `reasonIns` · `signalIns` 로 바꾼다 |
+| 계획품 | 보험품 | `targetPln` · `reasonPln` · `signalPln` 로 바꾼다 |
+
+목표 · 부족분 · 조치 · 신호 · 감축 금액 · 금융비용이 한 번에 따라 움직인다.
+`summary().staleN` 이 그렇게 다시 잡은 행 수, `waitingN` 이 확정 대기 행 수다.
+
+---|---|
 | `stockType` | 적정재고 계산에 쓰인 속성 (`06.type`) |
 | `stale` | 확정 속성 ≠ `stockType` · 사람이 바꿨을 때만 true (원본 상태는 743행 전부 false, 확인함) |
 | `targetNow` | 지금 써야 하는 목표. stale 이 아니면 `target` 그대로 |

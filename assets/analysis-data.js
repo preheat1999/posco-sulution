@@ -19,7 +19,7 @@
   var FALLBACK = {
     asof: null,
     counts: { equipment: 14, materials: 743 },
-    bucket: { '승인 완료': 0, '보험품→계획품': 149, '계획품→보험품': 90,
+    bucket: { '판단 완료': 0, '보험품→계획품': 149, '계획품→보험품': 90,
               '현행유지': 31, '판정일치': 340, '배제': 133 },
     action: { '발주': 120, '유지': 142, '감축': 481 },
     signal: { red: 67, yellow: 59, green: 129, gray: 488 },
@@ -59,7 +59,8 @@
         cutAmt: FALLBACK.money.cutAmt, poolAmt: FALLBACK.money.poolAmt,
         poolItems: FALLBACK.money.poolItems, finance: FALLBACK.money.finance,
         financeRate: FALLBACK.money.financeRate,
-        financeInterest: FALLBACK.money.financeInterest
+        financeInterest: FALLBACK.money.financeInterest,
+        judgedN: 0, waitingN: 0, staleN: 0, recalcN: 0
       };
     }
     return DB.summary();
@@ -73,11 +74,11 @@
    * verdict 는 그대로 남기 때문이다.
    * 그러면 이 시스템의 핵심(승인 한 건이 화면을 움직인다)이 대시보드에서 안 보인다.
    *
-   * 그래서 승인된 건(typeSrc === 'override')을 「승인 완료」 로 따로 센다.
+   * 그래서 사람이 판단한 건(judged)을 「판단 완료」 로 따로 센다.
    * 담당자가 한 건 승인하면 초록 조각이 커지고 주황 조각이 줄어든다.
    * 알고리즘 판정값 자체는 근거 화면을 위해 그대로 남아 있다 */
   var DONUT_ORDER = [
-    { key: '승인 완료', label: '승인 완료', color: 'var(--ok)', act: true },
+    { key: '판단 완료', label: '판단 완료', color: 'var(--ok)', act: true },
     { key: '보험품→계획품', label: '보험품 → 계획품', color: 'var(--plan)', act: true },
     { key: '계획품→보험품', label: '계획품 → 보험품', color: 'var(--insur)', act: true },
     { key: '현행유지', label: '현행유지', color: 'var(--core)', act: true },
@@ -89,7 +90,9 @@
 
   function bucketOf(r) {
     // 사람이 확정한 것이 먼저다. 이미 처리된 건을 「해야 할 일」 로 다시 세면 안 된다
-    if (r.typeSrc === 'override') { return '승인 완료'; }
+    /* 사람이 판단한 것 · 확정 전이라도 「판단 완료」 다.
+   * 확정 여부는 대시보드의 확정 대기 칩이 따로 알린다 */
+    if (r.judged) { return '판단 완료'; }
     var v = r.verdict, t = r.baseType;
     if (String(v || '').indexOf('배제') === 0) { return '배제'; }
     if (v === '회색지대') { return '현행유지'; }
@@ -124,7 +127,7 @@
       total: total, segs: segs,
       change: b['보험품→계획품'] + b['계획품→보험품'],
       hold: b['현행유지'],
-      done: b['승인 완료']
+      done: b['판단 완료']
     };
   }
 

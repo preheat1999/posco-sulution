@@ -320,7 +320,10 @@
         bucket: { '보험품→계획품': 0, '계획품→보험품': 0, '현행유지': 0, '판정일치': 0, '배제': 0 },
         holdOpen: 0,
         /* 속성이 바뀌어 적정재고를 다시 봐야 하는 행 · 그중 엔진 재계산이 남은 행 */
-        staleN: 0, recalcN: 0
+        staleN: 0, recalcN: 0,
+        /* 판단은 했지만 아직 확정하지 않은 행 · 이 값이 0 이 아니면 다른 화면은
+         * 아직 알고리즘 판정 속성을 쓰고 있다는 뜻이다 */
+        judgedN: 0, waitingN: 0
       };
       var nowAmt = 0, tgtAmt = 0, cutAmt = 0, i, r, price, b;
 
@@ -346,12 +349,13 @@
         /* 사람이 아직 확정하지 않은 회색지대. 「해야 할 건수」 는 이 값이다.
          * bucket 은 2층 판정을 1층 정본과 견준 값이라 승인해도 안 줄어든다.
          * 사이드바 배지에 bucket 을 쓰면 대시보드는 30, 배지는 31 로 어긋난다 */
-        if (b === '현행유지' && r.typeSrc !== 'override') { out.holdOpen += 1; }
+        if (b === '현행유지' && !r.judged) { out.holdOpen += 1; }
 
         price = Number(r.price) || 0;
         nowAmt += price * (Number(r.stock) || 0);
         tgtAmt += price * (Number(r.targetNow) || 0);
         if (r.stale) { out.staleN += 1; if (r.recalc && !r.recalc.done) { out.recalcN += 1; } }
+        if (r.judged) { out.judgedN += 1; if (r.pending) { out.waitingN += 1; } }
         // 감축 가능액은 목표를 넘는 만큼이다. 목표가 더 크면 0 이다
         cutAmt += price * Math.max(0, (Number(r.stock) || 0) - (Number(r.targetNow) || 0));
       }

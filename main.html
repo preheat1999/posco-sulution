@@ -329,7 +329,13 @@
           '<div class="viz-msg">' +
             '<div><b>' + UI.num(d.change) + '</b>속성 변경 제안</div>' +
             '<div><b' + (d.done ? ' class="ok"' : '') + '>' + UI.num(d.hold) +
-              '</b>사람 판단 보류' + (d.done ? ' · ' + UI.num(d.done) + '건 승인' : '') + '</div>' +
+              '</b>사람 판단 보류' + (d.done ? ' · ' + UI.num(d.done) + '건 판단' : '') + '</div>' +
+            /* 확정 대기가 있으면 다른 화면(적정재고 · 적정구매시점)이 아직 알고리즘
+             * 판정 속성을 쓰고 있다는 뜻이다. 그 사실을 대시보드에서 먼저 알린다 */
+            (s.waitingN ? '<div><b class="core">' + UI.num(s.waitingN) +
+              '</b>확정 대기 · 아직 반영 전</div>'
+              : (s.staleN ? '<div><b class="ok">' + UI.num(s.staleN) +
+                 '</b>확정 반영됨 · 목표재고 재계산</div>' : '')) +
             '<div class="viz-hint">마우스를 올리면 6갈래</div>' +
           '</div>' +
           '<div class="viz-legend">' + donutLegend(d) + '</div>' +
