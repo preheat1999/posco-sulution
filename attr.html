@@ -407,7 +407,7 @@
           '<span>' + (j < i ? '✓' : (j === i ? '●' : '·')) + '</span>' + UI.esc(s) + '</div>';
       }).join('');
       i += 1;
-      window.setTimeout(tick, 380);
+      window.setTimeout(tick, 750);   // 4단계 × 750ms ≈ 3초 · 실행이 실제로 일어나는 느낌을 준다
     })();
   }
 
