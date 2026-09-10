@@ -48,7 +48,7 @@
     },
     {
       "name": "attr_status",
-      "description": "속성값 판단(보험품 · 계획품) 현황을 준다. 변경 제안 · 회색지대 보류 · 제외대상 · 담당자 판단 · 확정 대기 건수. '회색지대가 몇 품목', '확정 대기 몇 건', '제외대상이 왜 473' 같은 질문에 쓴다.",
+      "description": "보유목적 판단(보험품 · 계획품) 현황을 준다. 변경 제안 · 회색지대 보류 · 제외대상 · 담당자 판단 · 확정 대기 건수. '회색지대가 몇 품목', '확정 대기 몇 건', '제외대상이 왜 473' 같은 질문에 쓴다.",
       "input_schema": {
         "type": "object",
         "properties": {},
@@ -167,7 +167,7 @@
               "return",
               "material-view"
             ],
-            "description": "main=대시보드, attr=속성값 판단, stock=적정재고 분석, plan=적정구매시점, pool=공용 전환, purchase=구매신청, return=자재반납, material-view=QR 자재 확인"
+            "description": "main=대시보드, attr=보유목적 판단, stock=적정재고 분석, plan=적정구매시점, pool=공용 전환, purchase=구매신청, return=자재반납, material-view=QR 자재 확인"
           },
           "topic": {
             "type": "string",
@@ -231,7 +231,7 @@
               "purchase",
               "return"
             ],
-            "description": "main=대시보드, attr=속성값 판단, stock=적정재고 분석, plan=적정구매시점, pool=공용 전환, purchase=구매신청(PR), return=자재반납(QR)"
+            "description": "main=대시보드, attr=보유목적 판단, stock=적정재고 분석, plan=적정구매시점, pool=공용 전환, purchase=구매신청(PR), return=자재반납(QR)"
           },
           "section": {
             "type": "string",
@@ -359,7 +359,7 @@
     {
       "name": "runAttrAlgorithm",
       "kind": "query",
-      "description": "속성값 판단 화면에서 알고리즘 판정을 실행한다. 「알고리즘 실행해」 「속성 판정 돌려」.",
+      "description": "보유목적 판단 화면에서 알고리즘 판정을 실행한다. 「알고리즘 실행해」 「속성 판정 돌려」.",
       "input_schema": {
         "type": "object",
         "properties": {}

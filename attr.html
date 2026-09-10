@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>속성값 판단 · AI 자재 솔루션</title>
+<title>보유목적 판단 · AI 자재 솔루션</title>
 <link rel="stylesheet" href="assets/shell.css">
 <script>window.PAGE = 'attr';</script>
 </head>
@@ -19,7 +19,7 @@
         <div>
           <div class="crumb" data-group="분석">&nbsp;</div>
           <div class="phead" style="margin-bottom:0">
-            <h1>속성값 판단</h1>
+            <h1>보유목적 판단</h1>
             <span class="badge" id="progress">&nbsp;</span>
           </div>
         </div>
@@ -189,7 +189,7 @@
     var at = S.stamp();
     bar.hidden = false;
     var cm = DB.commitInfo();
-    bar.innerHTML = '<span class="st-k">속성값 판단 실행</span>' +
+    bar.innerHTML = '<span class="st-k">보유목적 판단 실행</span>' +
       '<b class="st-v">' + UI.esc(at || '시각을 기록하지 못했습니다') + '</b>' +
       '<span class="st-x">기준일 ' + UI.esc(UI.date(DB.meta().asof)) +
         ' 스냅샷 · 743품목 판정 · 제외 ' + UI.num(c.excluded) + '품목</span>' +
@@ -208,7 +208,6 @@
     h.hidden = false;
     h.innerHTML =
       '<div class="rh-left">' +
-        '<p class="gt"><span>지금 보고 있는 것</span></p>' +
         '<h2>원본 속성 그대로입니다</h2>' +
         '<p class="sub">정본 743품목에 적힌 보험품 · 계획품. 어떤 알고리즘도 적용하지 않은 값입니다.</p>' +
         '<div class="rh-nums">' +
@@ -219,6 +218,9 @@
           UI.num(c.done) + '품목이 있습니다 · 실행하면 확정 내용과 함께 보입니다</p>' : '') +
       '</div>' +
       '<div class="rh-right">' +
+        /* 왼쪽 제목과 같은 크기 · 같은 높이에 둔다 · 「이건 지금 상태」 「이건 다음 할 일」 이
+         * 한 줄에서 마주 봐야 무엇을 누르면 되는지 바로 읽힌다 */
+        '<h2>AI의 도움을 받아볼까요?</h2>' +
         '<button class="btn" type="button" id="run" style="min-height:52px;padding:0 26px">' +
           '<span class="cbi">✦</span> 알고리즘 실행</button>' +
         '<p class="note" style="margin-top:10px">7요인 가중합으로 743품목의 속성을 다시 판정합니다 · ' +
@@ -545,7 +547,7 @@
     if (r.judged) { DB.revertAttr({ q: q, dept: dept }); }   // 판단을 바꾸면 앞 줄을 걷는다
     DB.approveAttr({
       q: q, dept: dept, newType: act === 'keep' ? r.baseType : act,
-      reason: act === 'keep' ? '담당자 확인 · 현행유지' : '담당자 판단 · 속성값 판단'
+      reason: act === 'keep' ? '담당자 확인 · 현행유지' : '담당자 판단 · 보유목적 판단'
     });
     return true;
   }
@@ -642,7 +644,7 @@
     el('clear').addEventListener('click', function () {
       var c = S.attrCounts(), cm = DB.commitInfo();
       UI.confirm({
-        title: '속성값 판단을 초기화할까요?',
+        title: '보유목적 판단을 초기화할까요?',
         body: '판단 · 확정을 지우고 <b>원본 속성</b> 상태로 돌립니다.',
         rows: [['지우는 것', '판단 ' + UI.num(c.done) + '건 · 확정 ' + UI.num(cm.done) + '건 · 실행 단계'],
                ['남는 것', '자재반납 · 구매신청 초안 · 공용 전환 이력'],

@@ -25,7 +25,7 @@ window.ACTIONS = (function () {
   /* 갈 수 있는 화면 · 칸. 여기 없는 것은 못 간다 */
   var SCREENS = {
     main: { file: 'main.html', title: '대시보드', sections: {} },
-    attr: { file: 'attr.html', title: '속성값 판단',
+    attr: { file: 'attr.html', title: '보유목적 판단',
             sections: { all: '전체', i2p: '보험품→계획품', p2i: '계획품→보험품', gray: '회색지대', done: '판단 완료' } },
     stock: { file: 'stock.html', title: '적정재고 분석',
              sections: { order: '발주 필요', cut: '감축 대상', keep: '적정 유지', all: '전체' } },
@@ -37,6 +37,9 @@ window.ACTIONS = (function () {
   /* 말로 부르는 이름 → 키. LLM 이 제목으로 넘겨도 찾는다 */
   var ALIAS = {
     '대시보드': 'main', '홈': 'main', '메인': 'main', 'dashboard': 'main',
+    /* 화면 이름은 「보유목적 판단」 이다 · 옛 이름(속성값 판단)으로 불러도 찾아야 한다 ·
+     * 시연 중에 사람이 옛 이름으로 말하는데 「그런 화면이 없습니다」 라고 답하면 안 된다 */
+    '보유목적': 'attr', '보유 목적': 'attr', '보유목적 판단': 'attr',
     '속성': 'attr', '속성값': 'attr', '속성값 판단': 'attr', '속성 판단': 'attr',
     '적정재고': 'stock', '재고': 'stock', '적정재고 분석': 'stock', '재고 분석': 'stock',
     '적정구매시점': 'plan', '구매시점': 'plan', '정비계획': 'plan', '정비': 'plan',
@@ -278,7 +281,7 @@ window.ACTIONS = (function () {
     }
   };
 
-  // ================================================================ 속성값 판단
+  // ================================================================ 보유목적 판단
   R.runAttrAlgorithm = {
     kind: 'query', label: '속성 알고리즘 실행', needs: 'attr',
     run: function () {
@@ -288,7 +291,7 @@ window.ACTIONS = (function () {
       return { kind: 'query',
                text: '알고리즘 판정을 올렸습니다 · 손대야 하는 자재 **' + num(c.all || 0) + '품목** (회색지대 ' + num(c.gray || 0) + ').',
                href: 'attr.html#all', screen: 'attr', reload: true,
-               evidence: [['한 일', 'SCREEN.setStage(\'algo\') · 속성값 판단 화면의 「알고리즘 실행」 과 같다']] };
+               evidence: [['한 일', 'SCREEN.setStage(\'algo\') · 보유목적 판단 화면의 「알고리즘 실행」 과 같다']] };
     }
   };
 
@@ -315,8 +318,8 @@ window.ACTIONS = (function () {
       if (ctx) { ctx.selectedCode = c; }
       return { kind: 'mutation',
                text: '**' + r.name + ' · ' + c + '** 를 **' + t + '** 으로 판단했습니다 · 「담당자 확정」 전까지는 대기입니다.',
-               evidence: [['저장 위치', '3층 attribute_overrides (DB.approveAttr) · 속성값 판단 화면의 버튼과 같은 길']],
-               link: { href: 'attr.html#done', label: '속성값 판단에서 보기' } };
+               evidence: [['저장 위치', '3층 attribute_overrides (DB.approveAttr) · 보유목적 판단 화면의 버튼과 같은 길']],
+               link: { href: 'attr.html#done', label: '보유목적 판단에서 보기' } };
     }
   };
   function judgeType(v, r) {
@@ -341,7 +344,7 @@ window.ACTIONS = (function () {
       return { kind: 'mutation',
                text: '담당자 확정을 적었습니다 · 이제 다른 화면이 확정 속성으로 계산합니다' +
                  (info && info.n !== undefined ? ' (' + num(info.n) + '건)' : '') + '.',
-               evidence: [['한 일', 'DB.commitAttr() · 속성값 판단 화면의 「담당자 확정」 과 같다']],
+               evidence: [['한 일', 'DB.commitAttr() · 보유목적 판단 화면의 「담당자 확정」 과 같다']],
                link: { href: 'stock.html', label: '적정재고 분석 열기' } };
     }
   };

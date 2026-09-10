@@ -67,6 +67,7 @@
   /* 위쪽 1px 흰 선. 빛이 위에서 온다고 알려 준다 · 다크에서 이게 깊이의 절반이다 */
   --edge: inset 0 1px 0 rgba(255, 255, 255, .06);
   --side-w: 230px;
+  --side-w-min: 66px;       /* 좁힌 사이드바 · 아이콘만 남는다 */
   --top-h: 64px;          /* 고정 상단바와 사이드바 로고 칸이 같이 쓴다 */
 }
 
@@ -131,18 +132,44 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: calc(var(--top-h) + 20px) 26px 56px;
 }
 
-/* 접힌 사이드바 · 넓은 화면에서 폭을 0 으로 만든다.
- * 본문이 그만큼 넓어지고 고정 상단바도 왼쪽 끝까지 온다 */
-.layout.folded { grid-template-columns: 0 1fr; }
-.layout.folded .side {
-  width: 0; padding-left: 0; padding-right: 0;
-  border-right: 0; overflow: hidden;
+/* 좁힌 사이드바 · 아이콘만 남기고 66px 로 줄인다. 이게 기본값이다.
+ *
+ * 폭 0(통째로 감추기)으로 두면 다른 화면으로 갈 길이 사라져서
+ * 단추를 한 번 더 눌러야 이동할 수 있다 · 아이콘 줄은 그대로 누를 수 있다.
+ * 글자는 감추고 글리프만 남긴다 · 이름은 title 로 뜬다 */
+.layout.folded { grid-template-columns: var(--side-w-min) 1fr; }
+.layout.folded .top { left: var(--side-w-min); }
+.layout.folded .side { padding: 0 8px 14px; }
+.layout.folded .side-logo { justify-content: center; padding: 0; margin: 0 -8px 10px; }
+.layout.folded .side-logo-text,
+.layout.folded .navgroup-label,
+.layout.folded .navitem-body,
+.layout.folded .side-me-name,
+.layout.folded .side-me-dept,
+.layout.folded .navlink .lk-t { display: none; }
+.layout.folded .navitem {
+  justify-content: center; padding: 10px 0; gap: 0;
+  border-left: 0; border-radius: 12px; position: relative;
 }
-.layout.folded .top { left: 0; }
-.side { transition: width .16s ease, padding .16s ease; }
+.layout.folded .navitem.on { border-left: 0; box-shadow: inset 0 0 0 1px var(--brand); }
+.layout.folded .navitem-ico { width: auto; font-size: 15px; }
+/* 배지는 숫자를 넣을 자리가 없다 · 「할 일이 있다」 만 점으로 남긴다 */
+.layout.folded .navcount {
+  position: absolute; top: 5px; right: 8px;
+  min-width: 0; width: 7px; height: 7px; padding: 0;
+  overflow: hidden; text-indent: -99px; background: var(--insur);
+}
+.layout.folded .side-foot { padding: 12px 0 0; }
+.layout.folded .side-links { gap: 6px; justify-content: center; }
+.layout.folded .navlink {
+  width: 42px; padding: 0; min-height: 30px; justify-content: center;
+}
+.layout.folded .navlink .lk-i { display: block; font-size: 13px; }
+/* 넓을 때는 글자만 · 글리프를 같이 두면 단추가 넓어져 두 줄로 접힌다 */
+.navlink .lk-i { display: none; }
+.side { transition: padding .16s ease; }
 .top { transition: left .16s ease; }
-/* 접기 단추는 늘 보인다 (모바일에서는 오버레이를 여닫는 같은 단추다) */
-.hamb { display: grid; }
+
 
 /* 햄버거용 어두운 막. 이게 없으면 햄버거가 동작하지 않는다 */
 .overlay {
@@ -238,12 +265,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .top-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .top-right { display: flex; align-items: center; gap: 10px; flex: none; }
 
+/* 메뉴를 좁혔다 넓혔다 하는 단추 · 넓은 화면에서도 늘 보인다.
+ * 전에는 여기서 display:none 이라 마우스로는 좁히기에 손이 닿지 않았다
+ * (좁은 화면 규칙만 다시 켜 주고 있었다) */
 .hamb {
   width: 36px; height: 36px; flex: none;
   border: 1px solid var(--line-2); border-radius: 10px;
-  background: var(--surface-2); display: none; place-items: center;
+  background: var(--surface-2); display: grid; place-items: center;
   font-size: 15px; color: var(--text-2);
 }
+.hamb:hover { border-color: var(--brand); color: var(--brand); }
 
 .crumb { font-size: 11px; color: var(--muted); }
 /* 고정 상단바 안에 두 줄로 들어간다. 21px 로 두면 64px 을 넘긴다 */
@@ -866,9 +897,28 @@ td.num, th.num { text-align: right; }
   .side.on { transform: none; }
   /* 오버레이 방식에서는 접기가 뜻이 없다. 폭 · 여백을 되돌린다 */
   .layout.folded { grid-template-columns: 1fr; }
+  /* 서랍으로 뜰 때는 좁히지 않는다 · 손가락으로 아이콘만 짚기는 어렵다 */
   .layout.folded .side { width: 264px; padding: 0 10px 16px; }
+  .layout.folded .side-logo { justify-content: flex-start; padding: 0 8px; margin: 0 -10px 10px; }
+  .layout.folded .side-logo-text,
+  .layout.folded .navgroup-label,
+  .layout.folded .navitem-body,
+  .layout.folded .side-me-name,
+  .layout.folded .side-me-dept,
+  .layout.folded .navlink .lk-t { display: block; }
+  .layout.folded .navitem {
+    justify-content: flex-start; padding: 9px 10px; gap: 9px;
+    border-left: 2px solid transparent; border-radius: 10px;
+  }
+  .layout.folded .navitem.on { border-left-color: var(--brand); box-shadow: none; }
+  .layout.folded .navcount {
+    position: static; width: auto; height: auto; min-width: 20px;
+    padding: 1px 6px; text-indent: 0; background: var(--insur-weak);
+  }
+  .layout.folded .navlink { width: auto; padding: 0 10px; }
+  .layout.folded .navlink .lk-i { display: none; }
+  .layout.folded .side-links { justify-content: flex-start; }
   .main { padding: calc(var(--top-h) + 16px) 16px 40px; }
-  .hamb { display: grid; }
   .grid2 { grid-template-columns: 1fr; }
   .kpiwrap, .kpiwrap.viz { grid-template-columns: 1fr 1fr; }
   .dashrow.c2 { grid-template-columns: 1fr; }
@@ -1682,14 +1732,26 @@ td.num, th.num { text-align: right; }
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
-.stageline .prstep .sv { font-size: 12px; }
+/* 단계 이름은 그 칸이 무슨 단계인지 말한다 · 값보다 먼저 읽혀야 한다.
+ * 10px 로 두었더니 값(12px)에 눌려 안 읽혔고, 줄 간격이 없어 아래 글자와 붙었다 */
+.stageline .prstep { align-items: start; row-gap: 4px; }
+.stageline .prstep .sk {
+  font-size: 12.5px; font-weight: 600; color: var(--text-2); line-height: 1.35;
+  letter-spacing: -.2px;
+}
+.stageline .prstep.doing .sk { color: var(--text); }
+.stageline .prstep .sv { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.stageline .prstep .sc { align-self: start; margin-top: 1px; }
 
 /* 실행 전 큰 카드 · 왼쪽은 지금 보는 것, 오른쪽은 실행 버튼 */
+/* 실행 전 큰 카드 · 왼쪽은 지금 상태, 오른쪽은 다음에 할 일.
+ * 두 칸의 제목이 같은 높이에서 마주 봐야 「이 상태에서 저걸 누른다」 가 한눈에 읽힌다 ·
+ * 그래서 가운데 정렬(center)이 아니라 위 정렬(start)이다 */
 .runhero {
-  display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: center;
+  display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: start;
   margin-bottom: 18px; padding: 26px 28px;
 }
-.runhero h2 { font-size: 24px; letter-spacing: -.8px; margin: 6px 0 6px; }
+.runhero h2 { font-size: 24px; letter-spacing: -.8px; margin: 0 0 8px; }
 .runhero .rh-nums { display: flex; gap: 28px; margin-top: 16px; }
 .runhero .rh-nums b { display: block; font-size: 30px; font-weight: 600; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
 .runhero .rh-nums span { font-size: 11px; color: var(--muted); }
@@ -2319,7 +2381,21 @@ a.duerow:hover { background: var(--slate-2); text-decoration: none; }
 .duecall.calm { background: var(--surface-2); color: var(--text-2); font-weight: 500; }
 .duecall .dc-l { display: flex; align-items: center; gap: 6px; min-width: 0; }
 
-/* 문맥 띠 · 오른쪽에 상태와 갱신을 둔다 */
+/* 문맥 띠 · 한 줄 설명만 둔다 · 두 줄까지 접히게 놔둔다(좁은 화면) */
+.ctxbar .ct { font-size: 13px; font-weight: 500; line-height: 1.55; color: var(--text-2); }
+.ctxbar .ct b { color: var(--text); font-weight: 700; }
+
+/* 이번 주 WO 더 보기 · 카드 안에서만 늘어난다 */
+.duemore {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 2px; padding: 7px 10px; border-radius: 10px;
+  border: 1px dashed var(--line-2); background: none; color: var(--muted);
+  font-size: 11px; cursor: pointer;
+}
+.duemore:hover { border-color: var(--brand); color: var(--brand); }
+.duemore .m-arrow { font-size: 10px; }
+
+/* 상단바의 계산 시각 칩 · 문맥 띠에 있던 것을 올렸다 */
 .ctxbar .cmono {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10.5px; color: var(--muted); white-space: nowrap;

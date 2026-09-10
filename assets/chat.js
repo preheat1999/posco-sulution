@@ -710,7 +710,7 @@
     var s = String(q || '');
     if (/Q\d{7}/i.test(s)) { return null; }
     if (!/(가\s*줘|가줘|가자|이동|열어|열기|보여\s*줘|보여줘|가고|갈래|띄워|켜)/.test(s)) { return null; }
-    if (!/(탭|화면|페이지|메뉴)|(대시보드|속성값 판단|속성 판단|적정재고|적정구매시점|공용 전환|구매신청|자재반납|반납 화면)/.test(s)) { return null; }
+    if (!/(탭|화면|페이지|메뉴)|(대시보드|보유목적 판단|속성 판단|적정재고|적정구매시점|공용 전환|구매신청|자재반납|반납 화면)/.test(s)) { return null; }
     var sk = ACTIONS.screenKey(s.replace(/(탭|화면|페이지|메뉴).*$/, '').trim()) || ACTIONS.screenKey(s);
     if (!sk) { return null; }
     /* 칸은 화면 이름을 뺀 나머지에서만 찾는다 (「적정재고」 의 「적정」 이 「적정 유지」 로 읽히지 않게) */

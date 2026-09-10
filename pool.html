@@ -217,7 +217,7 @@
     var c = S.poolCounts();
     var cm = DB.commitInfo();
     el('notice').innerHTML = cm.waiting
-      ? '<span class="ni">△</span><span>속성값 판단에 <b>확정 대기 ' + UI.num(cm.waiting) +
+      ? '<span class="ni">△</span><span>보유목적 판단에 <b>확정 대기 ' + UI.num(cm.waiting) +
         '품목</b>이 있습니다 · 이 화면은 확정된 속성만 씁니다</span>' +
         '<a class="nx" href="attr.html#done" style="color:var(--brand)">확정하러 가기 →</a>'
       : '<span class="ni">⇄</span><span><b>정체 ' + UI.num(c.all) + '품목 중 ' +

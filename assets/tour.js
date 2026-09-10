@@ -2,7 +2,7 @@
  *
  * 로그인한 뒤 대시보드에 들어오면 바로 뜬다 (login.html 이 mtrl.tour.pending 을 적어 둔다).
  * 순서는 사람이 일하는 순서다 ·
- *   Dashboard → 속성값 판단 → 적정재고 분석 → 적정구매시점 → 구매신청 → 자재반납.
+ *   Dashboard → 보유목적 판단 → 적정재고 분석 → 적정구매시점 → 구매신청 → 자재반납.
  * 한 화면의 설명이 끝나면 「다음 화면」 이 실제로 그 화면으로 옮겨 가고 거기서 이어 뜬다.
  *
  * 왜 명암인가 · 글로만 「오른쪽 위 카드를 보세요」 라고 적으면 눈이 그 카드를 못 찾는다.
@@ -26,7 +26,7 @@
   /* 코스 · 공용 전환은 메뉴에서 뺐으므로 코스에도 없다 (적정재고 안에서 들어간다) */
   var COURSE = [
     { page: 'main', file: 'main.html', name: 'Dashboard' },
-    { page: 'attr', file: 'attr.html', name: '속성값 판단' },
+    { page: 'attr', file: 'attr.html', name: '보유목적 판단' },
     { page: 'stock', file: 'stock.html', name: '적정재고 분석' },
     { page: 'plan', file: 'plan.html', name: '적정구매시점' },
     { page: 'purchase', file: 'purchase.html', name: '구매신청' },

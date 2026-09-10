@@ -89,7 +89,7 @@ window.ASK = (function () {
     };
   };
 
-  /* 속성값 판단 현황 */
+  /* 보유목적 판단 현황 */
   RUN.attr_status = function () {
     var c = SCREEN.attrCounts();
     var cm = DB.commitInfo();
@@ -115,7 +115,7 @@ window.ASK = (function () {
           : '아직 확정한 판단이 없습니다 (다른 화면은 알고리즘 판정 속성을 씁니다)'],
         ['회색지대란', '보험품 점수와 계획품 점수 차이가 작아 알고리즘이 보류한 자재입니다']
       ]),
-      link: { href: 'attr.html#gray', label: '속성값 판단에서 보기' }
+      link: { href: 'attr.html#gray', label: '보유목적 판단에서 보기' }
     };
   };
 

@@ -30,7 +30,7 @@ window.CATALOG = (function () {
       }
     },
     attr: {
-      file: 'attr.html', title: '속성값 판단',
+      file: 'attr.html', title: '보유목적 판단', also: '속성값 판단',
       what: '자재가 보험품인지 계획품인지 정한다. 처음엔 정본 속성만 보이고, ' +
         '「알고리즘 실행」 을 누르면 7요인 가중합 판정 결과가 올라온다. ' +
         '사람이 자재마다 판단하고 마지막에 「담당자 확정」 을 누른다.',
@@ -117,7 +117,7 @@ window.CATALOG = (function () {
     { key: '보험품', field: 'type', what: '돌발 고장에 대비해 일정 수량을 상시 보관하는 자재. 목표재고는 μ_LT + 안전재고로 잡는다.', where: 'attr' },
     { key: '계획품', field: 'type', what: '정비 일정에 맞춰 직납받는 자재. 상시 재고 0 이 원칙이다.', where: 'attr' },
     { key: '회색지대', field: 'verdict', what: '보험품 점수와 계획품 점수 차이가 작아 알고리즘이 판단을 보류한 자재. 사람이 확정해야 라벨이 생긴다.', where: 'attr' },
-    { key: '제외대상', what: '속성값 판단 목록에 올리지 않는 자재 · 사전 배제(소모품 · 순환품)와 판정일치를 합친 수다. 743 = 손대야 하는 것 + 제외대상.', where: 'attr' },
+    { key: '제외대상', what: '보유목적 판단 목록에 올리지 않는 자재 · 사전 배제(소모품 · 순환품)와 판정일치를 합친 수다. 743 = 손대야 하는 것 + 제외대상.', where: 'attr' },
     { key: '판단', field: 'judged', what: '사람이 고른 속성. 확정하기 전이라 다른 화면은 아직 쓰지 않는다.', where: 'attr' },
     { key: '확정', field: 'committed', what: '「담당자 확정」 을 누른 판단. 이 순간부터 적정재고 · 적정구매시점 · 대시보드가 그 속성으로 계산한다. 3층 attribute_overrides 의 seq 하나로 적는다.', where: 'attr' },
     { key: '확정 대기', field: 'pending', what: '판단은 했지만 아직 확정하지 않은 자재. 이 수가 0 이 아니면 다른 화면은 알고리즘 판정 속성을 쓰고 있다는 뜻이다.', where: 'attr' },

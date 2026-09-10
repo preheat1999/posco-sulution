@@ -5,9 +5,8 @@
  * <aside class="side" id="side"> 를 비워 둔다.
  * 사이드바 HTML 을 페이지마다 복사하면 메뉴 하나 바꾸는 데 13곳을 고치게 된다.
  *
- * 메뉴 구성은 와이어프레임 00_공통셸 을 따르되 「자재 검색」 을 관리에 같이 둔다.
- * 와이어프레임은 관리에 「데이터 근거」, 디자인 스펙은 「자재 검색」 을 적어 두어
- * 어느 한쪽만 따르면 화면 하나가 메뉴에서 사라진다.
+ * 사이드바는 좁게(아이콘만) 시작하고, 상단 왼쪽 단추로 넓혔다 좁혔다 한다 ·
+ * 시연에서는 표와 히트맵이 주인공이라 넓은 메뉴가 화면을 먹는다.
  *
  * org.js 보다 뒤에 실행돼야 한다. 내 이름과 소속을 org 에서 읽는다.
  */
@@ -19,14 +18,13 @@
       label: '관리',
       items: [
         { key: 'main', name: 'Dashboard', href: 'main.html', ico: '▤' },
-        { key: 'search', name: '자재 검색', href: 'search.html', ico: '⌕', soon: true },
-        { key: 'evidence', name: '데이터 근거', href: 'evidence.html', ico: '◈', soon: true }
+        { key: 'search', name: '자재 검색', href: 'search.html', ico: '⌕', soon: true }
       ]
     },
     {
       label: '분석',
       items: [
-        { key: 'attr', name: '속성값 판단', href: 'attr.html', ico: '◐', count: 'gray' },
+        { key: 'attr', name: '보유목적 판단', href: 'attr.html', ico: '◐', count: 'gray' },
         { key: 'stock', name: '적정재고 분석', href: 'stock.html', ico: '▦', count: 'order' },
         { key: 'report', name: '주간 리포트', href: 'report.html', ico: '✉', soon: true }
       ]
@@ -78,6 +76,15 @@
       .replace(/"/g, '&quot;');
   }
 
+  /* 발 밑 단추 하나 · 좁을 때는 글리프, 넓을 때는 글자 */
+  function link(tag, id, ico, label, href) {
+    return '<' + tag + ' class="btn line sm navlink"' +
+      (tag === 'a' ? ' href="' + esc(href) + '"' : ' type="button"') +
+      (id ? ' id="' + id + '"' : '') + ' title="' + esc(label) + '">' +
+      '<span class="lk-i" aria-hidden="true">' + ico + '</span>' +
+      '<span class="lk-t">' + esc(label) + '</span></' + tag + '>';
+  }
+
   function draw() {
     var side = document.getElementById('side');
     if (!side) { return; }
@@ -123,14 +130,16 @@
     html += '<div class="side-foot">' +
       '<div class="side-me-name">' + esc(me ? me.name + ' ' + me.rank : '담당자') + '</div>' +
       '<div class="side-me-dept">' + esc(me ? me.section : '') + '</div>' +
+      /* 좁을 때는 글리프만 남는다 · 글자와 글리프를 같이 심고 CSS 가 하나를 감춘다.
+       * title 을 붙여 두면 좁은 상태에서 마우스를 올려 이름을 볼 수 있다 */
       '<div class="side-links">' +
         /* 튜토리얼은 언제든 다시 볼 수 있어야 한다 · 처음(대시보드)부터 다시 돈다 */
-        '<button class="btn line sm" type="button" id="navtour">튜토리얼</button>' +
-        '<a class="btn line sm" href="login.html">소속 변경</a>' +
-        '<button class="btn line sm" type="button" id="navreset">시연 초기화</button>' +
+        link('button', 'navtour', '?', '튜토리얼') +
+        link('a', '', '⇄', '소속 변경', 'login.html') +
+        link('button', 'navreset', '↺', '시연 초기화') +
         /* 로그아웃은 세션만 지운다. 판단 · 확정 · 반납 이력(3층)은 남는다 ·
          * 다음 사람이 로그인하면 그 일이 이어져 있어야 한다 */
-        '<button class="btn line sm" type="button" id="navout">로그아웃</button>' +
+        link('button', 'navout', '⏻', '로그아웃') +
       '</div></div>';
 
     side.innerHTML = html;
@@ -191,10 +200,14 @@
   }
 
   /* 햄버거. .overlay 가 없으면 동작하지 않는다 */
-  /* 접힌 상태를 기억한다. 화면을 옮길 때마다 다시 접게 만들면 안 된다 */
+  /* 좁힌 상태를 기억한다. 화면을 옮길 때마다 다시 좁히면 안 된다.
+   * **저장된 값이 없으면 좁게 시작한다** · 처음 보는 사람에게도 표와 그림이 넓게 보여야 한다 */
   var FOLD_KEY = 'mtrl.side.folded';
   function foldRead() {
-    try { return window.localStorage.getItem(FOLD_KEY) === '1'; } catch (e) { return false; }
+    try {
+      var v = window.localStorage.getItem(FOLD_KEY);
+      return v === null ? true : v === '1';
+    } catch (e) { return true; }
   }
   function foldWrite(on) {
     try { window.localStorage.setItem(FOLD_KEY, on ? '1' : '0'); } catch (e) { /* 무시 */ }
@@ -207,7 +220,7 @@
     var layout = side && side.parentNode;
     if (!side || !hamb || !over || !layout) { return; }
 
-    /* 넓은 화면에서는 접기(폭 0), 좁은 화면에서는 오버레이.
+    /* 넓은 화면에서는 좁히기(아이콘만), 좁은 화면에서는 오버레이.
      * 같은 단추가 두 가지 일을 하는데, 그 경계는 CSS 의 960 과 같아야 한다 */
     function narrow() {
       try { return window.matchMedia('(max-width: 960px)').matches; }
@@ -221,12 +234,12 @@
     function fold(on) {
       layout.classList.toggle('folded', on);
       hamb.setAttribute('aria-expanded', on ? 'false' : 'true');
-      hamb.setAttribute('aria-label', on ? '메뉴 펼치기' : '메뉴 접기');
+      hamb.setAttribute('aria-label', on ? '메뉴 넓게' : '메뉴 좁게');
       foldWrite(on);
     }
 
     if (foldRead()) { layout.classList.add('folded'); }
-    hamb.setAttribute('aria-label', foldRead() ? '메뉴 펼치기' : '메뉴 접기');
+    hamb.setAttribute('aria-label', foldRead() ? '메뉴 넓게' : '메뉴 좁게');
 
     hamb.addEventListener('click', function () {
       if (narrow()) { overlay(!side.classList.contains('on')); return; }

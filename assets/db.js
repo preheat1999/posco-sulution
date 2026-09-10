@@ -117,7 +117,7 @@
 
     /* 사람의 판단은 확정된 것만 쓴다.
      * judged 는 「사람이 고른 값」, pending 은 「아직 확정 안 된 판단」 이다.
-     * 속성값 판단 화면만 이 둘을 보고, 다른 화면은 type 만 본다 */
+     * 보유목적 판단 화면만 이 둘을 보고, 다른 화면은 type 만 본다 */
     var cm = commitRead();
     var applied = !!ov && Number(ov.seq) <= Number(cm.seq || 0);
     var type, src;
@@ -197,7 +197,7 @@
       poolGrade: p.poolGrade, poolAge: p.ageDays, staleValue: p.staleValue,
       // 3층
       type: type, typeSrc: src, override: ov,
-      /* 사람이 고른 값과 그 확정 여부 · 속성값 판단 화면만 쓴다 */
+      /* 사람이 고른 값과 그 확정 여부 · 보유목적 판단 화면만 쓴다 */
       judged: judged, pending: pending, committed: applied,
       stock: stock, stockDelta: t.delta, txns: t.n, txnRows: t.rows,
       pooled: !!pl, poolAction: pl ? pl.action : null,
@@ -316,7 +316,7 @@
         verdict: {}, action: {}, grade: {}, signal: {}, conf: {}, path: {},
         type: {}, typeSource: {}, status: {},
         /* 2차 버킷팅 · 1단계 판정을 정본 Type 과 견준다.
-         * 화면 세 곳(대시보드 · 속성값 판단 · 주간 리포트)이 같은 값을 봐야 한다 */
+         * 화면 세 곳(대시보드 · 보유목적 판단 · 주간 리포트)이 같은 값을 봐야 한다 */
         bucket: { '보험품→계획품': 0, '계획품→보험품': 0, '현행유지': 0, '판정일치': 0, '배제': 0 },
         holdOpen: 0,
         /* 속성이 바뀌어 적정재고를 다시 봐야 하는 행 · 그중 엔진 재계산이 남은 행 */
@@ -436,7 +436,7 @@
     },
 
     /* 속성 판단 · 확정만 지운다. 반납 · 초안 · 공용 전환은 그대로 남는다 ·
-     * 속성값 판단 화면의 「초기화」 가 쓴다 */
+     * 보유목적 판단 화면의 「초기화」 가 쓴다 */
     clearAttr: function () {
       var rows = C ? C.rows('attribute_overrides') : [];
       var n = rows.length;
