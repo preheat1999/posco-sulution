@@ -1911,6 +1911,26 @@ td.num, th.num { text-align: right; }
 .linkbtn:hover { color: var(--text-2); }
 .chat-tsrc { font-size: 10px; color: var(--muted); }
 
+/* 답이 어느 갈래에서 왔는지 · 문서 · 이 서비스 데이터 · 서비스 설명 */
+.mtag {
+  display: inline-block; padding: 1px 6px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 700; margin-right: 4px; white-space: nowrap;
+}
+.mtag.data { background: var(--brand-weak); color: var(--b1); }
+.mtag.about { background: var(--ok-weak); color: var(--ok); }
+.mtag.doc { background: var(--core-weak); color: var(--core); }
+.chat-intro .mtag { margin-bottom: 2px; }
+
+/* 근거 줄 · 어느 함수 · 어느 필드 · 기준일 */
+.evrow {
+  display: grid; grid-template-columns: 72px 1fr; gap: 8px;
+  font-size: 10.5px; line-height: 1.55; padding: 3px 0;
+  border-top: 1px solid var(--line);
+}
+.evrow:first-of-type { border-top: 0; }
+.evrow .evk { color: var(--muted); }
+.evrow .evv { color: var(--text-2); word-break: break-word; }
+
 /* 진행 단계 · 스피너 대신 네 칸. 어디까지 왔는지가 보여야 6~11초를 기다린다 */
 .stages { display: grid; gap: 5px; margin-bottom: 8px; }
 .stages .st {

@@ -1,0 +1,215 @@
+{
+  "note": "질의 라우터가 고를 도구 목록. 브라우저(assets/ask.js)와 serve.py 가 이 파일 하나를 같이 읽는다. 두 곳에 따로 두면 어긋난다. 설명(description)에 '언제 쓰는지'를 적어야 라우터가 제대로 고른다.",
+  "system": "너는 POSCO 압연설비1부 자재관리 화면의 질의 라우터다. 사용자 질문을 읽고 알맞은 도구 하나를 고른다. 직접 답하지 않는다 · 반드시 도구를 호출한다. 이 서비스는 우리 부서 자재 743품목의 속성 판정 · 적정재고 · 정비계획 발주 · 공용 전환 · 구매신청 · 자재반납을 다룬다. 자재코드는 Q + 숫자 7자리다. 사내 규정 · 절차 · 매뉴얼을 묻는 질문은 ask_documents 로 보낸다. 이 서비스의 숫자 · 화면 · 용어를 묻는 질문은 그에 맞는 도구로 보낸다.\n- 이 서비스의 화면 · 항목 · 용어를 묻는 질문은 사내 문서가 아니라 explain_screen · explain_term 으로 답한다 (화면 이름은 「대시보드」 처럼 제목으로 넘겨도 된다).",
+  "tools": [
+    {
+      "name": "count_action",
+      "description": "조치별 자재 품목 수와 금액을 준다. '발주 필요 몇 품목', '감축 대상 몇 개', '적정 유지가 몇 건인가' 처럼 조치 건수를 묻는 질문에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "발주",
+              "유지",
+              "감축"
+            ],
+            "description": "발주=목표보다 적다, 유지=목표와 같다, 감축=목표를 넘는다"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      }
+    },
+    {
+      "name": "money_summary",
+      "description": "금액을 준다. 보유 재고 금액 · 목표재고 금액 · 감축 가능 금액 · 공용화 회수 금액 · 금융비용 절감액 중 하나. '얼마', '금액', '절감' 을 묻는 질문에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "now",
+              "target",
+              "cut",
+              "pool",
+              "finance"
+            ],
+            "description": "now=지금 보유, target=목표재고, cut=감축 가능, pool=공용화 회수, finance=금융비용 절감"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      }
+    },
+    {
+      "name": "attr_status",
+      "description": "속성값 판단(보험품 · 계획품) 현황을 준다. 변경 제안 · 회색지대 보류 · 제외대상 · 담당자 판단 · 확정 대기 건수. '회색지대가 몇 품목', '확정 대기 몇 건', '제외대상이 왜 473' 같은 질문에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "material_detail",
+      "description": "자재 한 건의 속성 · 등급 · 현재고 · 목표재고 · 조치 · 산식 근거 · 리드타임 · 단가를 준다. 질문에 Q+숫자7 자재코드가 있으면 이것을 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "자재코드 · Q 와 숫자 7자리 (예 Q1000108)"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      }
+    },
+    {
+      "name": "top_materials",
+      "description": "기준을 정해 자재 순위 표를 준다. '감축 금액 큰 자재 5개', '부족 수량이 많은 자재', '단가 높은 자재' 처럼 여러 건을 나열해 달라는 질문에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "type": "string",
+            "enum": [
+              "cut",
+              "need",
+              "price",
+              "stock",
+              "stale"
+            ],
+            "description": "cut=감축 금액, need=부족 수량, price=단가, stock=보유 금액, stale=정체 금액"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "몇 건 · 기본 5 · 최대 10"
+          }
+        },
+        "required": [
+          "by"
+        ]
+      }
+    },
+    {
+      "name": "today_tasks",
+      "description": "오늘 · 이번 주에 담당자가 손대야 하는 일과 그 품목 수. 「오늘 할 일」 「뭐부터 해야 해」 「지금 급한 게 뭐야」 에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "plan_status",
+      "description": "적정구매시점(정비계획 발주) 현황을 준다. 이 달 WO 건수 · 발주 마감 초과 · 예상 소요 자재 종수 · 예상 발주금액. '마감 넘긴 WO 몇 건', '이번 주 정비계획' 같은 질문에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "pool_status",
+      "description": "공용 전환 현황을 준다. 정체 자재 · 회수 가능 금액 · 보류 · 전환 완료. '공용 전환하면 얼마 회수', '정체 자재 몇 품목' 같은 질문에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "return_status",
+      "description": "자재반납 현황을 준다. 반납 대기 · 반납 완료 · QR 접수 건수. '반납할 자재 몇 건', 'QR 반납 몇 건 됐어' 같은 질문에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "explain_term",
+      "description": "이 서비스의 항목 · 용어 뜻을 설명한다. 'stale 이 뭐야', 'targetNow 랑 target 차이', '회색지대가 무슨 뜻', '핵심예비품 표시가 뭐야' 처럼 뜻을 묻는 질문에 쓴다. 사내 규정이 아니라 이 화면의 용어를 물을 때다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string",
+            "description": "묻는 용어나 항목 이름"
+          }
+        },
+        "required": [
+          "term"
+        ]
+      }
+    },
+    {
+      "name": "explain_screen",
+      "description": "화면 하나가 무엇을 보여 주고 무엇을 할 수 있는지 설명한다. '적정재고 분석 탭에서 히트맵 상자 크기가 뭘 뜻해', '확정을 누르면 어디가 바뀌어', '이 화면 뭐 하는 곳이야' 같은 질문에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "screen": {
+            "type": "string",
+            "enum": [
+              "main",
+              "attr",
+              "stock",
+              "plan",
+              "pool",
+              "purchase",
+              "return",
+              "material-view"
+            ],
+            "description": "main=대시보드, attr=속성값 판단, stock=적정재고 분석, plan=적정구매시점, pool=공용 전환, purchase=구매신청, return=자재반납, material-view=QR 자재 확인"
+          },
+          "topic": {
+            "type": "string",
+            "description": "그 화면 안에서 특히 묻는 것 (예 히트맵, 확정, 트리맵 색)"
+          }
+        },
+        "required": [
+          "screen"
+        ]
+      }
+    },
+    {
+      "name": "data_source",
+      "description": "어떤 값이 어디서 왔는지 답한다. '이 수치는 어느 파일에서 왔어', '목표재고는 누가 계산한 거야', '데이터 기준일이 언제야' 같은 출처 질문에 쓴다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "출처를 묻는 대상 (예 목표재고, 속성 판정, 정비계획, 현재고, 기준일)"
+          }
+        },
+        "required": [
+          "topic"
+        ]
+      }
+    },
+    {
+      "name": "ask_documents",
+      "description": "사내 지침 · 매뉴얼 · 계약서 · FAQ 문서에서 찾아야 하는 질문. 절차 · 규정 · 기준 · '어떻게 하나요' 처럼 문서로 답할 질문에 쓴다. 이 서비스의 숫자나 화면 설명이 아닌 모든 업무 질문은 여기로 보낸다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "문서에 물어볼 질문 · 사용자 문장을 그대로 두거나 조금 다듬는다"
+          }
+        },
+        "required": [
+          "question"
+        ]
+      }
+    }
+  ]
+}

@@ -17,6 +17,11 @@
 브라우저가 막는 것이고 서버는 정상이다. 화면이 /rag/api/chat/stream 을 부르면
 이 서버가 .env 의 토큰을 붙여 10.1.14.205:8000 으로 대신 물어보고 답을 그대로 흘려 준다.
 
+또 하나 · /llm/route 로 오는 질문을 LLM 라우터에 넘긴다.
+질문 문장과 도구 목록(assets/tools.json)만 보내고 「어느 도구를 어떤 값으로 부를지」를
+받는다 · 자재 행 · 금액 · 부서 값은 LLM 으로 가지 않고, 답은 브라우저가 우리 데이터로 만든다.
+키(LLM_API_KEY)는 .env 에 두고 브라우저로 내려보내지 않는다.
+
 또 하나 · .env 를 읽어 assets/config.local.js 를 만든다.
 화면은 정적 파일(빌드 없음)이라 브라우저가 .env 를 직접 읽을 수 없다 · 그 다리를 여기서 놓는다.
 .env 와 config.local.js 는 둘 다 .gitignore 다 (저장소가 공개라 토큰을 올리면 안 된다).
@@ -25,9 +30,11 @@ import argparse
 import functools
 import http.server
 import io
+import json
 import os
 import socket
 import socketserver
+import time
 import urllib.error
 import urllib.request
 
@@ -35,7 +42,22 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 RAG = {'api': '', 'token': ''}      # .env 에서 읽는다 (main 이 채운다)
+LLM = {'key': '', 'model': '', 'url': 'https://api.anthropic.com/v1/messages'}
 PREFIX = '/rag/'
+LLM_PATH = '/llm/route'
+TOOLS_CACHE = {'mtime': 0, 'data': None}
+
+
+def load_tools():
+    """assets/tools.json 을 읽는다. 파일이 바뀌면 다시 읽는다 (서버를 다시 안 띄워도 된다)."""
+    path = os.path.join(ROOT, 'assets', 'tools.json')
+    if not os.path.exists(path):
+        return None
+    m = os.path.getmtime(path)
+    if TOOLS_CACHE['data'] is None or m != TOOLS_CACHE['mtime']:
+        TOOLS_CACHE['data'] = json.load(io.open(path, encoding='utf-8'))
+        TOOLS_CACHE['mtime'] = m
+    return TOOLS_CACHE['data']
 
 
 class H(http.server.SimpleHTTPRequestHandler):
@@ -45,7 +67,94 @@ class H(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith(PREFIX):
             self.proxy('POST')
             return
-        self.send_error(405, 'Only /rag/ accepts POST')
+        if self.path.split('?')[0] == LLM_PATH:
+            self.route_question()
+            return
+        self.send_error(405, 'Only /rag/ and /llm/route accept POST')
+
+    def json_out(self, code, obj):
+        body = json.dumps(obj, ensure_ascii=False).encode('utf-8')
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except Exception:
+            pass
+
+    def route_question(self):
+        """질문 → 도구 하나 + 값. 답을 만들지는 않는다 (그건 브라우저가 우리 데이터로 한다).
+
+        보내는 것 · 질문 문장 · 최근 대화 두 턴의 질문 문장 · 도구 스키마.
+        보내지 않는 것 · 자재 행 · 금액 · 부서 · 담당자 이름. 규칙이다.
+        """
+        n = int(self.headers.get('Content-Length') or 0)
+        try:
+            req = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+        except Exception:
+            self.json_out(400, {'detail': '요청이 JSON 이 아닙니다'})
+            return
+        q = str(req.get('question') or '').strip()
+        if not q:
+            self.json_out(400, {'detail': '질문이 비어 있습니다'})
+            return
+        if len(q) > 500:
+            q = q[:500]
+
+        spec = load_tools()
+        if not spec:
+            self.json_out(503, {'detail': 'assets/tools.json 이 없습니다'})
+            return
+        if not LLM['key']:
+            self.json_out(503, {'detail': '.env 에 LLM_API_KEY 가 없습니다'})
+            return
+
+        msgs = []
+        # 앞 대화는 질문 문장만 싣는다 · 답(우리 데이터가 섞인 문장)은 보내지 않는다
+        for h in (req.get('history') or [])[-2:]:
+            hq = str((h or {}).get('question') or '').strip()
+            if hq:
+                msgs.append({'role': 'user', 'content': hq[:300]})
+                msgs.append({'role': 'assistant', 'content': '(도구를 골라 답했습니다)'})
+        msgs.append({'role': 'user', 'content': q})
+
+        body = {
+            'model': LLM['model'],
+            'max_tokens': 300,
+            'system': spec.get('system') or '',
+            'tools': spec.get('tools') or [],
+            'tool_choice': {'type': 'any'},      # 반드시 도구를 고르게 한다
+            'messages': msgs,
+        }
+        r = urllib.request.Request(
+            LLM['url'], data=json.dumps(body, ensure_ascii=False).encode('utf-8'),
+            headers={'x-api-key': LLM['key'], 'anthropic-version': '2023-06-01',
+                     'content-type': 'application/json'})
+        t0 = time.time()
+        try:
+            with urllib.request.urlopen(r, timeout=30) as up:
+                out = json.loads(up.read().decode('utf-8'))
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode('utf-8', 'replace')[:300]
+            self.json_out(e.code, {'detail': 'LLM 오류 · ' + detail})
+            return
+        except Exception as e:
+            self.json_out(502, {'detail': 'LLM 에 닿지 못했습니다 · ' + str(e)})
+            return
+
+        picks = [c for c in (out.get('content') or []) if c.get('type') == 'tool_use']
+        if not picks:
+            self.json_out(200, {'tool': None, 'input': {},
+                                'ms': int((time.time() - t0) * 1000)})
+            return
+        self.json_out(200, {
+            'tool': picks[0].get('name'),
+            'input': picks[0].get('input') or {},
+            'ms': int((time.time() - t0) * 1000),
+            'model': out.get('model'),
+            'usage': out.get('usage'),
+        })
 
     def do_GET(self):
         if self.path.startswith(PREFIX):
@@ -159,6 +268,10 @@ def write_local_config(env):
         body.append("  C.CHAT_PROXY = true;")
     if token:
         body.append("  C.CHAT_TOKEN_SRC = 'serve.py 프록시';")
+    if env.get('LLM_API_KEY'):
+        # 라우터가 켜졌다는 사실만 알린다 · 키는 내려보내지 않는다
+        body.append("  C.ASK_ROUTE = '/llm/route';")
+        body.append("  C.ASK_MODEL = '%s';" % (env.get('LLM_MODEL') or 'claude-haiku-4-5-20251001'))
     body.append('})();')
     body.append('')
     path = os.path.join(ROOT, 'assets', 'config.local.js')
@@ -188,6 +301,8 @@ def main():
     local = write_local_config(env)
     RAG['api'] = env.get('CHAT_API', '')
     RAG['token'] = env.get('CHAT_TOKEN', '')
+    LLM['key'] = env.get('LLM_API_KEY', '')
+    LLM['model'] = env.get('LLM_MODEL', '') or 'claude-haiku-4-5-20251001'
     ip = lan_ip()
     base = 'http://%s:%d' % (ip, a.port)
     print('서버 · %s:%d (no-store)' % (a.host, a.port))
@@ -204,6 +319,11 @@ def main():
         print('  토큰 %s · 서버에서 붙인다 (브라우저로 내려보내지 않음)'
               % ('있음' if local['token'] else '없음 · .env 에 CHAT_TOKEN 을 넣어라'))
         print('  폰도 그대로 된다 · %s/main.html' % base)
+    tools = load_tools()
+    print('질의 라우터 · %s · 도구 %d개 · 키 %s (브라우저로 내려보내지 않음)'
+          % (LLM['model'], len((tools or {}).get('tools') or []),
+             '있음' if LLM['key'] else '없음 · .env 에 LLM_API_KEY 를 넣어라'))
+    print('  질문 문장만 보낸다 · 자재 값은 브라우저 안에서 답을 만든다')
     print()
     print('폰이 안 붙으면 · 윈도 방화벽에서 이 포트를 한 번 허용해야 한다')
     print('  (관리자 명령창) netsh advfirewall firewall add rule '
