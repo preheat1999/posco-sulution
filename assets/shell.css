@@ -1800,6 +1800,15 @@ td.num, th.num { text-align: right; }
 .phone .fval { min-height: 42px; padding: 9px 12px; font-size: 13px; }
 .phone .fval .fk { color: var(--muted); font-size: 11.5px; flex: none; }
 .phone .fval .fv { font-weight: 600; text-align: right; word-break: break-all; }
+/* 반납자 입력 · 식별표 칸(.fval) 안에 그대로 들어간다.
+ * 폰은 여러 사람이 돌려 쓰니 고칠 수 있어야 한다 */
+.whoin {
+  flex: 1; min-width: 0; text-align: right;
+  background: none; border: 0; padding: 0;
+  font: inherit; font-weight: 600; color: var(--text);
+}
+.whoin:focus { outline: none; color: var(--b1); }
+
 /* 취소 · 반납 두 개를 나란히. 오른쪽이 실행이다 */
 .qr-acts {
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px;

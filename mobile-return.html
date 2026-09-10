@@ -69,6 +69,17 @@
   var cond = null;
   var done = false;
 
+  /* 반납자 · 현장에서 이 사람이 반납했다는 기록이 남는다.
+   * 로그인 세션이 있으면 그 사람으로 채우고, 없으면 아래 기본값이다 ·
+   * 폰은 여러 사람이 돌려 쓰기 때문에 고칠 수 있어야 한다 */
+  var who = (function () {
+    var me = window.ORG ? ORG.load() : null;
+    return {
+      emp: (me && me.empNo) || '638844',
+      name: (me && me.name) || '이예열'
+    };
+  })();
+
   /* 반납 대상 한 건을 만든다.
    *
    * 원래 이 화면은 불출 잔여가 있는 10건만 다뤘다. QR 은 그 목록에 없는 자재도 열 수 있다 ·
@@ -160,8 +171,10 @@
         '<div class="sub">반납 수량 · ' + (r.qrOnly ? '식별표 ' : '잔여 ') +
           UI.num(r.left) + '</div>' +
         '<div style="display:flex;gap:12px;justify-content:center;margin-top:14px">' +
-          '<button class="stepbtn" type="button" data-step="-1" aria-label="하나 줄이기">−</button>' +
-          '<button class="stepbtn" type="button" data-step="1" aria-label="하나 늘리기">+</button>' +
+          '<button class="stepbtn" type="button" data-step="-1" aria-label="하나 줄이기"' +
+            (qty <= 1 ? ' disabled' : '') + '>−</button>' +
+          '<button class="stepbtn" type="button" data-step="1" aria-label="하나 늘리기"' +
+            (qty >= Number(r.left) ? ' disabled' : '') + '>+</button>' +
         '</div>' +
       '</div>' +
 
@@ -174,6 +187,17 @@
           '<span class="cn">' + UI.esc(c[0]) + '</span>' +
           '<span class="cd">' + UI.esc(c[1]) + '</span></button>';
       }).join('') + '</div>' +
+
+      '<p class="gt" style="margin:16px 0 8px"><span>반납자</span>' +
+        '<span class="gt-sub">이 이름으로 이력이 남습니다</span></p>' +
+      '<div class="fgrid">' +
+        '<div class="fval"><span class="fk">사번</span>' +
+          '<input class="whoin" data-who="emp" inputmode="numeric" ' +
+            'value="' + UI.esc(who.emp) + '" aria-label="반납자 사번"></div>' +
+        '<div class="fval"><span class="fk">이름</span>' +
+          '<input class="whoin" data-who="name" ' +
+            'value="' + UI.esc(who.name) + '" aria-label="반납자 이름"></div>' +
+      '</div>' +
 
       (e ? '<div class="callout ok" style="margin-top:16px"><span class="ci">↩</span>' +
         '<span><b>재고 ' + UI.num(e.stock[0]) + ' → ' + UI.num(e.stock[1]) + '</b>' +
@@ -213,7 +237,8 @@
     return '<div class="card" style="text-align:center;margin-top:20px">' +
 woChk() +
       '<h1 style="font-size:20px;font-weight:600;margin:12px 0 4px">반납 완료</h1>' +
-      '<p class="sub">' + UI.esc(r.name) + ' · ' + UI.num(qty) + ' ' + UI.esc(r.unit) + '</p>' +
+      '<p class="sub">' + UI.esc(r.name) + ' · ' + UI.num(qty) + ' ' + UI.esc(r.unit) +
+        '<br>반납자 ' + UI.esc(who.name) + ' · 사번 ' + UI.esc(who.emp) + '</p>' +
       (t ? '<div class="pgrid" style="margin-top:16px;text-align:left">' +
         '<div><div class="pk">현재고</div><div class="pv">' + UI.num(t.stock) + '</div></div>' +
         '<div><div class="pk">조치</div><div class="pv">' + UI.esc(t.actionNow) + '</div></div>' +
@@ -253,12 +278,19 @@ woChk() +
     }
     var st = e.target.closest && e.target.closest('[data-step]');
     if (st) {
-      var r = rows().filter(function (x) { return x.q === q; })[0];
+      /* target() 으로 찾는다 · rows() 는 불출 잔여가 있는 자재만이라
+       * QR 로 들어온 자재에서는 버튼이 아무 일도 하지 않았다 */
+      var r = target();
       if (!r) { return; }
-      qty = Math.max(1, Math.min(Number(r.left), qty + Number(st.getAttribute('data-step'))));
+      var max = Math.max(1, Number(r.left) || 1);
+      qty = Math.max(1, Math.min(max, (Number(qty) || 0) + Number(st.getAttribute('data-step'))));
       paintPanel();
       return;
     }
+
+    /* 반납자 입력 · 값만 담아 둔다. 여기서 다시 그리면 글자 칠 때마다 칸이 튄다 */
+    var wi = e.target.closest && e.target.closest('[data-who]');
+    if (wi) { return; }
     var c = e.target.closest && e.target.closest('[data-cond]');
     if (c) { cond = c.getAttribute('data-cond'); paintPanel(); return; }
 
@@ -271,6 +303,7 @@ woChk() +
         DB.qrReturn({
           code: r2.q, dept: r2.qrOnly ? (r2.qr.deptCode || '') : undefined,
           qty: qty, unit: r2.unit, cond: cond,
+          by: (who.name || '담당자') + (who.emp ? ' (' + who.emp + ')' : ''),
           note: viaQr ? '현장 QR 반납' : '현장 반납'
         });
         done = true;
@@ -280,6 +313,13 @@ woChk() +
           rows: [['이유', String(err.message || err)]] });
       }
     }
+  });
+
+  /* 반납자 칸에 친 값을 담아 둔다. 다시 그릴 때 그 값으로 채운다 */
+  document.addEventListener('input', function (e) {
+    var wi = e.target.closest && e.target.closest('[data-who]');
+    if (!wi) { return; }
+    who[wi.getAttribute('data-who')] = String(e.target.value || '').trim();
   });
 
   paintHead();

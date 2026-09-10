@@ -27,7 +27,7 @@ window.QR_ITEMS = {
     recvDate: '2025-11-27',
     deptCode: 'KUX12DQ',
     deptPath: '광양 압연설비1부 열연정비1섹션 1열연RM전기파트',
-    owner: '이예열',
+    owner: '김헤정',
     tel: '061-790-1111',
     /* 이 값이 어디서 왔는지 화면이 그대로 적는다 */
     source: '자재식별표 QR'
