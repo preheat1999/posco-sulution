@@ -77,12 +77,12 @@
    * 담당자가 한 건 승인하면 초록 조각이 커지고 주황 조각이 줄어든다.
    * 알고리즘 판정값 자체는 근거 화면을 위해 그대로 남아 있다 */
   var DONUT_ORDER = [
-    { key: '승인 완료', label: '승인 완료 · 사람이 확정', color: 'var(--ok)', act: true },
+    { key: '승인 완료', label: '승인 완료', color: 'var(--ok)', act: true },
     { key: '보험품→계획품', label: '보험품 → 계획품', color: 'var(--plan)', act: true },
     { key: '계획품→보험품', label: '계획품 → 보험품', color: 'var(--insur)', act: true },
-    { key: '현행유지', label: '현행유지 · 사람 판단', color: 'var(--core)', act: true },
-    { key: '판정일치', label: '판정일치 · 그대로', color: 'var(--line-2)', act: false },
-    { key: '배제', label: '배제 · 소모품 순환품', color: 'var(--muted)', act: false }
+    { key: '현행유지', label: '현행유지', color: 'var(--core)', act: true },
+    { key: '판정일치', label: '판정일치', color: 'var(--line-2)', act: false },
+    { key: '배제', label: '배제', color: 'var(--muted)', act: false }
   ];
 
   function bucketOf(r) {

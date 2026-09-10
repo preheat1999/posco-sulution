@@ -13,13 +13,13 @@
   <aside class="side" id="side"></aside>
 
   <main class="main">
+    <!-- 제목 아래 설명 줄을 뺐다. 화면 이름을 읽고 나서 설명을 또 읽는 사람은 없다 -->
     <div class="top">
       <div class="top-left">
         <button class="hamb" id="hamb" aria-label="메뉴" aria-expanded="false">&#9776;</button>
         <div>
           <div class="crumb" data-group="관리">&nbsp;</div>
           <h1>자재관리 대시보드</h1>
-          <p class="pagedesc">담당 설비의 자재 현황과 오늘 해야 할 일을 한 화면에서 봅니다</p>
         </div>
       </div>
       <div class="top-right">
@@ -35,10 +35,7 @@
 
       <section class="card">
         <header>
-          <div>
-            <h2>오늘 할 일</h2>
-            <p class="sub">지금 해야 하는 것만 펼쳐 두었습니다</p>
-          </div>
+          <div><h2>오늘 할 일</h2></div>
           <div class="card-tools"><span class="badge" id="todo-sum">&nbsp;</span></div>
         </header>
         <div class="todo" id="todo"></div>
@@ -52,10 +49,10 @@
       <section class="card">
         <header>
           <div>
-            <h2>정비 예정 · 발주 마감일</h2>
+            <h2>정비 예정 · 발주 마감</h2>
             <p class="sub" id="due-sub">&nbsp;</p>
           </div>
-          <div class="card-tools"><a class="btn line sm" href="plan.html">정비계획 열기</a></div>
+          <div class="card-tools"><a class="btn line sm" href="plan.html">열기</a></div>
         </header>
         <div class="due" id="due"></div>
         <p class="note" id="due-note">&nbsp;</p>
@@ -66,10 +63,7 @@
          닫힌 줄에 숫자가 없으면 빈 줄로 보여 아무도 열지 않는다 -->
     <section class="sect" id="s-pipe">
       <div class="sect-head" role="button" tabindex="0" aria-expanded="false" aria-controls="pipe">
-        <div class="sect-title">
-          <h2>구매신청 · 자재반납 진행 현황</h2>
-          <p class="sub">단계마다 몇 건이 걸려 있는지 보여 줍니다</p>
-        </div>
+        <div class="sect-title"><h2>구매신청 · 자재반납 진행</h2></div>
         <div class="card-tools">
           <span class="sect-n" id="pipe-n">&nbsp;</span>
           <span class="sect-arrow">&#8744;</span>
@@ -80,13 +74,10 @@
 
     <section class="sect" id="s-eq">
       <div class="sect-head" role="button" tabindex="0" aria-expanded="false" aria-controls="eq">
-        <div class="sect-title">
-          <h2>설비별 자재 현황</h2>
-          <p class="sub">보유 수량을 누르면 창고와 타부서 보유를 확인합니다</p>
-        </div>
+        <div class="sect-title"><h2>설비별 자재 현황</h2></div>
         <div class="card-tools">
           <span class="sect-n" id="eq-n">&nbsp;</span>
-          <a class="btn line sm" href="stock.html">적정재고 열기</a>
+          <a class="btn line sm" href="stock.html">적정재고</a>
           <span class="sect-arrow">&#8744;</span>
         </div>
       </div>
@@ -95,12 +86,9 @@
       </div>
     </section>
 
-    <!-- 파란 배너를 지웠어도 이 사실은 남아야 한다.
-         정답 라벨이 없으니 정확도를 말하지 않는다 · 이걸 빼면 심사에서 먼저 묻는다 -->
-    <p class="note" style="margin-top:14px">
-      이 화면의 제안은 규칙 기반입니다. 사내 원장에 정답 라벨이 0건이라
-      정확도를 말하지 않고, <b>담당자 승인을 첫 라벨로 쌓습니다.</b>
-      숫자에 붙은 <b>?</b> 와 보유 수량을 누르면 그 값이 어떻게 나왔는지 그대로 나옵니다.
+    <!-- 이 한 줄은 남긴다. 정답 라벨이 없다는 사실을 빼면 심사에서 먼저 묻는다 -->
+    <p class="note" style="margin-top:16px">
+      정답 라벨이 0건이라 정확도를 말하지 않습니다 · <b>담당자 승인이 첫 라벨입니다</b>
     </p>
   </main>
 </div>
@@ -134,27 +122,36 @@
   var todoRows = [];
   var restOpen = false;
   var trendCache = null;
+  var dueCache = null;
+
+  /* 화면에 글자를 최소로 둔다. 대신 값마다 ? 를 붙이고
+   * 설명은 전부 그 안으로 넣는다. 근거를 없앤 것이 아니라 접어 둔 것이다 */
+  function ask(id) {
+    return ' <button class="askbtn" type="button" id="' + id + '" aria-label="근거 보기">?</button>';
+  }
 
   // ------------------------------------------------------------ 도넛
   /* 차트 라이브러리를 쓰지 않는다. 원 하나에 stroke-dasharray 로 조각을 낸다.
-     사내망에서 외부 주소가 막히면 화면이 통째로 깨진다 */
+     사내망에서 외부 주소가 막히면 화면이 통째로 깨진다.
+     링은 얇게 둔다 · 두꺼우면 값이 아니라 링 자체가 먼저 보인다 */
   function donutSvg(d) {
-    var R = 40, C = 2 * Math.PI * R, off = 0, segs = '';
+    var R = 42, SW = 9, C = 2 * Math.PI * R, off = 0, segs = '';
     d.segs.forEach(function (s) {
       if (!s.n) { return; }
       var len = C * s.pct / 100;
       segs += '<circle cx="52" cy="52" r="' + R + '" fill="none" stroke="' + s.color +
-        '" stroke-width="14" stroke-dasharray="' + len.toFixed(2) + ' ' +
+        '" stroke-width="' + SW + '" stroke-dasharray="' + len.toFixed(2) + ' ' +
         (C - len).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) +
         '" transform="rotate(-90 52 52)"></circle>';
       off += len;
     });
     return '<svg class="donut" viewBox="0 0 104 104" role="img" ' +
       'aria-label="재판정 결과 ' + d.total + '품목의 비율">' +
-      '<circle cx="52" cy="52" r="40" fill="none" stroke="var(--line)" stroke-width="14"></circle>' +
+      '<circle cx="52" cy="52" r="' + R + '" fill="none" stroke="var(--line)" ' +
+        'stroke-width="' + SW + '"></circle>' +
       segs +
       '<text class="donut-v" x="52" y="51" text-anchor="middle">' + UI.num(d.total) + '</text>' +
-      '<text class="donut-k" x="52" y="64" text-anchor="middle">품목 재판정</text>' +
+      '<text class="donut-k" x="52" y="63" text-anchor="middle">품목</text>' +
       '</svg>';
   }
 
@@ -168,84 +165,41 @@
   }
 
   // ------------------------------------------------------------ 재고 금액 트렌드
-  /* 선 두 개를 직접 그린다. 차트 라이브러리를 쓰지 않는 이유는 도넛과 같다.
+  /* 선만 남긴다. 축 · 격자 · 면 · 월 이름을 다 지웠다.
+   * 기간과 증감은 옆의 알약이 말하고, 정확한 값은 ? 안에 있다.
+   * 그림이 커야 하고 그림 위에 글자가 없어야 한다.
    *
-   * 색이 뜻을 갖는다. 우리 부서 선은 **오르면 빨강, 내리면 파랑**이다.
-   * 재고 금액이 오르는 것이 이 과제의 문제 자체이므로 색으로 먼저 말한다.
-   * 전사 선은 초록 파선이다. 기준선이라 실선으로 두면 우리 값과 헷갈린다. */
+   * 색이 뜻을 갖는다. 우리 부서 선은 오르면 빨강, 내리면 파랑이다.
+   * 전사 선은 초록 파선 · 기준선이라 실선으로 두면 우리 값과 헷갈린다 */
   function trendSvg(t) {
-    /* 가로 대 세로를 4:1 쯤으로 둔다. 정사각에 가까우면 카드에서 그림이
-     * 숫자보다 커 보이고, 너무 납작하면 오르내림이 안 보인다 */
-    var W = 340, H = 86, PL = 1, PR = 1, PT = 8, PB = 16;
+    var W = 400, H = 104, PL = 3, PR = 3, PT = 8, PB = 8;
     var n = t.months.length;
     if (n < 2) { return ''; }
 
     var iw = W - PL - PR, ih = H - PT - PB;
-    var top = t.max * 1.06;                       // 선이 위쪽에 붙지 않게 여유를 준다
+    /* 두 선을 한 축에 둔다. 지수로 바꾸면 「우리가 전사의 절반」 이라는 사실이 사라진다 */
+    var top = t.max * 1.04;
     var x = function (i) { return PL + iw * (i / (n - 1)); };
     var y = function (v) { return PT + ih * (1 - (Number(v) || 0) / top); };
-
     var pts = function (arr) {
       return arr.map(function (v, i) { return x(i).toFixed(1) + ',' + y(v).toFixed(1); }).join(' ');
     };
-    var deptColor = t.dir === 'down' ? 'var(--brand)' : (t.dir === 'flat' ? 'var(--muted)' : 'var(--insur)');
-    var fillId = 'tg' + (t.dir === 'down' ? 'd' : 'u');
-
-    /* 면을 채우면 「쌓여 왔다」 가 보인다. 선만 있으면 그냥 꺾은선이다 */
-    var area = 'M' + x(0).toFixed(1) + ',' + y(t.dept[0]).toFixed(1) + ' L' +
-      pts(t.dept).split(' ').join(' L') + ' L' + x(n - 1).toFixed(1) + ',' + (PT + ih) +
-      ' L' + x(0).toFixed(1) + ',' + (PT + ih) + ' Z';
+    var col = t.dir === 'down' ? 'var(--brand)' : (t.dir === 'flat' ? 'var(--muted)' : 'var(--insur)');
 
     return '<svg class="trend-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" ' +
       'aria-label="최근 ' + (n - 1) + '개월 보유 재고 금액 · 우리 부서 ' +
       UI.won(t.deptLast) + ' · 전사 ' + UI.won(t.allLast) + '">' +
-      '<defs><linearGradient id="' + fillId + '" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="' + deptColor + '" stop-opacity=".22"></stop>' +
-        '<stop offset="100%" stop-color="' + deptColor + '" stop-opacity="0"></stop>' +
-      '</linearGradient></defs>' +
-      /* 바닥선 · 0 이 어디인지 알려 준다 */
-      '<line x1="' + PL + '" y1="' + (PT + ih) + '" x2="' + (W - PR) + '" y2="' + (PT + ih) +
-        '" stroke="var(--line-2)" stroke-width="1"></line>' +
-      '<path d="' + area + '" fill="url(#' + fillId + ')"></path>' +
       '<polyline points="' + pts(t.all) + '" fill="none" stroke="var(--ok)" ' +
-        'stroke-width="1.6" stroke-dasharray="4 3" stroke-linejoin="round" ' +
+        'stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" ' +
         'vector-effect="non-scaling-stroke"></polyline>' +
-      '<polyline points="' + pts(t.dept) + '" fill="none" stroke="' + deptColor + '" ' +
-        'stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" ' +
+      '<polyline points="' + pts(t.dept) + '" fill="none" stroke="' + col + '" ' +
+        'stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" ' +
         'vector-effect="non-scaling-stroke"></polyline>' +
       '<circle cx="' + x(n - 1).toFixed(1) + '" cy="' + y(t.all[n - 1]).toFixed(1) +
-        '" r="2.6" fill="var(--ok)"></circle>' +
+        '" r="2.4" fill="var(--ok)"></circle>' +
       '<circle cx="' + x(n - 1).toFixed(1) + '" cy="' + y(t.dept[n - 1]).toFixed(1) +
-        '" r="3.2" fill="' + deptColor + '"></circle>' +
-      /* 언제부터 언제까지인지 없으면 「그냥 오르는 선」 이 된다.
-         가운데 달은 안 적는다 · 작은 그림에 글자가 많으면 아무것도 안 읽힌다 */
-      '<text class="trend-x" x="' + PL + '" y="' + (H - 4) + '" text-anchor="start">' +
-        UI.esc(t.months[0]) + '</text>' +
-      '<text class="trend-x" x="' + (W - PR) + '" y="' + (H - 4) + '" text-anchor="end">' +
-        UI.esc(t.months[n - 1]) + ' 기준</text>' +
+        '" r="3.4" fill="' + col + '"></circle>' +
       '</svg>';
-  }
-
-  function trendBlock(t) {
-    var dirWord = t.dir === 'down' ? '내려가는 중' : (t.dir === 'flat' ? '변화 없음' : '올라가는 중');
-    var sign = t.pct === null ? '' : (t.pct >= 0 ? '+' : '');
-    var chip = t.pct === null ? '증감 미확인'
-      : (sign + t.pct.toFixed(0) + '% · ' + (t.months.length - 1) + '개월');
-
-    return '<div class="trend">' +
-      '<div class="trend-head">' +
-        '<span>보유 재고 금액 추이</span>' +
-        '<span class="trend-chip ' + t.dir + '">' + chip + '</span>' +
-        (t.src === 'demo' ? '<span class="trend-chip demo">시연용 값</span>' : '') +
-        '<button class="askbtn" type="button" id="trend-why" aria-label="이 선의 근거">?</button>' +
-      '</div>' +
-      trendSvg(t) +
-      '<div class="trend-legend">' +
-        '<span class="' + (t.dir === 'down' ? 'down' : 'up') + '"><i></i>우리 부서 <b>' +
-          UI.won(t.deptLast) + '</b> · ' + dirWord + '</span>' +
-        '<span class="all"><i></i>전사 <b>' + UI.won(t.allLast) + '</b></span>' +
-      '</div>' +
-      '</div>';
   }
 
   /* 이 선을 어떻게 만들었는지 숨기지 않는다.
@@ -279,36 +233,52 @@
     });
   }
 
-  function kpiCell(cls, value, unit, label, extra) {
+  function kpiCell(cls, value, unit, label) {
     return '<div class="kpi ' + cls + '">' +
       '<div class="v">' + value + (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
-      '<div class="k">' + label + '</div>' +
-      (extra ? '<div class="k2">' + extra + '</div>' : '') + '</div>';
+      '<div class="k">' + label + '</div></div>';
+  }
+
+  function metaCell(value, label) {
+    return '<div><b>' + value + '</b><span>' + label + '</span></div>';
   }
 
   function paintKpi() {
     var m = A.meta(), d = A.donut(), w = A.money(), s = A.summary();
     var me = window.ORG ? ORG.load() : null;
-    trendCache = A.trend(13);
+    var t = A.trend(13);
+    trendCache = t;
 
     document.getElementById('asof').textContent =
       m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
 
-    /* 담당 현황 · 이 화면의 기준값이라 제일 크게 둔다 */
+    /* 담당 현황 · 금액 하나 · 증감 하나 · 큰 선 하나 · 부속값 세 개.
+     * 숫자를 넷 늘어놓으면 어느 것이 중요한지 사라진다 */
+    var chip = t.pct === null ? '증감 미확인'
+      : ((t.pct >= 0 ? '+' : '') + t.pct.toFixed(0) + '% · ' + (t.months.length - 1) + '개월');
+
     document.getElementById('kpi-lead').innerHTML =
       '<p class="gt"><span>담당 현황</span>' +
         (me && me.dept ? '<span class="gt-sub">' + UI.esc(me.part) + ' · ' +
           UI.esc(me.dept) + '</span>' : '') +
       '</p>' +
-      '<div class="row">' +
-        kpiCell('', UI.num(m.counts.equipment), '기', '담당 설비') +
-        kpiCell('', UI.num(m.counts.materials), '품목', '담당 자재') +
+      '<div class="lead-hero">' +
+        kpiCell('big', UI.wonShort(w.nowAmt), UI.wonShortUnit(w.nowAmt), '보유 재고') +
+        '<span class="trend-chip ' + t.dir + '">' + chip + '</span>' +
+        (t.src === 'demo' ? '<span class="trend-chip demo">시연용 값</span>' : '') +
+        ask('trend-why') +
       '</div>' +
-      '<div class="lead-line"></div>' +
-      '<div class="lead-bottom">' +
-        kpiCell('big', UI.wonShort(w.nowAmt), UI.wonShortUnit(w.nowAmt), '보유 재고',
-                '목표 ' + UI.won(w.tgtAmt)) +
-        trendBlock(trendCache) +
+      '<div class="trend">' + trendSvg(t) +
+        '<div class="trend-legend">' +
+          '<span class="' + (t.dir === 'down' ? 'down' : 'up') + '"><i></i>우리 부서 <b>' +
+            UI.won(t.deptLast) + '</b></span>' +
+          '<span class="all"><i></i>전사 <b>' + UI.won(t.allLast) + '</b></span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="lead-meta">' +
+        metaCell(UI.won(w.tgtAmt), '목표 재고') +
+        metaCell(UI.num(m.counts.equipment) + '기', '담당 설비') +
+        metaCell(UI.num(m.counts.materials) + '품목', '담당 자재') +
       '</div>';
 
     /* AI 속성 분류 · 도넛 · 내역은 마우스를 올릴 때만 */
@@ -318,11 +288,10 @@
       '<div class="kpi-viz">' + donutSvg(d) +
         '<div class="viz-right">' +
           '<div class="viz-msg">' +
-            '<div><b>' + UI.num(d.change) + '품목</b> 속성 변경 제안</div>' +
-            '<div><b>' + UI.num(d.hold) + '품목</b> 사람 판단 보류' +
-              (d.done ? '<br><b class="ok">' + UI.num(d.done) + '품목</b> 승인 완료' : '') +
-            '</div>' +
-            '<div class="viz-hint">마우스를 올리면 6갈래 내역</div>' +
+            '<div><b>' + UI.num(d.change) + '</b>속성 변경 제안</div>' +
+            '<div><b' + (d.done ? ' class="ok"' : '') + '>' + UI.num(d.hold) +
+              '</b>사람 판단 보류' + (d.done ? ' · ' + UI.num(d.done) + '건 승인' : '') + '</div>' +
+            '<div class="viz-hint">마우스를 올리면 6갈래</div>' +
           '</div>' +
           '<div class="viz-legend">' + donutLegend(d) + '</div>' +
         '</div>' +
@@ -333,43 +302,37 @@
       '<p class="gt"><span><span class="ai">✦</span> AI 적정재고 분석</span>' +
       '<span class="gt-link">바로가기</span></p>' +
       '<div class="row">' +
-        kpiCell('core', UI.num(w.orderItems), '품목', '발주 필요',
-                '즉시 ' + UI.num(s.signal.red || 0) + '건') +
-        kpiCell('ok', UI.wonShort(w.cutAmt), UI.wonShortUnit(w.cutAmt), '감축 가능',
-                UI.num(w.cutItems) + '품목') +
+        kpiCell('core', UI.num(w.orderItems), '품목', '발주 필요') +
+        kpiCell('ok', UI.wonShort(w.cutAmt), UI.wonShortUnit(w.cutAmt), '감축 가능') +
       '</div>' +
       cmpChart(w) +
       finPill(w);
   }
 
   /* 「이만큼 빼도 된다」 를 견주기로 보여 준다.
-   * 막대 하나를 색으로 쪼개면 무엇과 무엇을 견주는지 안 보인다.
-   * 지금 보유를 위에, 목표 안에 드는 몫을 아래에 두면 짧아진 만큼이 감축액이다.
-   * 빗금 칸이 그 몫이다 · 비어야 돈이 남는다는 뜻으로 읽힌다 */
+   * 라벨을 막대 위로 올렸다 · 왼쪽에 두면 그만큼 막대가 짧아진다.
+   * 빗금 칸이 빼도 되는 몫이다 · 비어야 돈이 남는다는 뜻으로 읽힌다 */
   function cmpChart(w) {
     var keepPct = w.nowAmt ? (w.keepAmt / w.nowAmt * 100) : 0;
     var cutPct = w.cutPct;
     /* 빗금 칸이 좁으면 글자를 넣지 않는다. 넣으면 「감 / 축」 으로 쌓인다 */
-    var inLabel = cutPct >= 26
-      ? '감축 ' + UI.won(w.cutAmt) + ' · ' + cutPct.toFixed(1) + '%' : '';
+    var inLabel = cutPct >= 22 ? '감축 ' + UI.won(w.cutAmt) : '';
 
     return '<div class="cmp" role="img" aria-label="지금 보유 ' + UI.won(w.nowAmt) +
         ' 가운데 목표를 넘는 몫 ' + UI.won(w.cutAmt) + ' · ' + UI.pct(w.cutAmt, w.nowAmt) + '">' +
       '<div class="cmp-row">' +
-        '<span class="cmp-k">지금 보유</span>' +
+        '<div class="cmp-lab"><span>지금 보유</span>' +
+          '<b class="cmp-v">' + UI.won(w.nowAmt) + '</b></div>' +
         '<div class="cmp-track"><div class="cmp-fill now" style="width:100%"></div></div>' +
-        '<b class="cmp-v">' + UI.won(w.nowAmt) + '</b>' +
       '</div>' +
       '<div class="cmp-row">' +
-        '<span class="cmp-k">목표 안</span>' +
+        '<div class="cmp-lab"><span>목표 안</span>' +
+          '<b class="cmp-v">' + UI.won(w.keepAmt) + '</b></div>' +
         '<div class="cmp-track">' +
           '<div class="cmp-fill tgt" style="width:' + keepPct.toFixed(1) + '%"></div>' +
           '<div class="cmp-gap" style="width:' + cutPct.toFixed(1) + '%">' + inLabel + '</div>' +
         '</div>' +
-        '<b class="cmp-v">' + UI.won(w.keepAmt) + '</b>' +
       '</div>' +
-      '<p class="cmp-note">빗금 칸이 <b>빼도 되는 몫 ' + UI.won(w.cutAmt) + ' · ' +
-        UI.pct(w.cutAmt, w.nowAmt) + '</b> 입니다 · 공용 전환하거나 다음 발주를 미루면 됩니다</p>' +
       '</div>';
   }
 
@@ -383,19 +346,18 @@
     }
     return '<div class="fin-pill">' +
       '<span class="fic">₩</span>' +
-      '<span><b>해마다 ' + UI.won(w.finance) + ' 남습니다</b>' +
-      '금융비용 기준 · 감축 ' + UI.won(w.cutAmt) + ' + 공용화 회수 ' +
-      UI.won(w.poolAmt) + ' (부서 모집단)</span></div>';
+      '<span><b>연 ' + UI.won(w.finance) + '</b>' +
+      '금융비용 절감 · 감축 + 공용화 회수 기준</span></div>';
   }
 
   // ------------------------------------------------------------ 오늘 할 일
   /* 지금 해야 하는 한 줄만 키우고 나머지는 접는다.
    * 네 줄을 같은 크기로 두면 급한 것과 해도 되는 것이 같은 무게로 읽힌다.
-   * 접힌 버튼에 건수를 적어 둔다 · 숫자를 감추면 접힌 줄을 아무도 안 연다 */
+   * 설명 줄(왜 이 숫자인가)은 화면에서 빼고 ? 안으로 넣었다 */
   function paintTodo() {
     todoRows = A.todo();
     var total = todoRows.reduce(function (a, r) { return a + r.n; }, 0);
-    document.getElementById('todo-sum').textContent = '처리 대기 ' + UI.num(total) + '품목';
+    document.getElementById('todo-sum').textContent = '대기 ' + UI.num(total) + '품목';
 
     /* 「지금」 이 0건일 수도 있다. 그러면 0을 키워 두지 않고
      * 실제로 건이 있는 첫 줄을 올린다 */
@@ -409,9 +371,9 @@
       todoLine(todoRows[heroIx], heroIx, true) +
       '<button class="todo-more" type="button" id="todo-more" aria-expanded="' +
         (restOpen ? 'true' : 'false') + '" aria-controls="todo-rest">' +
-        '<span>' + (restOpen ? '나머지 접기' : '나머지 ' + rest.length + '줄') + ' · ' +
+        '<span>' + (restOpen ? '접기' : '나머지 ' + rest.length + '줄') + ' · ' +
         rest.map(function (r) {
-          return UI.esc(r.tag) + ' <b>' + UI.num(r.n) + r.unit + '</b>';
+          return UI.esc(r.tag) + ' <b>' + UI.num(r.n) + '</b>';
         }).join(' · ') + '</span>' +
         '<span class="m-arrow">' + (restOpen ? '∧' : '∨') + '</span>' +
       '</button>' +
@@ -429,7 +391,6 @@
         '<span class="todo-num">' + UI.num(r.n) + r.unit + '</span> ' + UI.esc(r.text) +
         ' <button class="askbtn" type="button" data-why="' + ix + '" ' +
         'aria-label="근거 보기">?</button>' +
-        '<div class="todo-why">' + UI.esc(r.why) + '</div>' +
         '<div class="todo-act">' + r.acts.map(function (a) {
           return '<a class="btn ' + (hero ? '' : 'soft ') + 'sm" href="' + a[1] + '">' +
             UI.esc(a[0]) + '</a>';
@@ -465,7 +426,7 @@
     });
   }
 
-  /* 트렌드의 ? 는 담당 현황 안에 있다. 다시 그려도 붙어 있게 위임으로 둔다 */
+  /* 담당 현황 안의 ? · 다시 그려도 붙어 있게 위임으로 둔다 */
   function wireLead() {
     document.getElementById('kpi-lead').addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('#trend-why');
@@ -476,10 +437,10 @@
   // ------------------------------------------------------------ 발주 마감일
   function paintDue() {
     /* 한 줄에 세 칸이 되면서 칸이 좁아졌다. 다섯 줄을 넣으면 카드가 화면을 넘긴다 */
-    var SHOW = 4;
-    var d = A.dueList(SHOW);
+    var d = A.dueList(4);
+    dueCache = d;
     document.getElementById('due-sub').textContent =
-      '정비 일정에 묶인 ' + UI.num(d.total) + '건 중 급한 순으로 ' + d.rows.length + '건';
+      UI.num(d.total) + '건 중 급한 ' + d.rows.length + '건';
 
     document.getElementById('due').innerHTML = d.rows.length ? d.rows.map(function (r) {
       /* 얼굴은 남은 일수로 정한다. 신호(red/gray)는 재고 기준이라 배지로 따로 낸다.
@@ -491,27 +452,41 @@
           /* 설비명과 자재명이 둘 다 영문이라 라벨이 없으면 어느 줄이 무엇인지 모른다.
              설비 코드는 원천에 없다. 지어내지 않고 이름만 적는다 */
           '<div class="due-name"><span class="ln">설비</span>' +
-            UI.esc(r.sigEq || '설비 연결 미확인') +
-            '<span class="dim"> · ' + UI.esc(r.sigKind || '휴지구분 미확인') + '</span></div>' +
+            UI.esc(r.sigEq || '설비 연결 미확인') + '</div>' +
           '<div class="due-meta"><span class="ln">자재</span>' +
             UI.esc(r.name || '품명 미확인') +
-            '<span class="dim"> · ' + UI.esc(r.q) + ' · ' +
-            UI.esc(r.grade || '?') + '등급</span></div>' +
+            '<span class="dim"> · ' + UI.esc(r.q) + '</span></div>' +
         '</div>' +
         '<div class="due-right">' +
           '<div class="due-d">' + UI.esc(UI.dleft(r.dDays)) + '</div>' +
-          '<div class="due-date">마감 ' + UI.esc(UI.date(r.dueDate)) + '</div>' +
-          '<div style="margin-top:3px">' + UI.signalBadge(r.signal, r.status) + '</div>' +
+          '<div class="due-date">' + UI.esc(UI.date(r.dueDate)) + '</div>' +
         '</div></div>';
     }).join('') :
       '<div class="empty"><strong>정비 일정에 묶인 자재가 없습니다</strong>' +
       '정비계획 화면에서 휴지 일정을 확인하세요</div>';
 
-    /* 「전부 마감 초과」 가 데이터의 사실이다. 숨기지 않고 뜻을 붙여 적는다 */
+    /* 「전부 마감 초과」 가 데이터의 사실이다. 한 줄로 줄이고 뜻은 ? 에 담는다 */
     document.getElementById('due-note').innerHTML =
-      UI.num(d.total) + '건이 모두 발주 마감일을 넘겼습니다. 그중 <b>' + UI.num(d.now) +
-      '건</b>은 재고가 예상 소요보다 적어 지금 신청해야 하고, 나머지는 재고로 충당됩니다. ' +
-      '마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다릅니다.';
+      UI.num(d.total) + '건 모두 마감 초과 · 지금 신청은 <b>' + UI.num(d.now) + '건</b>' +
+      ask('due-why');
+  }
+
+  function wireDue() {
+    document.getElementById('due-note').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('#due-why');
+      if (!b || !dueCache) { return; }
+      POP.show(b, {
+        title: '발주 마감일',
+        rows: [
+          ['정비 일정에 묶인 자재', UI.num(dueCache.total) + '건'],
+          ['마감을 넘긴 건', UI.num(dueCache.total) + '건 · 전부'],
+          ['지금 신청해야 하는 건', UI.num(dueCache.now) + '건 (발주 신호 red)'],
+          ['마감일 산식', '휴지 시작일 - 내림(리드타임 평균 + 선행일수 + 0.5 × 표준편차)']
+        ],
+        note: '마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다릅니다. ' +
+              '나머지는 마감을 넘겼지만 재고로 충당됩니다.'
+      });
+    });
   }
 
   // ------------------------------------------------------------ 진행 파이프라인
@@ -533,7 +508,6 @@
       return '<div class="pipe-set">' +
         '<div class="pipe-head">' +
           '<span>' + p.ico + ' ' + UI.esc(p.title) + '</span>' +
-          '<span class="sub">전체 ' + UI.num(p.total) + p.unit + '</span>' +
           '<a class="btn line sm" href="' + p.href + '" style="margin-left:auto">열기</a>' +
         '</div>' +
         '<div class="pipe-row">' + p.steps.map(function (s) {
@@ -587,14 +561,12 @@
               UI.num(r.stock) + '</button>' +
             '<span class="arrow">→</span>' + UI.num(r.target) + '</span></td>' +
           '<td data-label="조치"><span class="badge core">발주 ' + UI.num(r.needNow) + '</span>' +
-            (move > 0 ? ' <span class="badge ok">이관 ' + UI.num(move) + ' 가능</span>' : '') +
+            (move > 0 ? ' <span class="badge ok">이관 ' + UI.num(move) + '</span>' : '') +
           '</td></tr>';
       }).join('') + '</tbody></table>' +
-      '<p class="note" style="margin-top:10px">발주 필요 ' + UI.num(n.total) +
-      '품목 중 설비가 연결된 ' + UI.num(n.linked) + '품목을 먼저, 그다음 금액이 큰 순입니다. ' +
-      '나머지 <b>' + UI.num(n.unlinked) + '품목은 설비 연결이 원천에 없습니다</b> · ' +
-      '작업주문과 자재계획의 교집합이 비어 있는 문제로, 데이터 근거 화면에 그대로 적어 뒀습니다. ' +
-      '이관이 가능하면 사는 것보다 쌉니다.</p>';
+      '<p class="note" style="margin-top:12px">설비가 연결된 ' + UI.num(n.linked) +
+      '품목을 먼저, 그다음 금액 순입니다. <b>나머지 ' + UI.num(n.unlinked) +
+      '품목은 설비 연결이 원천에 없습니다.</b></p>';
   }
 
   /* 보유 수량을 누르면 창고와 타부서 보유를 보여 준다.
@@ -635,6 +607,7 @@
   paintAll();
   wireTodo();     // 이벤트는 한 번만 붙인다
   wireLead();
+  wireDue();
   wireEq();
   UI.accordion(document);
 
