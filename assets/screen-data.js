@@ -219,7 +219,14 @@
     return { wos: c.wos, over: c.tone.over, now: nowN, mats: c.mats };
   }
 
-  /* WO 한 건에 걸린 자재. needQs 는 발주가 필요한 것만이다 */
+  /* WO 한 건에 걸린 자재. needQs 는 발주가 필요한 것만이다.
+   *
+   * 부족분은 **목표재고 기준(needNow)** 으로 센다. WO 머리의 「발주 필요 N품목」 도
+   * 같은 기준이라 표와 머리가 어긋나지 않는다.
+   *
+   * expect(이 정비 건의 예상 소요)는 알고리즘 결과에 정비계획에 걸린 56행만 있다.
+   * 그걸로 과부족을 계산하면 나머지 687행이 전부 0 이 되어 표가 뜻을 잃는다.
+   * 없는 행은 「원천에 없음」 이라고 적고 지어내지 않는다 */
   function planMats(wo) {
     if (!live) { return []; }
     var need = {};
@@ -227,10 +234,14 @@
     return (wo.mats || []).map(function (q) {
       var r = DB.item(q);
       if (!r) { return { q: q, missing: true }; }
+      var hasExpect = r.expect !== null && r.expect !== undefined && r.expect !== '';
       return {
         q: q, name: r.name, grade: r.grade, type: r.type,
-        expect: r.expect, stock: r.stock, target: r.target,
-        need: Math.max(0, Number(r.expect || 0) - Number(r.stock || 0)),
+        expect: hasExpect ? Number(r.expect) : null,
+        stock: r.stock, target: r.target,
+        need: Number(r.needNow) || 0,               // 목표재고 기준 부족분
+        /* 예상 소요가 있는 행만 「이 정비 건 기준」 부족분을 같이 준다 */
+        shortByExpect: hasExpect ? Math.max(0, Number(r.expect) - Number(r.stock || 0)) : null,
         needOrder: !!need[q], signal: r.signal, ltMean: r.ltMean, price: r.price
       };
     });

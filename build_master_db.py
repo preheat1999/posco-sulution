@@ -32,6 +32,11 @@ from datetime import date, timedelta
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "본선_반출 최종본", "데이터")
+# 알고리즘 담당에게 받은 파일을 두는 곳. 같은 이름이 있으면 반출본 대신 이걸 읽는다.
+# 반출 폴더는 읽기 전용으로 남긴다 · 무엇이 주최측 값이고 무엇이 우리 값인지
+# 심사에서 답할 수 있어야 한다
+ALGO_IN = os.path.join(ROOT, "algo_in")
+USED_ALGO = []
 ASSETS = os.path.join(ROOT, "assets")
 DB = os.path.join(ROOT, "db")
 DB_CSV = os.path.join(DB, "csv")
@@ -82,9 +87,19 @@ def cast(val, typ):
     return s or None
 
 
+def src_path(name):
+    """받은 폴더에 같은 이름이 있으면 그것을 쓴다. 어느 것을 썼는지 기록한다."""
+    over = os.path.join(ALGO_IN, name)
+    if os.path.isfile(over):
+        if name not in USED_ALGO:
+            USED_ALGO.append(name)
+        return over
+    return os.path.join(SRC, name)
+
+
 def read_csv(name, schema):
     cols = schema[name]
-    path = os.path.join(SRC, name)
+    path = src_path(name)
     # CSV 는 UTF-8 BOM 이다. utf-8-sig 로 열지 않으면 첫 컬럼명에 BOM 이 붙는다
     with io.open(path, encoding="utf-8-sig", newline="") as f:
         rows = []
@@ -99,7 +114,8 @@ def read_csv(name, schema):
 
 
 def read_json(name):
-    with io.open(os.path.join(SRC, name), encoding="utf-8") as f:
+    # BOM 이 붙어 오는 경우가 있다. utf-8-sig 로 열면 둘 다 읽힌다
+    with io.open(src_path(name), encoding="utf-8-sig") as f:
         return json.load(f)
 
 
@@ -655,9 +671,27 @@ def verify(master, derived, biz, plan, schema):
     diff = compare_with_shipped(master, derived, biz)
     for line in diff["lines"]:
         say("  " + line)
-    check(diff["mismatch"] == 0, "필드 불일치 %d건" % diff["mismatch"])
+    if USED_ALGO:
+        # 받은 파일을 썼으면 불일치는 「알고리즘이 바꾼 값」 이다. 실패가 아니다.
+        # 대신 어느 칸이 몇 건 바뀌었는지 적는다 · 심사에서 이 목록을 그대로 보여 준다
+        say()
+        say("  받은 파일을 썼으므로 위 불일치는 알고리즘이 바꾼 값이다 · 검산 실패가 아니다")
+        for name in USED_ALGO:
+            say("    받은 파일 · " + name)
+        for tag, cols in field_delta(diff).items():
+            for col, n in cols:
+                say("    바뀐 칸 · %s.%s %d건" % (tag, col, n))
+        check(True, "받은 파일 반영 · 필드 차이 %d건 (알고리즘 결과)" % diff["mismatch"])
+    else:
+        check(diff["mismatch"] == 0, "필드 불일치 %d건" % diff["mismatch"])
 
     return bad
+
+
+def field_delta(diff):
+    """어느 표의 어느 칸이 몇 건 바뀌었나. 대조 함수가 세어 둔 값을 정렬만 한다."""
+    return dict((k, sorted(v.items(), key=lambda x: -x[1]))
+                for k, v in diff.get("bycol", {}).items())
 
 
 def compare_with_shipped(master, derived, biz):
@@ -666,7 +700,7 @@ def compare_with_shipped(master, derived, biz):
     같은 데이터의 구조 그대로가 같이 왔으니 안 쓰면 아깝다.
     CSV 에서 다시 만든 값이 원본과 같은지 필드 단위로 본다.
     """
-    lines, mismatch = [], 0
+    lines, mismatch, bycol = [], 0, {}
     pairs = [
         ("db-master.json", master, ["depts", "materials", "equipment", "maintenance"], ["q", "dept"]),
         ("db-derived.json", derived, ["attr", "stock", "pool"], ["q", "dept"]),
@@ -707,13 +741,16 @@ def compare_with_shipped(master, derived, biz):
                         if n < 5:
                             lines.append("%s.%s 불일치 %s.%s · 재현 %r · 원본 %r"
                                          % (fname, t, ra.get(pk[0]), k, va, vb))
+                        # 칸별로도 센다. 줄은 5개까지만 남기므로 여기서 세야 한다
+                        bycol.setdefault(t, {})
+                        bycol[t][k] = bycol[t].get(k, 0) + 1
                         n += 1
             if n:
                 mismatch += n
                 lines.append("%s.%s 필드 불일치 %d건" % (fname, t, n))
             else:
                 lines.append("%s.%s %d행 모든 필드 일치" % (fname, t, len(a)))
-    return {"lines": lines, "mismatch": mismatch}
+    return {"lines": lines, "mismatch": mismatch, "bycol": bycol}
 
 
 # ---------------------------------------------------------------- 본체

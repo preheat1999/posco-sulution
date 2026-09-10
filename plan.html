@@ -98,7 +98,9 @@
     el('stat').innerHTML =
       cell(UI.num(c.wos), '건', '정비계획', '기준일 이후 · 우리 부서 설비') +
       cell(UI.num(c.over), '건', '마감 초과', '발주 마감일을 넘겼습니다', 'ins') +
-      cell(UI.num(c.now), '건', '지금 신청', '재고가 예상 소요보다 적습니다', 'core') +
+      cell(UI.num(c.now), '건', '지금 신청',
+           c.now ? '재고가 예상 소요보다 적습니다' : '재고로 충당됩니다',
+           c.now ? 'core' : '') +
       cell(UI.num(c.mats), '품목', '소요 자재', '정비계획에 걸린 자재');
   }
 
@@ -181,9 +183,13 @@
     el('next').disabled = page >= max;
 
     var c = S.planCounts();
-    el('foot').innerHTML = '마감을 넘긴 ' + UI.num(c.over) + '건 중 <b>지금 신청해야 하는 것은 ' +
-      UI.num(c.now) + '건</b>입니다. 나머지는 마감을 넘겼지만 재고로 충당됩니다. ' +
-      '마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다릅니다.';
+    el('foot').innerHTML = c.now
+      ? ('마감을 넘긴 ' + UI.num(c.over) + '건 중 <b>지금 신청해야 하는 것은 ' +
+         UI.num(c.now) + '건</b>입니다. 나머지는 마감을 넘겼지만 재고로 충당됩니다. ' +
+         '마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다릅니다.')
+      : ('마감을 넘긴 것이 ' + UI.num(c.over) + '건이지만 <b>지금 신청할 것은 없습니다</b>. ' +
+         '예상 소요가 현재고로 충당되기 때문입니다 · 마감을 넘겼다는 것과 ' +
+         '지금 신청해야 한다는 것은 다릅니다. 정비 일정이 바뀌면 다시 계산됩니다.');
   }
 
   /* 펼친 WO · 세 날짜를 한 줄에 놓고, 걸린 자재를 표로 낸다 */
@@ -215,7 +221,7 @@
     var table = mats.length ?
       '<div class="tablewrap"><table><thead><tr>' +
         '<th>자재 · 코드</th><th>속성</th><th class="num">예상 소요</th>' +
-        '<th class="num">현재고</th><th>과부족</th><th>조치</th>' +
+        '<th class="num">현재고 → 목표</th><th>부족</th><th>조치</th>' +
       '</tr></thead><tbody>' +
       mats.map(function (m) {
         if (m.missing) {
@@ -227,9 +233,13 @@
             '<div class="cell-1st">' + UI.esc(m.name || '품명 미확인') + '</div>' +
             '<div class="cell-2nd">' + UI.esc(m.q) + '</div></div></td>' +
           '<td data-label="속성">' + UI.typeBadge(m.type) + ' ' + UI.gradeBadge(m.grade) + '</td>' +
-          '<td class="num" data-label="예상 소요">' + UI.num(m.expect) + '</td>' +
-          '<td class="num" data-label="현재고">' + UI.num(m.stock) + '</td>' +
-          '<td data-label="과부족">' + (m.need > 0
+          /* 예상 소요는 정비계획에 걸린 행만 원천에 있다. 없으면 그대로 적는다 */
+          '<td class="num" data-label="예상 소요">' +
+            (m.expect === null ? '<span class="sub">원천에 없음</span>' : UI.num(m.expect)) +
+            '</td>' +
+          '<td class="num" data-label="현재고 → 목표"><span>' + UI.num(m.stock) +
+            '<span class="arrow">→</span>' + UI.num(m.target) + '</span></td>' +
+          '<td data-label="부족">' + (m.need > 0
             ? '<span class="badge insur">' + UI.num(m.need) + ' 부족</span>'
             : '<span class="badge ok">충당</span>') + '</td>' +
           '<td data-label="조치">' + (m.needOrder
@@ -241,14 +251,20 @@
       '<div class="empty"><strong>이 정비계획에 걸린 자재가 없습니다</strong>' +
       '원천의 자재계획에 연결이 없습니다</div>';
 
+    var noExpect = mats.filter(function (m) { return !m.missing && m.expect === null; }).length;
+
     return line +
       '<p class="note" style="margin:10px 0 12px">마감 ' + UI.esc(UI.date(w.dueDate)) +
         ' · 오늘 ' + UI.esc(UI.date(asof())) + ' · 휴지 착수 ' + UI.esc(UI.date(w.stopStart)) +
         ' · 리드타임 평균 ' + UI.num(w.ltMean) + '일' +
         (w.driver ? ' · 마감을 정한 자재 ' + UI.esc(w.driver) : '') + '</p>' +
       '<p class="gt"><span>소요 자재 ' + UI.num(mats.length) + '품목' +
-        (need.length ? ' · 발주 필요 ' + UI.num(need.length) + '품목' : '') + '</span></p>' +
-      table;
+        (need.length ? ' · 발주 필요 ' + UI.num(need.length) + '품목' : '') + '</span>' +
+        '<span class="gt-sub">부족은 목표재고 기준입니다</span></p>' +
+      table +
+      (noExpect ? '<p class="note" style="margin-top:10px"><b>' + UI.num(noExpect) +
+        '품목은 이 정비 건의 예상 소요가 원천에 없습니다.</b> ' +
+        '예상 소요는 정비계획에 걸린 자재에만 있어서, 부족분은 목표재고 기준으로 셉니다.</p>' : '');
   }
 
   function pt(cls, at, label) {
