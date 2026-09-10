@@ -278,7 +278,8 @@
       return '<span class="vnote dim">🎤 ' + (m.mode === 'server' ? '서버 음성 인식' : '브라우저 음성 인식') +
         ' · 「적정재고 탭으로 가줘」 「이 자재 10개 구매 신청해줘」</span>';
     }
-    return m ? '<span class="vnote dim">' + esc(m.why) + '</span>' : '';
+    /* 안내에 링크가 들어 있으면(https 주소) 그대로 살린다 · voice.js 가 만든 문장이다 */
+    return m ? '<span class="vnote dim">' + (m.html ? m.why : esc(m.why)) + '</span>' : '';
   }
   function paintMic() {
     var b = el('chatmic');

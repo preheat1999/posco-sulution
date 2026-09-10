@@ -5,7 +5,7 @@
 ```bash
 python -B make_qr.py --all                              # 등록된 자재 전부
 python -B make_qr.py --code Q4046777                    # 한 건
-python -B make_qr.py --base http://192.168.0.10:8130    # 다른 주소로 (사내망 · 노트북)
+python -B make_qr.py --base https://192.168.0.10:8443   # 다른 주소로 (사내망 · 노트북 · https)
 python -B make_qr.py --page mobile-return.html           # 반납 화면으로 바로
 ```
 
@@ -37,7 +37,7 @@ python -B make_qr.py --page mobile-return.html           # 반납 화면으로 �
 
 ```bash
 python -B serve.py                                        # 0.0.0.0:8130 · 폰이 붙을 수 있다
-python -B make_qr.py --base http://<노트북 IP>:8130 --all   # 그 주소로 QR
+python -B make_qr.py --base https://<노트북 IP>:8443 --all  # 그 주소로 QR (https 라야 마이크가 열린다)
 ```
 
 `serve.py` 가 띄울 때 폰으로 열 주소와 QR 만드는 명령을 같이 적어 준다.
@@ -65,3 +65,13 @@ python -B make_qr.py --base http://<노트북 IP>:8130 --all   # 그 주소로 Q
 QR 은 절대 주소를 담는다. 그 주소에 **`material-view.html` 이 올라가 있어야** 열린다
 (`assets/qr-items.js` 도 함께 올라가야 자재를 찾는다).
 아직 배포하지 않았다면 `--base` 로 지금 열려 있는 주소(사내망 노트북 등)를 넣어 다시 만든다.
+
+## 접속 QR (시연장에서 폰으로 들어오는 문)
+
+```bash
+python -B make_open_qr.py            # 지금 이 컴퓨터의 https 주소로 만든다
+```
+
+`qr/open_label.png` 한 장을 띄워 두면 사람들이 찍고 들어온다 ·
+그림 안에 「고급 → 계속」 안내와 「https 라야 마이크가 열린다」 가 같이 적혀 있다.
+와이파이가 바뀌어 IP 가 달라지면 다시 만들면 된다.

@@ -17,6 +17,11 @@
 브라우저가 막는 것이고 서버는 정상이다. 화면이 /rag/api/chat/stream 을 부르면
 이 서버가 .env 의 토큰을 붙여 10.1.14.205:8000 으로 대신 물어보고 답을 그대로 흘려 준다.
 
+또 하나 · 같은 와이파이에서 **HTTPS 로도** 띄운다 (--https · 기본 8443).
+마이크와 브라우저 음성 인식은 보안 컨텍스트에서만 열린다 ·
+http://10.1.14.204:8130 은 막히고 https://10.1.14.204:8443 은 된다.
+인증서는 이 컴퓨터가 직접 만든다(자체 서명) · 폰에서 한 번 「고급 → 계속」 을 누르면 된다.
+
 또 하나 · /llm/route 로 오는 질문을 LLM 라우터에 넘긴다.
 질문 문장과 도구 목록(assets/tools.json)만 보내고 「어느 도구를 어떤 값으로 부를지」를
 받는다 · 자재 행 · 금액 · 부서 값은 LLM 으로 가지 않고, 답은 브라우저가 우리 데이터로 만든다.
@@ -35,6 +40,9 @@ import os
 import re
 import socket
 import socketserver
+import ssl
+import subprocess
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -330,7 +338,7 @@ def read_env():
     return out
 
 
-def write_local_config(env):
+def write_local_config(env, secure_url=None):
     """.env 값을 화면이 읽을 수 있는 js 로 내려 준다.
 
     CFG 를 덮지 않고 필요한 칸만 채운다 · assets/config.js 의 나머지 값은 그대로다.
@@ -364,11 +372,79 @@ def write_local_config(env):
         # 음성 인식 프록시가 켜졌다는 사실만 · 키는 서버에 있다. 없으면 브라우저 내장 인식으로 간다
         body.append("  C.STT = '/stt';")
         body.append("  C.STT_MODEL = '%s';" % (env.get('STT_MODEL') or 'whisper-1'))
+    if secure_url:
+        # http 로 들어오면 마이크가 막힌다 · 화면이 「이 주소로 오세요」 라고 말할 수 있게 알려 준다
+        body.append("  C.SECURE_URL = '%s';" % secure_url)
     body.append('})();')
     body.append('')
     path = os.path.join(ROOT, 'assets', 'config.local.js')
     io.open(path, 'w', encoding='utf-8', newline='\n').write('\n'.join(body))
     return {'api': api, 'token': bool(token), 'path': path}
+
+
+CERT_DIR = os.path.join(ROOT, 'certs')
+
+
+def cert_paths():
+    return (os.path.join(CERT_DIR, 'lan-cert.pem'),
+            os.path.join(CERT_DIR, 'lan-key.pem'))
+
+
+def cert_covers(cert, ip):
+    """이 인증서가 지금 이 IP 를 담고 있나.
+
+    와이파이가 바뀌면 IP 가 바뀐다 · 그때는 다시 만들어야 폰이 붙는다.
+    반대로 IP 가 그대로면 다시 만들지 않는다 · 새로 만들면 폰에서 경고를 또 넘겨야 한다.
+    """
+    try:
+        out = subprocess.run(['openssl', 'x509', '-in', cert, '-noout', '-text'],
+                             capture_output=True, text=True, timeout=20)
+        return ('IP Address:' + ip) in out.stdout or ('IP:' + ip) in out.stdout
+    except Exception:
+        return False
+
+
+def make_cert(ip):
+    """자체 서명 인증서를 만든다 · 주소(SAN)에 이 컴퓨터의 IP 와 localhost 를 넣는다.
+
+    SAN 이 없으면 크롬이 아예 열어 주지 않는다 (CN 만 보는 시대는 끝났다).
+    openssl 은 Git for Windows 에 들어 있다 · 없으면 그 사실을 그대로 알리고 HTTP 로만 띄운다.
+    """
+    cert, key = cert_paths()
+    if not os.path.isdir(CERT_DIR):
+        os.makedirs(CERT_DIR)
+    san = 'subjectAltName=DNS:localhost,IP:127.0.0.1,IP:' + ip
+    cmd = ['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-sha256',
+           '-days', '365', '-nodes',
+           '-keyout', key, '-out', cert,
+           '-subj', '/CN=mtrl-demo-' + ip,
+           '-addext', san]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except FileNotFoundError:
+        return None, 'openssl 을 찾지 못했다 (Git for Windows 의 bash 에서 실행하면 있다)'
+    except Exception as e:
+        return None, str(e)
+    if r.returncode != 0 or not os.path.exists(cert):
+        return None, (r.stderr or '').strip()[:200]
+    return (cert, key), None
+
+
+def ensure_cert(ip):
+    cert, key = cert_paths()
+    if os.path.exists(cert) and os.path.exists(key) and cert_covers(cert, ip):
+        return (cert, key), None
+    return make_cert(ip)
+
+
+def serve_forever(host, port, tls=None):
+    socketserver.TCPServer.allow_reuse_address = True
+    srv = socketserver.ThreadingTCPServer((host, port), functools.partial(H, directory=ROOT))
+    if tls:
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(tls[0], tls[1])
+        srv.socket = ctx.wrap_socket(srv.socket, server_side=True)
+    srv.serve_forever()
 
 
 def lan_ip():
@@ -387,10 +463,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--port', type=int, default=8130)
+    # HTTPS · 마이크를 쓰려면 이게 필요하다
+    ap.add_argument('--https', dest='https', action='store_true', default=True,
+                    help='HTTPS 도 같이 띄운다 (기본 켜짐 · 마이크가 열린다)')
+    ap.add_argument('--no-https', dest='https', action='store_false',
+                    help='HTTP 만 띄운다')
+    ap.add_argument('--sport', type=int, default=8443, help='HTTPS 포트')
     a = ap.parse_args()
 
     env = read_env()
-    local = write_local_config(env)
     RAG['api'] = env.get('CHAT_API', '')
     RAG['token'] = env.get('CHAT_TOKEN', '')
     LLM['key'] = env.get('LLM_API_KEY', '')
@@ -399,13 +480,31 @@ def main():
     STT['model'] = env.get('STT_MODEL', '') or 'whisper-1'
     ip = lan_ip()
     base = 'http://%s:%d' % (ip, a.port)
+    tls, tls_why = (None, None)
+    if a.https:
+        tls, tls_why = ensure_cert(ip)
+    sbase = 'https://%s:%d' % (ip, a.sport) if tls else None
+    # 인증서를 만든 뒤에 써야 https 주소를 같이 내려 줄 수 있다
+    local = write_local_config(env, sbase)
+
     print('서버 · %s:%d (no-store)' % (a.host, a.port))
     print('  이 컴퓨터 · http://127.0.0.1:%d/main.html' % a.port)
     print('  폰 · 같은 Wi-Fi · %s/main.html' % base)
-    print('  폰 · QR 진입 · %s/mobile-return.html?code=Q4046777' % base)
+    if sbase:
+        print()
+        print('=' * 66)
+        print('  마이크를 쓰려면 이 주소로 들어간다 (같은 Wi-Fi)')
+        print('    %s/main.html' % sbase)
+        print()
+        print('  처음 한 번 · 「연결이 비공개가 아닙니다」 → 고급 → 계속 (이 컴퓨터가 만든 인증서다)')
+        print('  그 뒤부터 마이크 · 음성 인식이 열린다 (http 로는 브라우저가 막는다)')
+        print('=' * 66)
+    elif a.https:
+        print('  HTTPS 를 띄우지 못했다 · %s' % (tls_why or '이유 미확인'))
+        print('  마이크는 이 컴퓨터의 localhost 에서만 열린다')
     print()
     print('이 주소로 QR 만들기 ·')
-    print('  python -B make_qr.py --base %s --all' % base)
+    print('  python -B make_qr.py --base %s --all' % (sbase or base))
     print()
     print('RAG · %s' % (local['api'] or '주소 없음'))
     if local['api']:
@@ -420,19 +519,25 @@ def main():
     print('  질문 문장만 보낸다 · 자재 값은 브라우저 안에서 답을 만든다')
     print('음성 인식 · %s' % ('/stt → OpenAI ' + STT['model'] + ' (키는 서버에)' if STT['key']
                            else '브라우저 내장(Web Speech) · .env 에 OPENAI_API_KEY 를 넣으면 /stt 로 바뀐다'))
-    print('  마이크는 https 또는 localhost 에서만 열린다 · 폰(IP 주소)에서는 브라우저가 막는다')
+    if sbase:
+        print('  마이크 · %s 에서 열린다 (localhost 도 된다)' % sbase)
+    else:
+        print('  마이크는 https 또는 localhost 에서만 열린다')
     print()
-    print('폰이 안 붙으면 · 윈도 방화벽에서 이 포트를 한 번 허용해야 한다')
+    print('폰이 안 붙으면 · 윈도 방화벽에서 두 포트를 한 번 허용해야 한다')
     print('  (관리자 명령창) netsh advfirewall firewall add rule '
-          'name="mtrl demo %d" dir=in action=allow protocol=TCP localport=%d'
-          % (a.port, a.port))
+          'name="mtrl demo" dir=in action=allow protocol=TCP localport=%d,%d'
+          % (a.port, a.sport))
     print()
 
     os.chdir(ROOT)
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.ThreadingTCPServer((a.host, a.port),
-                                         functools.partial(H, directory=ROOT)) as srv:
-        srv.serve_forever()
+    if tls:
+        # HTTP 는 뒤에서 돌리고 HTTPS 를 앞에서 돌린다 · 둘 다 같은 파일 · 같은 프록시를 쓴다
+        t = threading.Thread(target=serve_forever, args=(a.host, a.port), daemon=True)
+        t.start()
+        serve_forever(a.host, a.sport, tls)
+    else:
+        serve_forever(a.host, a.port)
 
 
 main()

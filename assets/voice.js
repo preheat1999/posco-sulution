@@ -34,7 +34,16 @@ window.VOICE = (function () {
 
   /* 어느 길이 열려 있나 · 'server' | 'browser' | null. 이유도 같이 준다 */
   function mode() {
-    if (!secure()) { return { mode: null, why: '마이크는 https 또는 localhost 에서만 열립니다 · 이 주소(' + location.origin + ')는 브라우저가 막습니다' }; }
+    if (!secure()) {
+      /* 막힌 이유만 적으면 「그래서 어디로 가라는 거냐」 가 남는다 ·
+       * 서버가 https 주소를 내려 줬으면 그 주소를 그대로 눌러 갈 수 있게 적는다 */
+      var go = CFG.SECURE_URL
+        ? ' · 마이크를 쓰려면 <a href="' + CFG.SECURE_URL + location.pathname +
+          '" style="color:var(--b1)">' + CFG.SECURE_URL + '</a> 로 들어오세요'
+        : '';
+      return { mode: null, html: !!go,
+               why: '마이크는 https 에서만 열립니다 (지금 ' + location.origin + ')' + go };
+    }
     if (CFG.STT && canRecord()) { return { mode: 'server', why: '서버 음성 인식 (' + (CFG.STT_MODEL || 'whisper') + ')' }; }
     if (SR()) { return { mode: 'browser', why: '브라우저 내장 음성 인식 · .env 에 OPENAI_API_KEY 를 넣으면 서버 인식으로 바뀝니다' }; }
     if (CFG.STT) { return { mode: null, why: '이 브라우저는 녹음(MediaRecorder)을 지원하지 않습니다' }; }

@@ -29,3 +29,7 @@ package-lock.json
 # serve.py 가 .env 를 읽어 assets/config.local.js 를 만든다 (그 파일도 생성물이라 안 올린다)
 .env
 assets/config.local.js
+
+# 같은 와이파이 HTTPS 용 자체 서명 인증서 · serve.py 가 만든다.
+# **사설 열쇠**라 저장소에 올리지 않는다 (다른 컴퓨터에서는 그 컴퓨터가 새로 만든다)
+certs/
