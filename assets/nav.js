@@ -173,21 +173,51 @@
   }
 
   /* 햄버거. .overlay 가 없으면 동작하지 않는다 */
+  /* 접힌 상태를 기억한다. 화면을 옮길 때마다 다시 접게 만들면 안 된다 */
+  var FOLD_KEY = 'mtrl.side.folded';
+  function foldRead() {
+    try { return window.localStorage.getItem(FOLD_KEY) === '1'; } catch (e) { return false; }
+  }
+  function foldWrite(on) {
+    try { window.localStorage.setItem(FOLD_KEY, on ? '1' : '0'); } catch (e) { /* 무시 */ }
+  }
+
   function wire() {
     var side = document.getElementById('side');
     var hamb = document.getElementById('hamb');
     var over = document.getElementById('overlay');
-    if (!side || !hamb || !over) { return; }
+    var layout = side && side.parentNode;
+    if (!side || !hamb || !over || !layout) { return; }
 
-    function open(on) {
+    /* 넓은 화면에서는 접기(폭 0), 좁은 화면에서는 오버레이.
+     * 같은 단추가 두 가지 일을 하는데, 그 경계는 CSS 의 960 과 같아야 한다 */
+    function narrow() {
+      try { return window.matchMedia('(max-width: 960px)').matches; }
+      catch (e) { return false; }
+    }
+    function overlay(on) {
       side.classList.toggle('on', on);
       over.classList.toggle('on', on);
       hamb.setAttribute('aria-expanded', on ? 'true' : 'false');
     }
-    hamb.addEventListener('click', function () { open(!side.classList.contains('on')); });
-    over.addEventListener('click', function () { open(false); });
+    function fold(on) {
+      layout.classList.toggle('folded', on);
+      hamb.setAttribute('aria-expanded', on ? 'false' : 'true');
+      hamb.setAttribute('aria-label', on ? '메뉴 펼치기' : '메뉴 접기');
+      foldWrite(on);
+    }
+
+    if (foldRead()) { layout.classList.add('folded'); }
+    hamb.setAttribute('aria-label', foldRead() ? '메뉴 펼치기' : '메뉴 접기');
+
+    hamb.addEventListener('click', function () {
+      if (narrow()) { overlay(!side.classList.contains('on')); return; }
+      fold(!layout.classList.contains('folded'));
+    });
+    over.addEventListener('click', function () { overlay(false); });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { open(false); }
+      if (e.key !== 'Escape') { return; }
+      if (side.classList.contains('on')) { overlay(false); }
     });
   }
 

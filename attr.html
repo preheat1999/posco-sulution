@@ -167,13 +167,16 @@
     el('clear').hidden = stage !== 'algo';
     el('sort').hidden = stage !== 'algo';        // 점수차는 실행 뒤에 생긴다
 
-    /* 확정 버튼 · 대기 건수를 그대로 적는다. 대기가 없으면 누를 것이 없다 */
+    /* 확정 버튼 · 판단이 하나라도 있으면 언제든 누를 수 있다.
+     * 아무 판단도 하지 않은 처음 상태에서만 비활성이다 (누를 것이 없다).
+     * 칸(전체 · 회색지대 …)과는 상관없다 · 확정은 목록이 아니라 판단 전체에 대한 일이다 */
     var cb = el('commit');
     cb.hidden = stage !== 'algo';
-    cb.disabled = !c.waiting;
+    cb.disabled = !c.done;
+    cb.className = 'btn' + (c.waiting ? '' : ' line');
     cb.textContent = c.waiting
       ? ('담당자 확정 · ' + UI.num(c.waiting) + '건')
-      : (cm.done ? '확정 완료 · ' + UI.num(cm.done) + '건' : '확정할 판단이 없습니다');
+      : (c.done ? '확정 완료 · ' + UI.num(cm.done) + '건' : '판단한 자재가 없습니다');
     paintStamp(c);
   }
 
@@ -384,24 +387,44 @@
     var cls = d.bucket === 'gray' ? 'gray' : (d.bucket === 'done' ? 'ok' : (r.verdict === '보험품' ? 'ins' : 'pln'));
     var mark = d.bucket === 'gray' ? '△' : (d.bucket === 'done' ? '✓' : '✦');
 
-    return panelHead(r) +
-      '<div class="axis2">' +
-        '<div class="axis2-head">' +
-          '<span style="color:var(--brand)"><i class="ad sp"></i>계획품 점수 <b>' + sp.toFixed(1) + '</b></span>' +
-          '<span style="color:var(--insur)">보험품 점수 <b>' + si.toFixed(1) + '</b><i class="ad si"></i></span>' +
-        '</div>' +
-        '<div class="axis2-track"><span class="axis2-mid"></span>' +
-          '<span class="axis2-dot sp" style="left:' + clamp(sp) + '%"><i class="bub up">' + sp.toFixed(1) + '</i></span>' +
-          '<span class="axis2-dot si" style="left:' + clamp(si) + '%"><i class="bub down">' + si.toFixed(1) + '</i></span>' +
-        '</div>' +
-        '<div class="axis2-foot"><span>계획품 0</span><span>점수차 ' + d.gap.toFixed(1) + '점</span><span>보험품 100</span></div>' +
-      '</div>' +
+    /* 축은 「어느 쪽이 우세한가」 하나다.
+     *
+     * 전에는 두 점수를 같은 축에 각각 찍었다. 축의 왼쪽이 계획품인데 계획품 점수가
+     * 크면 점이 오른쪽으로 가서, 계획품이 우세할 때 파란 점이 오른쪽에 놓였다.
+     * 지금은 우세도(보험품 점수 - 계획품 점수)로 점 하나를 놓는다 ·
+     * 계획품이 우세하면 왼쪽, 보험품이 우세하면 오른쪽이다. 점 색도 우세한 쪽 색이다.
+     * 두 점수 자체는 아래 막대 두 개로 각각 보인다 */
+    var lead = si - sp;                       // + 보험품 우세 · − 계획품 우세
+    var at = clamp(50 + lead / 2);            // 0~100 · 50 이 균형
+    var side = d.bucket === 'gray' ? 'gray' : (lead > 0 ? 'ins' : (lead < 0 ? 'pln' : 'gray'));
+    var sideText = d.bucket === 'gray'
+      ? '판단 보류 · 점수차 ' + d.gap.toFixed(1) + '점'
+      : ((lead > 0 ? '보험품 우세 ' : '계획품 우세 ') + d.gap.toFixed(1) + '점');
 
-      '<div class="callout ' + cls + '"><span class="ci">' + mark + '</span>' +
+    return panelHead(r) +
+      /* 판정이 이 화면의 결론이다. 그림 아래에 두면 결론을 찾아 내려가야 한다 */
+      '<div class="callout ' + cls + '" style="margin-top:14px"><span class="ci">' + mark + '</span>' +
         '<span><b>' + UI.esc(r.judged
           ? ((r.committed ? '담당자 확정 · ' : '담당자 판단 (확정 대기) · ') + r.judged)
           : UI.verdict(r.verdict)) + '</b>' +
         UI.esc(d.verdictText) + '</span></div>' +
+
+      '<div class="axis2">' +
+        '<div class="axis2-head">' +
+          '<span class="pln"><i class="ad sp"></i>계획품 ' + sp.toFixed(1) + '</span>' +
+          '<span class="mid">' + UI.esc(sideText) + '</span>' +
+          '<span class="ins">보험품 ' + si.toFixed(1) + '<i class="ad si"></i></span>' +
+        '</div>' +
+        '<div class="axis2-track"><span class="axis2-mid"></span>' +
+          '<span class="axis2-dot ' + side + '" style="left:' + at + '%"></span>' +
+        '</div>' +
+        '<div class="axis2-foot"><span>계획품 우세</span><span>균형</span><span>보험품 우세</span></div>' +
+        /* 점수 자체는 각자의 막대로 · 0~100 이 그대로 보인다 */
+        '<div class="axis2-bars">' +
+          bar('계획품 점수', sp, 'pln') +
+          bar('보험품 점수', si, 'ins') +
+        '</div>' +
+      '</div>' +
 
       /* 원본 → 알고리즘 → 확정, 세 값을 한 줄에. 무엇이 어디서 바뀌었는지가 이 화면의 요점이다 */
       '<div class="flow3">' +
@@ -441,6 +464,14 @@
             '<div class="decide-row" style="margin-top:8px"><button class="btn ghost" type="button" data-act="keep">' +
               '현행유지 · ' + UI.esc(r.baseType) + ' 그대로</button></div>') +
       '</div>';
+  }
+
+  /* 점수 막대 한 줄 · 0~100 을 그대로 그린다 */
+  function bar(k, v, cls) {
+    return '<div class="ab ' + cls + '">' +
+      '<span class="abk">' + UI.esc(k) + '</span>' +
+      '<span class="abt"><i style="width:' + Math.max(0, Math.min(100, v)).toFixed(1) + '%"></i></span>' +
+      '<b>' + v.toFixed(1) + '</b></div>';
   }
 
   function step3(k, v, tone) {
@@ -541,7 +572,17 @@
   /* 확정 · 여기까지의 판단을 다른 화면이 쓰게 한다 */
   function commit(anchor) {
     var c = S.attrCounts();
-    if (!c.waiting) { return; }
+    if (!c.waiting) {
+      /* 이미 다 확정한 상태 · 무엇이 확정돼 있는지 그대로 보여 준다 */
+      var cm0 = DB.commitInfo();
+      POP.show(anchor, {
+        title: '이미 확정돼 있습니다',
+        rows: [['확정', UI.num(cm0.done) + '품목'], ['확정 시각', cm0.at || '미기록'],
+               ['확정 대기', '0품목']],
+        note: '새로 판단한 자재가 생기면 이 버튼이 다시 활성화됩니다.'
+      });
+      return;
+    }
     var info = DB.commitAttr();
     POP.show(anchor, {
       title: '담당자 확정 ' + UI.num(info.n) + '품목',
