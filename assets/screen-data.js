@@ -62,11 +62,15 @@
   }
 
   function attrCounts() {
-    var all = rows(), c = { all: 0, i2p: 0, p2i: 0, gray: 0, done: 0, out: 0, same: 0 };
+    var all = rows(), c = { all: 0, i2p: 0, p2i: 0, gray: 0, done: 0, out: 0, same: 0,
+      /* 원본 단계가 쓰는 정본 속성 수 · 적정재고를 다시 봐야 하는 행 수 */
+      insBase: 0, plnBase: 0, stale: 0, recalc: 0 };
     all.forEach(function (r) {
       var b = attrBucket(r);
       c[b] += 1;
       if (b !== 'out' && b !== 'same') { c.all += 1; }
+      if (r.baseType === '보험품') { c.insBase += 1; } else if (r.baseType === '계획품') { c.plnBase += 1; }
+      if (r.stale) { c.stale += 1; if (r.recalc && !r.recalc.done) { c.recalc += 1; } }
     });
     return c;
   }
@@ -184,9 +188,11 @@
         (r.stockDelta > 0 ? ' +' : ' ') + r.stockDelta + ')' : '')],
       ['전사 보유', UInum(r.stockAll)],
       ['타부서 보유', UInum(Math.max(0, Number(r.stockAll) - Number(r.stock))) + ' · 이관 후보'],
-      ['목표재고', UInum(r.target)],
+      ['목표재고', r.stale
+        ? (UInum(r.target) + ' → ' + (r.recalc && r.recalc.done ? UInum(r.targetNow) : '재계산 대기'))
+        : UInum(r.target)],
       ['조치', r.actionNow || '미확인']
-    ];
+    ].concat(r.stale ? [['속성 변경', r.stockType + ' → ' + r.type + ' · ' + r.recalc.rule]] : []);
   }
 
   // ================================================================ 정비계획
@@ -375,6 +381,40 @@
     };
   }
 
+  // ================================================================ 단계
+  /* 원본 → 실행 → 확정. 「실행」 은 알고리즘을 여기서 돌리는 것이 아니라
+   * feat/algo 엔진이 이 DB 로 이미 계산해 둔 결과(2층)를 화면에 올리는 것이다.
+   * 그렇게 적는다 · 돌리는 척하면 안 된다.
+   * 승인(3층)이 하나라도 있으면 실행한 뒤라는 뜻이므로 algo 로 본다 */
+  var STAGE_KEY = (window.CFG || {}).STAGE_KEY || 'mtrl.stage.v1';
+  function stage() {
+    var v = null;
+    try { v = window.localStorage.getItem(STAGE_KEY); } catch (e) { v = null; }
+    if (v === 'algo') { return 'algo'; }
+    if (live && (DB.changes().attribute_overrides || []).length) { return 'algo'; }
+    return 'raw';
+  }
+  function setStage(v) {
+    try { window.localStorage.setItem(STAGE_KEY, v); } catch (e) { /* 무시 */ }
+  }
+
+  /* 사람의 확정을 알고리즘 담당의 경계 파일 형식으로 낸다.
+   * 03_연동_인터페이스.md · classification_result.csv (Qcode, DeptCode, Type, 신뢰도, 판단근거)
+   * 엔진은 이 파일을 읽어 보험품 · 계획품 행만 Type 을 바꾸고 적정재고를 다시 낸다.
+   * 확정이 없는 행은 알고리즘 판정을 그대로 낸다 · 회색지대는 엔진이 원본 Type 을 쓴다 */
+  function exportClassification() {
+    var lines = ['Qcode,DeptCode,Type,신뢰도,판단근거'];
+    rows().forEach(function (r) {
+      var human = r.typeSrc === 'override';
+      var t = human ? r.type : (r.verdict || r.baseType);
+      var conf = human ? 'HIGH' : (r.conf || '');
+      /* 승인 사유는 이미 「담당자 확정 · …」 로 적혀 있다. 없을 때만 채운다 */
+      var why = human ? ((r.override && r.override.reason) || '담당자 확정') : (r.why || '');
+      lines.push([r.q, r.dept, t, conf, '"' + String(why).replace(/"/g, '""') + '"'].join(','));
+    });
+    return '\ufeff' + lines.join('\r\n') + '\r\n';
+  }
+
   // ================================================================ 공통
   function UInum(v) { return window.UI ? UI.num(v) : String(v); }
   function won(v) { return window.UI ? UI.won(v) : String(v); }
@@ -388,6 +428,7 @@
     planList: planList, planCounts: planCounts, planMats: planMats, planAxis: planAxis,
     prSteps: prSteps, prList: prList, prDraft: prDraft,
     retTabs: retTabs, retList: retList, retEffect: retEffect,
+    stage: stage, setStage: setStage, exportClassification: exportClassification,
     /* 승인 · 반납이 일어나면 화면이 다시 그려져야 한다 */
     on: function (fn) { if (live) { DB.on(fn); } }
   };

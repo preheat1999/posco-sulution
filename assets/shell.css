@@ -1447,6 +1447,51 @@ td.num, th.num { text-align: right; }
 .prstep.doing .sv { color: var(--brand); }
 .prstep.done .sv { color: var(--ok); }
 
+/* 속성값 판단 · 단계 줄. 원본 → 실행 → 확정 → 적정재고. 네 칸이 한 줄에 */
+.stageline {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 18px;
+  padding: 14px 18px; margin-bottom: 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+.stageline .prstep .sv { font-size: 12px; }
+
+/* 실행 전 큰 카드 · 왼쪽은 지금 보는 것, 오른쪽은 실행 버튼 */
+.runhero {
+  display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: center;
+  margin-bottom: 18px; padding: 26px 28px;
+}
+.runhero h2 { font-size: 24px; letter-spacing: -.8px; margin: 6px 0 6px; }
+.runhero .rh-nums { display: flex; gap: 28px; margin-top: 16px; }
+.runhero .rh-nums b { display: block; font-size: 30px; font-weight: 600; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.runhero .rh-nums span { font-size: 11px; color: var(--muted); }
+.runhero .rh-right { text-align: left; }
+.runhero .cbi { color: var(--b1); margin-right: 6px; }
+.runsteps { margin-top: 12px; display: grid; gap: 6px; }
+.runsteps .rs { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.runsteps .rs span { width: 16px; text-align: center; }
+.runsteps .rs.now { color: var(--brand); font-weight: 600; }
+.runsteps .rs.done { color: var(--ok); }
+
+/* 원본 → 알고리즘 → 확정 세 값 */
+.flow3 {
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 8px;
+  margin: 12px 0 0; padding: 10px 12px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+}
+.flow3 .f3 { min-width: 0; text-align: center; }
+.flow3 .f3k { display: block; font-size: 10px; color: var(--muted); margin-bottom: 2px; }
+.flow3 .f3 b { font-size: 13px; font-weight: 600; }
+.flow3 .fa { color: var(--muted); font-size: 12px; }
+
+@media (max-width: 960px) {
+  .stageline { grid-template-columns: repeat(2, 1fr); }
+  .runhero { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .stageline { grid-template-columns: 1fr; }
+}
+
 /* 정비계획 한 건 · 접었다 펴는 줄 */
 .wo { background: var(--surface-2); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
 .wo-head { display: flex; align-items: center; gap: 12px; padding: 13px 15px; cursor: pointer; }

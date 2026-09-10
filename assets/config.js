@@ -21,6 +21,8 @@
     STORE_KEY: 'mtrl.db.v1',
     // 로그인이 고른 소속. org.js · nav.js 가 읽는다
     SESSION_KEY: 'mtrl.session.v1',
+    /* 속성값 판단의 단계 · raw(원본만) → algo(알고리즘 실행함). 시연 초기화가 지운다 */
+    STAGE_KEY: 'mtrl.stage.v1',
 
     // 재고 트랜잭션 4종과 부호.
     // qty 는 언제나 양수로 넣고 부호는 읽는 쪽이 종류로 정한다.

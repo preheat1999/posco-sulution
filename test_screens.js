@@ -56,7 +56,7 @@ function makeDoc() {
   return doc;
 }
 
-function run(page) {
+function run(page, preset) {
   const html = fs.readFileSync(path.join(ROOT, page + '.html'), 'utf8');
   const srcs = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
   const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
@@ -72,6 +72,7 @@ function run(page) {
   sandbox.globalThis = sandbox;
   sandbox.document = makeDoc();
   sandbox.location = { hash: '', href: '', replace() {} };
+  Object.assign(box, preset || {});   // 화면이 읽을 저장소 값을 미리 넣는다 (단계 등)
   sandbox.localStorage = {
     getItem: (k) => (Object.prototype.hasOwnProperty.call(box, k) ? box[k] : null),
     setItem: (k, v) => { box[k] = String(v); },
@@ -98,7 +99,7 @@ console.log('=== 화면별 · 스크립트가 끝까지 도는가 ===');
 const seen = {};
 PAGES.forEach((p) => {
   let s = null, err = null;
-  try { s = run(p); } catch (e) { err = e; }
+  try { s = run(p, p === 'attr' ? { 'mtrl.stage.v1': 'algo' } : null); } catch (e) { err = e; }
   ok(!err, p + '.html 오류 없이 실행' + (err ? ' · ' + err.message : ''));
   if (!s) { return; }
 
@@ -115,6 +116,21 @@ PAGES.forEach((p) => {
   ok(!new RegExp('\u2014|\u2013').test(all), p + ' · 긴 줄표 없음');
   ok(!new RegExp('#' + '000' + '\\b').test(all), p + ' · 순수 검정 없음');
 });
+
+/* attr 의 원본 단계 · 알고리즘 숫자가 새면 안 되고 실행 버튼이 있어야 한다 */
+{
+  let raw = null, err = null;
+  try { raw = run('attr'); } catch (e) { err = e; }
+  ok(!err, 'attr(원본 단계) 오류 없이 실행' + (err ? ' · ' + err.message : ''));
+  if (raw) {
+    let all = '';
+    const st = raw.document._store;
+    Object.keys(st).forEach((k) => { all += st[k]._html + ' ' + st[k]._text + ' '; });
+    ok(/알고리즘 실행/.test(all), 'attr(원본) · 실행 버튼이 있다');
+    ok(!/점수차 \d/.test(all), 'attr(원본) · 점수차가 새지 않는다');
+    ok(!/undefined|NaN/.test(all), 'attr(원본) · undefined · NaN 없음');
+  }
+}
 
 console.log('');
 console.log('=== 실제 값이 실렸는가 ===');

@@ -277,6 +277,31 @@ pr_drafts            q dept data by at
 `qty` 는 **언제나 양수**로 넣고 부호는 읽는 쪽이 종류를 보고 정한다
 (`반납 +1 · 입고 +1 · 불출 -1 · 공용전환 -1`).
 
+### 8-1. 확정 속성 → 적정재고 (어떤 조합이든)
+
+`06` 의 `target` 은 엔진이 **그 행의 `type` 으로** 계산한 값이다. 담당자가 화면에서 속성을 바꾸면
+그 목표는 「다른 속성으로 계산한 값」 이 된다. `db.js merge()` 가 행마다 이걸 표시한다.
+
+| 필드 | 뜻 |
+|---|---|
+| `stockType` | 적정재고 계산에 쓰인 속성 (`06.type`) |
+| `stale` | 확정 속성 ≠ `stockType` · 사람이 바꿨을 때만 true (원본 상태는 743행 전부 false, 확인함) |
+| `targetNow` | 지금 써야 하는 목표. stale 이 아니면 `target` 그대로 |
+| `recalc` | `{done, rule, from, to}` · 화면이 계산한 게 아니라 명세 규칙을 적용한 기록 |
+
+조합별 처리 (원본 · 알고리즘 · 확정 어느 경로로 왔든 **확정 속성 vs 계산 속성** 만 본다):
+
+| 확정 | 계산 속성 | 처리 |
+|---|---|---|
+| 같다 | 같다 | 그대로 (`stale=false`) |
+| 계획품 | 보험품 · 비핵심설비 | `targetNow=0` 즉시 (`plnFormula` 첫 줄 · 이력 불필요) `recalc.done=true` |
+| 계획품 | 보험품 · 핵심설비 | 소요 이력으로 0/1 결정 → **엔진 재계산 대기** (`recalc.done=false`) |
+| 보험품 | 계획품 | μ_LT+SS 는 소요 이력 필요 → **엔진 재계산 대기** |
+
+재계산 대기 행은 attr 화면의 「확정 내보내기」 가 `classification_result.csv`(Qcode, DeptCode, Type, 신뢰도, 판단근거) 로 낸다.
+그 파일로 `run_all.py` 를 돌려 `06` 을 다시 만들어 `algo_in/` 에 넣으면 `stockType` 이 확정 속성과 같아져 stale 이 풀린다.
+`summary().staleN / recalcN` 이 그 수다.
+
 ---
 
 ## 9. 막히면

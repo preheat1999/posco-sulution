@@ -30,6 +30,9 @@
     <!-- 값 네 개를 한 카드 안에 나란히. 가운데(전수 743)가 이 화면의 모집단이라 크게 둔다 -->
     <section class="card kpistrip"><div class="kpistrip-in" id="stat"></div></section>
 
+    <!-- 속성값 판단 단계와 이어진다 · 원본 단계면 그 사실을, 확정이 바뀌었으면 재계산 대기를 적는다 -->
+    <div class="noticebar" id="stagebar" style="margin-bottom:16px" hidden></div>
+
     <!-- 계산 순서를 그대로 단계로 둔다. 첫 단계만 열려 있다 -->
     <div id="steps"></div>
 
@@ -214,11 +217,14 @@
               (r.csp ? ' · 핵심예비품' : '') + '</div>' +
           '</div></td>' +
           '<td data-label="속성 · 등급">' + UI.typeBadge(r.type) + ' ' +
-            UI.gradeBadge(r.grade) + '</td>' +
+            UI.gradeBadge(r.grade) +
+            /* 확정 속성이 계산에 쓴 속성과 다르면 표시한다 · 목표가 다른 공식이어야 한다 */
+            (r.stale ? ' <span class="badge core">' + (r.recalc.done ? '재계산됨' : '재계산 대기') + '</span>' : '') +
+            '</td>' +
           '<td class="num" data-label="보유 → 목표"><span>' +
             '<button class="linkq" type="button" data-q="' + UI.esc(r.q) + '">' +
               UI.num(r.stock) + '</button>' +
-            '<span class="arrow">→</span>' + UI.num(r.target) + '</span></td>' +
+            '<span class="arrow">→</span>' + targetCell(r) + '</span></td>' +
           '<td data-label="조치">' + actionBadge(r) + '</td>' +
           '<td data-label="작업">' + work(r, move) + '</td>' +
           '</tr>';
@@ -235,12 +241,42 @@
     el('snext').disabled = page >= max;
   }
 
+  /* 목표 칸 · 속성이 바뀐 행은 옛 목표를 지우고 지금 목표를 적는다. 엔진이 다시 낼 것은 기다린다고 적는다 */
+  function targetCell(r) {
+    if (!r.stale) { return UI.num(r.target); }
+    if (r.recalc && r.recalc.done) {
+      return '<s style="color:var(--muted)">' + UI.num(r.target) + '</s> ' + UI.num(r.targetNow);
+    }
+    return '<span class="sub">' + UI.num(r.target) + ' · 대기</span>';
+  }
+
+  function paintStageBar() {
+    var bar = el('stagebar');
+    var st = S.stage(), s = DB.summary();
+    if (st === 'raw') {
+      bar.hidden = false;
+      bar.innerHTML = '<span class="ni">◇</span><span><b>속성값 판단을 아직 실행하지 않았습니다</b> · ' +
+        '이 목표재고는 정본 속성으로 계산된 값입니다. 속성을 확정하면 그 속성으로 다시 봅니다</span>' +
+        '<a class="nx" href="attr.html" style="color:var(--brand)">속성값 판단으로 →</a>';
+      return;
+    }
+    if (s.staleN) {
+      bar.hidden = false;
+      bar.innerHTML = '<span class="ni">↻</span><span><b>속성이 바뀐 ' + UI.num(s.staleN) + '품목</b> · ' +
+        UI.num(s.staleN - s.recalcN) + '품목은 명세 규칙으로 목표 0 이 됐고, ' +
+        UI.num(s.recalcN) + '품목은 소요 이력이 필요해 엔진 재계산을 기다립니다</span>' +
+        '<a class="nx" href="attr.html#done" style="color:var(--brand)">확정 내보내기 →</a>';
+      return;
+    }
+    bar.hidden = true;
+  }
+
   function actionBadge(r) {
     if (r.actionNow === '발주') {
       return '<span class="badge core">발주 ' + UI.num(r.needNow) + '</span>';
     }
     if (r.actionNow === '감축') {
-      return '<span class="badge ok">감축 ' + UI.num(Math.max(0, r.stock - r.target)) + '</span>';
+      return '<span class="badge ok">감축 ' + UI.num(Math.max(0, r.stock - r.targetNow)) + '</span>';
     }
     return '<span class="badge">유지</span>';
   }
@@ -384,12 +420,13 @@
     var m = window.DB ? DB.meta() : null;
     el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
     paintStat();
+    paintStageBar();
     paintSteps();
   }
 
   paintAll();
   wire();
-  S.on(function () { paintStat(); paintTable(); });
+  S.on(function () { paintStat(); paintStageBar(); paintTable(); });
 
   /* 주소에 #order 가 붙어 오면 조치 판정 단계를 펼친다.
    * 대시보드의 「적정재고 분석 열기」 가 그 주소로 온다 */

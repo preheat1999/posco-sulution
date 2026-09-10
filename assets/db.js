@@ -111,6 +111,26 @@
     var stock = seed + t.delta;
     var target = Number(s.target) || 0;
 
+    /* 확정 속성과 적정재고가 계산된 속성이 다른가.
+     * 원본 상태에서는 743행 전부 같다(확인함). 사람이 바꿨을 때만 생긴다 */
+    var stockType = s.type || m.type;
+    var stale = !!ov && type !== stockType;
+    var targetNow = target, recalc = null;
+    if (stale) {
+      if (type === '계획품' && !m.ceq) {
+        /* 명세 plnFormula 첫 줄 · 핵심설비가 아니면 목표 0. 이력이 필요 없는 유일한 경우다 */
+        targetNow = 0;
+        recalc = { done: true, rule: '명세 · 핵심설비가 아닌 계획품은 목표 0',
+                   from: target, to: 0 };
+      } else if (type === '계획품') {
+        recalc = { done: false, rule: '핵심설비 계획품은 소요 이력으로 0 또는 1 · 엔진 재계산 필요',
+                   from: target, to: null };
+      } else {
+        recalc = { done: false, rule: '보험품 목표 μ_LT+SS 는 소요 이력이 필요 · 엔진 재계산 필요',
+                   from: target, to: null };
+      }
+    }
+
     return {
       // 키
       q: m.q, dept: m.dept, key: k,
@@ -138,8 +158,10 @@
        * need 는 알고리즘이 낸 값이라 근거 화면에서 그대로 보여 줘야 하고,
        * needNow 는 반납 후의 지금 상태다.
        * 반납하면 needNow 만 줄고 알고리즘 산출값은 그대로 남는다 */
-      needNow: Math.max(0, target - stock),
-      actionNow: stock < target ? '발주' : (stock === target ? '유지' : '감축')
+      /* 적정재고가 어느 속성으로 계산됐는지 · 확정 속성과 다르면 stale */
+      stockType: stockType, stale: stale, recalc: recalc, targetNow: targetNow,
+      needNow: Math.max(0, targetNow - stock),
+      actionNow: stock < targetNow ? '발주' : (stock === targetNow ? '유지' : '감축')
     };
   }
 
@@ -247,7 +269,9 @@
         /* 2차 버킷팅 · 1단계 판정을 정본 Type 과 견준다.
          * 화면 세 곳(대시보드 · 속성값 판단 · 주간 리포트)이 같은 값을 봐야 한다 */
         bucket: { '보험품→계획품': 0, '계획품→보험품': 0, '현행유지': 0, '판정일치': 0, '배제': 0 },
-        holdOpen: 0
+        holdOpen: 0,
+        /* 속성이 바뀌어 적정재고를 다시 봐야 하는 행 · 그중 엔진 재계산이 남은 행 */
+        staleN: 0, recalcN: 0
       };
       var nowAmt = 0, tgtAmt = 0, cutAmt = 0, i, r, price, b;
 
@@ -277,9 +301,10 @@
 
         price = Number(r.price) || 0;
         nowAmt += price * (Number(r.stock) || 0);
-        tgtAmt += price * (Number(r.target) || 0);
+        tgtAmt += price * (Number(r.targetNow) || 0);
+        if (r.stale) { out.staleN += 1; if (r.recalc && !r.recalc.done) { out.recalcN += 1; } }
         // 감축 가능액은 목표를 넘는 만큼이다. 목표가 더 크면 0 이다
-        cutAmt += price * Math.max(0, (Number(r.stock) || 0) - (Number(r.target) || 0));
+        cutAmt += price * Math.max(0, (Number(r.stock) || 0) - (Number(r.targetNow) || 0));
       }
 
       out.insItems = out.type['보험품'] || 0;
@@ -287,7 +312,7 @@
       out.nowAmt = Math.round(nowAmt);
       out.tgtAmt = Math.round(tgtAmt);
       out.cutAmt = Math.round(cutAmt);
-      out.zeroTarget = rows.filter(function (r2) { return (Number(r2.target) || 0) === 0; }).length;
+      out.zeroTarget = rows.filter(function (r2) { return (Number(r2.targetNow) || 0) === 0; }).length;
 
       /* 정체 금액을 두 값으로 나눈다.
        * 명세의 공용화 규칙 · strong 즉시공용화 · medium 공용화권장 · review 보류.
