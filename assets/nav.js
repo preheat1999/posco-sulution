@@ -120,6 +120,9 @@
       '<div class="side-links">' +
         '<a class="btn line sm" href="login.html">소속 변경</a>' +
         '<button class="btn line sm" type="button" id="navreset">시연 초기화</button>' +
+        /* 로그아웃은 세션만 지운다. 판단 · 확정 · 반납 이력(3층)은 남는다 ·
+         * 다음 사람이 로그인하면 그 일이 이어져 있어야 한다 */
+        '<button class="btn line sm" type="button" id="navout">로그아웃</button>' +
       '</div></div>';
 
     side.innerHTML = html;
@@ -141,6 +144,30 @@
           } catch (e) { /* 저장소가 막힌 환경 · 무시 */ }
           window.location.reload();
         }
+      });
+    }
+
+    var out = document.getElementById('navout');
+    if (out) {
+      out.addEventListener('click', function () {
+        var go = function () {
+          try {
+            window.localStorage.removeItem((window.CFG || {}).SESSION_KEY || 'mtrl.session.v1');
+          } catch (e) { /* 저장소가 막힌 환경 · 무시 */ }
+          window.location.href = 'login.html';
+        };
+        if (window.UI && UI.confirm) {
+          UI.confirm({
+            title: '로그아웃할까요?',
+            body: '로그인 화면으로 돌아갑니다.',
+            rows: [['지우는 것', '로그인 세션 (소속 · 담당자)'],
+                   ['남는 것', '속성 판단 · 확정 · 반납 · 초안 이력']],
+            note: '이력까지 지우려면 「시연 초기화」 를 쓰세요.',
+            ok: '로그아웃', onOk: go
+          });
+          return;
+        }
+        go();
       });
     }
   }

@@ -254,10 +254,13 @@
       ['전사 보유', UInum(r.stockAll)],
       ['타부서 보유', UInum(Math.max(0, Number(r.stockAll) - Number(r.stock))) + ' · 이관 후보'],
       ['목표재고', r.stale
-        ? (UInum(r.target) + ' → ' + (r.recalc && r.recalc.done ? UInum(r.targetNow) : '재계산 대기'))
+        ? (UInum(r.target) + ' → ' + UInum(r.targetNow) + ' (확정 ' + r.type + ')')
         : UInum(r.target)],
       ['조치', r.actionNow || '미확인']
-    ].concat(r.stale ? [['속성 변경', r.stockType + ' → ' + r.type + ' · ' + r.recalc.rule]] : []);
+    ].concat(r.stale
+      ? [['속성 변경', r.stockType + ' → ' + r.type],
+         ['다시 잡은 근거', (r.recalc && r.recalc.why) || (r.recalc && r.recalc.rule) || '']]
+      : []);
   }
 
   // ================================================================ 정비계획
@@ -360,7 +363,7 @@
     /* 「지금 신청」 은 마감 초과가 아니라 재고가 예상 소요보다 적은 건이다.
      * 마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다르다 */
     var nowN = live ? DB.list({ dueDate: function (v) { return !!v; } })
-      .filter(function (r) { return r.signal === 'red'; }).length : 0;
+      .filter(function (r) { return (r.signalNow || r.signal) === 'red'; }).length : 0;
 
     var moveN = 0, moveAmt = 0, orderAmt = 0;
     if (live) {
@@ -420,7 +423,7 @@
         need: Number(r.needNow) || 0,               // 목표재고 기준 부족분
         /* 예상 소요가 있는 행만 「이 정비 건 기준」 부족분을 같이 준다 */
         shortByExpect: hasExpect ? Math.max(0, Number(r.expect) - Number(r.stock || 0)) : null,
-        needOrder: !!need[q], signal: r.signal, ltMean: r.ltMean, price: r.price
+        needOrder: !!need[q], signal: r.signalNow || r.signal, ltMean: r.ltMean, price: r.price
       };
     });
   }
@@ -540,7 +543,8 @@
     var qty = saved || Number(r.needNow) || 0;
     return {
       q: r.q, name: r.name || '품명 미확인', qty: qty,
-      active: r.signal === 'red', warn: r.signal === 'red' ? '즉시 발주' : '',
+      active: (r.signalNow || r.signal) === 'red',
+      warn: (r.signalNow || r.signal) === 'red' ? '즉시 발주' : '',
       wo: null, kind: null, eq: r.eq, planDate: r.dueDate,
       price: r.price, amount: Math.round((Number(r.price) || 0) * qty),
       ltMean: r.ltMean, grade: r.grade, type: r.type, csp: r.csp, unit: unitOf(r.q),

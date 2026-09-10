@@ -49,6 +49,7 @@
         <!-- 판단과 확정은 다른 일이다. 확정을 눌러야 다른 화면이 그 속성을 쓴다 -->
         <button class="btn" type="button" id="commit" hidden>담당자 확정</button>
         <button class="btn line sm" type="button" id="export" hidden>확정 내보내기</button>
+        <button class="btn line sm" type="button" id="clear" hidden>초기화</button>
       </div>
     </div>
 
@@ -163,6 +164,7 @@
                 : '검토 대기 ' + UI.num(c.gray) + '품목')
       : '원본 속성 · 알고리즘 실행 전';
     el('export').hidden = stage !== 'algo' || !cm.done;
+    el('clear').hidden = stage !== 'algo';
     el('sort').hidden = stage !== 'algo';        // 점수차는 실행 뒤에 생긴다
 
     /* 확정 버튼 · 대기 건수를 그대로 적는다. 대기가 없으면 누를 것이 없다 */
@@ -314,15 +316,17 @@
   function paintBulk(view) {
     var bar = el('bulk');
     if (stage !== 'algo') { bar.hidden = true; return; }
-    var keys = view.map(function (r) { return r.key; });
+    /* 선택은 **이 칸 전체**다. 쪽(12건)만 고르면 회색지대 31건을 세 번 나눠 눌러야 한다 */
+    var keys = listRows.map(function (r) { return r.key; });
     var on = keys.filter(function (k) { return sel[k]; }).length;
     var n = Object.keys(sel).filter(function (k) { return sel[k]; }).length;
+    var label = (S.ATTR_TABS.filter(function (t) { return t.key === tab; })[0] || {}).label || '전체';
     bar.hidden = false;
     bar.innerHTML =
       '<label class="pick-chk"><input type="checkbox" id="chkall"' +
-        (on && on === keys.length ? ' checked' : '') + ' aria-label="이 쪽 전체 선택"></label>' +
-      '<span class="bk">이 쪽 전체 선택' + (on ? ' · ' + UI.num(on) + ' / ' + UI.num(keys.length) : '') +
-        '</span>' +
+        (on && on === keys.length ? ' checked' : '') + ' aria-label="이 칸 전체 선택"></label>' +
+      '<span class="bk">「' + UI.esc(label) + '」 ' + UI.num(keys.length) + '건 전체 선택' +
+        (on ? ' · ' + UI.num(on) + '건 선택됨' : '') + '</span>' +
       (n ? '<span class="bn">선택 ' + UI.num(n) + '건</span>' +
         '<span class="bacts">' +
           '<button class="btn ins sm" type="button" data-bulk="보험품">보험품</button>' +
@@ -591,12 +595,33 @@
 
     el('commit').addEventListener('click', function (e) { commit(e.currentTarget); });
 
+    /* 초기화 · 이 화면에서 한 일만 지운다. 반납 · 초안은 사이드바의 시연 초기화가 지운다 */
+    el('clear').addEventListener('click', function () {
+      var c = S.attrCounts(), cm = DB.commitInfo();
+      UI.confirm({
+        title: '속성값 판단을 초기화할까요?',
+        body: '판단 · 확정을 지우고 <b>원본 속성</b> 상태로 돌립니다.',
+        rows: [['지우는 것', '판단 ' + UI.num(c.done) + '건 · 확정 ' + UI.num(cm.done) + '건 · 실행 단계'],
+               ['남는 것', '자재반납 · 구매신청 초안 · 공용 전환 이력'],
+               ['다른 화면', '확정이 지워지므로 알고리즘 판정 속성으로 되돌아갑니다']],
+        note: '반납 · 초안까지 지우려면 왼쪽 아래 「시연 초기화」 를 쓰세요.',
+        ok: '초기화',
+        onOk: function () {
+          DB.clearAttr();
+          S.setStage('raw');
+          stage = 'raw'; tab = 'all'; page = 0; sel = {}; picked = null;
+          location.hash = '';
+          paintAll();
+        }
+      });
+    });
+
     /* 체크 · 이 쪽 전체 선택 · 여러 건 판단 */
     el('bulk').addEventListener('click', function (e) {
       var all = e.target.closest('#chkall');
       if (all) {
-        var keys = listRows.slice(page * PAGE, page * PAGE + PAGE)
-          .map(function (r) { return r.key; });
+        /* 이 칸에 있는 것 전부 · 쪽 넘김과 무관하다 */
+        var keys = listRows.map(function (r) { return r.key; });
         var on = keys.filter(function (k) { return sel[k]; }).length === keys.length;
         keys.forEach(function (k) { if (on) { delete sel[k]; } else { sel[k] = true; } });
         paintList();

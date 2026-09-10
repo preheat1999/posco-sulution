@@ -153,6 +153,27 @@ def tone_of(left):
 
 # ---------------------------------------------------------------- 층 만들기
 
+def read_both_targets():
+    """algo_in/06_목표재고_양속성.csv → {(q, dept): {targetIns, ...}}.
+
+    스키마에 없는 파일이라 read_csv 를 쓰지 않는다. 있으면 싣고 없으면 빈 사전이다.
+    이 값은 **사람이 속성을 바꾼 행에만** 쓴다 · 바꾸지 않은 행은 06 의 target 그대로다.
+    """
+    path = os.path.join(ALGO_IN, "06_목표재고_양속성.csv")
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    with io.open(path, encoding="utf-8-sig") as f:
+        for r in csv.DictReader(f):
+            out[(r["q"], r["dept"])] = {
+                "targetIns": int(float(r["targetIns"])), "reasonIns": r["reasonIns"],
+                "signalIns": r["signalIns"], "statusIns": r["statusIns"],
+                "targetPln": int(float(r["targetPln"])), "reasonPln": r["reasonPln"],
+                "signalPln": r["signalPln"], "statusPln": r["statusPln"],
+            }
+    return out
+
+
 def build():
     schema = load_schema()
 
@@ -172,6 +193,19 @@ def build():
     summary = read_json("요약값.json")
 
     asof = spec.get("asof")
+
+    # 속성 두 가지 각각의 목표재고 · 엔진(feat/algo engine.py)을 전 품목 보험품 ·
+    # 전 품목 계획품으로 각각 돌려 구운 값이다. 없으면 그냥 넘어간다 (예전 db 도 열려야 한다)
+    both = read_both_targets()
+    if both:
+        n = 0
+        for r in stock:
+            b = both.get((r["q"], r["dept"]))
+            if not b:
+                continue
+            r.update(b)
+            n += 1
+        say("       양속성 목표재고 실은 행 %d / %d" % (n, len(stock)))
 
     # trend 는 세미콜론 24개다. 스키마가 list; 로 잡아 주지만 원소는 문자열로 남는다
     for r in stock:

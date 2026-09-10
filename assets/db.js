@@ -131,23 +131,44 @@
     var stock = seed + t.delta;
     var target = Number(s.target) || 0;
 
-    /* 확정 속성과 적정재고가 계산된 속성이 다른가.
-     * 원본 상태에서는 743행 전부 같다(확인함). 사람이 바꿨을 때만 생긴다 */
+    /* 확정 속성의 목표재고.
+     *
+     * 06 의 target 은 그 행의 속성으로 계산된 값 하나뿐이다. 사람이 속성을 바꾸면
+     * 그것은 「다른 속성으로 계산한 값」 이 되고, 화면은 다시 계산할 수 없다 ·
+     * μ_LT + SS 에 필요한 소요 이력(txn_history 22,625행)이 반출 데이터에 없다.
+     *
+     * 그래서 알고리즘 엔진을 전 품목 보험품 · 전 품목 계획품으로 각각 돌려
+     * 두 목표를 미리 구워 2층에 실었다 (targetIns · targetPln).
+     * 기준 재현 743/743 일치 · db/ENGINE_REPRO.txt.
+     *
+     * 확정 속성이 06 의 속성과 다르면 구운 값을 쓴다. 같으면 06 값 그대로다 ·
+     * 손대지 않은 행의 숫자는 반출 그대로 남는다 */
     var stockType = s.type || m.type;
     var stale = applied && type !== stockType;
     var targetNow = target, recalc = null;
+    var reasonNow = s.reason, signalNow = s.signal, statusNow = s.status;
     if (stale) {
-      if (type === '계획품' && !m.ceq) {
-        /* 명세 plnFormula 첫 줄 · 핵심설비가 아니면 목표 0. 이력이 필요 없는 유일한 경우다 */
-        targetNow = 0;
-        recalc = { done: true, rule: '명세 · 핵심설비가 아닌 계획품은 목표 0',
-                   from: target, to: 0 };
-      } else if (type === '계획품') {
-        recalc = { done: false, rule: '핵심설비 계획품은 소요 이력으로 0 또는 1 · 엔진 재계산 필요',
-                   from: target, to: null };
+      var baked = type === '보험품'
+        ? { t: s.targetIns, why: s.reasonIns, sig: s.signalIns, st: s.statusIns }
+        : { t: s.targetPln, why: s.reasonPln, sig: s.signalPln, st: s.statusPln };
+      if (baked.t === undefined || baked.t === null || baked.t === '') {
+        /* 구운 값이 없는 db (예전 파일)에서는 명세로 판단할 수 있는 것만 본다 */
+        if (type === '계획품' && !m.ceq) {
+          targetNow = 0;
+          recalc = { done: true, rule: '명세 · 핵심설비가 아닌 계획품은 목표 0',
+                     from: target, to: 0, src: 'spec' };
+        } else {
+          recalc = { done: false, rule: '구운 목표가 없습니다 · 엔진 재계산 필요',
+                     from: target, to: null, src: 'none' };
+        }
       } else {
-        recalc = { done: false, rule: '보험품 목표 μ_LT+SS 는 소요 이력이 필요 · 엔진 재계산 필요',
-                   from: target, to: null };
+        targetNow = Number(baked.t) || 0;
+        reasonNow = baked.why || s.reason;
+        signalNow = baked.sig || s.signal;
+        statusNow = baked.st || s.status;
+        recalc = { done: true, src: 'engine',
+                   rule: '엔진이 ' + type + ' 으로 계산한 목표입니다',
+                   from: target, to: targetNow, why: reasonNow };
       }
     }
 
@@ -165,6 +186,10 @@
       verdict: a.verdict, path: a.path, why: a.why, si: a.si, sp: a.sp,
       conf: a.conf, cspScore: a.cspScore, stockSrc: a.stockSrc,
       grade: s.grade, target: s.target, need: s.need, amount: s.amount,
+      /* 속성 두 가지 각각의 목표 · 엔진이 미리 구운 값이다.
+       * 화면이 「계획품으로 바꾸면 목표가 몇이 되는지」 를 미리 보여 줄 때도 쓴다 */
+      targetIns: s.targetIns, reasonIns: s.reasonIns,
+      targetPln: s.targetPln, reasonPln: s.reasonPln,
       action: s.action, reason: s.reason, signal: s.signal, status: s.status,
       sigEq: s.sigEq, sigKind: s.sigKind, stopDate: s.stopDate,
       dueDate: s.dueDate, dDays: s.dDays, expect: s.expect,
@@ -180,8 +205,10 @@
        * need 는 알고리즘이 낸 값이라 근거 화면에서 그대로 보여 줘야 하고,
        * needNow 는 반납 후의 지금 상태다.
        * 반납하면 needNow 만 줄고 알고리즘 산출값은 그대로 남는다 */
-      /* 적정재고가 어느 속성으로 계산됐는지 · 확정 속성과 다르면 stale */
+      /* 적정재고가 어느 속성으로 계산됐는지 · 확정 속성과 다르면 stale.
+       * stale 이어도 targetNow · reasonNow · signalNow 는 확정 속성 쪽 값이다 */
       stockType: stockType, stale: stale, recalc: recalc, targetNow: targetNow,
+      reasonNow: reasonNow, signalNow: signalNow, statusNow: statusNow,
       needNow: Math.max(0, targetNow - stock),
       actionNow: stock < targetNow ? '발주' : (stock === targetNow ? '유지' : '감축')
     };
@@ -302,7 +329,7 @@
         bump(out.verdict, r.verdict);
         bump(out.action, r.actionNow);
         bump(out.grade, r.grade);
-        bump(out.signal, r.signal);
+        bump(out.signal, r.signalNow || r.signal);
         bump(out.conf, r.conf);
         bump(out.path, r.path);
         bump(out.type, r.type);
@@ -402,6 +429,18 @@
       });
       invalidate();
       return row;
+    },
+
+    /* 속성 판단 · 확정만 지운다. 반납 · 초안 · 공용 전환은 그대로 남는다 ·
+     * 속성값 판단 화면의 「초기화」 가 쓴다 */
+    clearAttr: function () {
+      var rows = C ? C.rows('attribute_overrides') : [];
+      var n = rows.length;
+      rows.slice().reverse().forEach(function (r) { C.remove('attribute_overrides', r.seq); });
+      commitWrite({ seq: 0, at: '', n: 0 });
+      invalidate();
+      if (C) { C.emit(); }
+      return n;
     },
 
     /* 여기까지의 판단을 확정한다. 이 순간부터 다른 화면이 그 속성으로 계산한다 */

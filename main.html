@@ -647,7 +647,7 @@
           ['목표재고', UI.num(r.target)],
           ['조치', r.actionNow]
         ],
-        formula: r.reason || '',
+        formula: r.reasonNow || r.reason || '',
         note: '조달 ' + (r.proc || '미확인') + ' · 리드타임 평균 ' +
               UI.num(r.ltMean) + '일 · 공급사 ' + UI.num(r.suppliers) + '곳'
       });

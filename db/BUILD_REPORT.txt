@@ -1,3 +1,4 @@
+       양속성 목표재고 실은 행 743 / 743
 ======================================================================
 build_master_db.py · 생성 보고
 기준일 2026-09-03 · PK Qcode|DeptCode
@@ -5,11 +6,11 @@ build_master_db.py · 생성 보고
 
 만든 파일 23개
     263130  assets/db-master.js
-    518468  assets/db-derived.js
+    701692  assets/db-derived.js
       5028  assets/db-biz.js
      74663  assets/plan-data.js
     346996  db/master.json
-    740949  db/derived.json
+    953893  db/derived.json
       5037  db/biz.json
     100123  db/plan.json
       3399  db/spec.json
@@ -98,12 +99,12 @@ build_master_db.py · 생성 보고
   db-derived.json.attr 불일치 Q1000751.stockSrc · 재현 'DOG Type TSV + DB 자재정본' · 원본 'Dummy TSV'
   db-derived.json.attr 불일치 Q1000781.stockSrc · 재현 'DOG Type TSV + DB 자재정본' · 원본 'Dummy TSV'
   db-derived.json.attr 필드 불일치 745건
+  db-derived.json.stock 불일치 Q1000108.statusIns · 재현 '발주임박' · 원본 None
   db-derived.json.stock 불일치 Q1000108.expect · 재현 None · 원본 2
-  db-derived.json.stock 불일치 Q1000737.expect · 재현 None · 원본 0
-  db-derived.json.stock 불일치 Q1000745.expect · 재현 None · 원본 4
-  db-derived.json.stock 불일치 Q1000751.expect · 재현 None · 원본 2
-  db-derived.json.stock 불일치 Q1000781.expect · 재현 None · 원본 2
-  db-derived.json.stock 필드 불일치 769건
+  db-derived.json.stock 불일치 Q1000108.targetIns · 재현 2 · 원본 None
+  db-derived.json.stock 불일치 Q1000108.targetPln · 재현 0 · 원본 None
+  db-derived.json.stock 불일치 Q1000108.signalIns · 재현 'yellow' · 원본 None
+  db-derived.json.stock 필드 불일치 6713건
   db-derived.json.pool 262행 모든 필드 일치
   db-biz.json.returns 10행 모든 필드 일치
   db-biz.json.purchase 6행 모든 필드 일치
@@ -116,12 +117,20 @@ build_master_db.py · 생성 보고
     받은 파일 · 요약값.json
     바뀐 칸 · attr.stockSrc 743건
     바뀐 칸 · attr.si 2건
+    바뀐 칸 · stock.statusIns 743건
+    바뀐 칸 · stock.targetIns 743건
+    바뀐 칸 · stock.targetPln 743건
+    바뀐 칸 · stock.signalIns 743건
+    바뀐 칸 · stock.reasonPln 743건
+    바뀐 칸 · stock.reasonIns 743건
+    바뀐 칸 · stock.signalPln 743건
+    바뀐 칸 · stock.statusPln 743건
     바뀐 칸 · stock.expect 742건
     바뀐 칸 · stock.sigEq 13건
-    바뀐 칸 · stock.status 6건
     바뀐 칸 · stock.signal 6건
+    바뀐 칸 · stock.status 6건
     바뀐 칸 · stock.issues 2건
-  OK   받은 파일 반영 · 필드 차이 1514건 (알고리즘 결과)
+  OK   받은 파일 반영 · 필드 차이 7458건 (알고리즘 결과)
 
 ======================================================================
 검산 통과 · 문제 0건

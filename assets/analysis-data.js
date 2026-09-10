@@ -204,7 +204,7 @@
     if (!live) { return { rows: FALLBACK.dueRows.slice(0, limit || 5), total: 56, now: 6 }; }
     var rows = DB.list({ dueDate: function (v) { return !!v; } });
     rows.sort(function (a, b) { return Number(a.dDays) - Number(b.dDays); });
-    var nowN = rows.filter(function (r) { return r.signal === 'red'; }).length;
+    var nowN = rows.filter(function (r) { return (r.signalNow || r.signal) === 'red'; }).length;
     return { rows: limit ? rows.slice(0, limit) : rows, total: rows.length, now: nowN };
   }
 

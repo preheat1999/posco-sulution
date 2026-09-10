@@ -30,7 +30,7 @@
     <!-- 값 네 개를 한 카드 안에 나란히. 가운데(전수 743)가 이 화면의 모집단이라 크게 둔다 -->
     <section class="card kpistrip"><div class="kpistrip-in" id="stat"></div></section>
 
-    <!-- 속성값 판단 단계와 이어진다 · 원본 단계면 그 사실을, 확정이 바뀌었으면 재계산 대기를 적는다 -->
+    <!-- 속성값 판단과 이어진다 · 확정 대기가 있는지, 확정이 목표를 바꿨는지 적는다 -->
     <div class="noticebar" id="stagebar" style="margin-bottom:16px" hidden></div>
 
     <!-- 분석 전 · 여기서 사람이 분석을 실행한다 -->
@@ -331,7 +331,8 @@
           '<td data-label="속성 · 등급">' + UI.typeBadge(r.type) + ' ' +
             UI.gradeBadge(r.grade) +
             /* 확정 속성이 계산에 쓴 속성과 다르면 표시한다 · 목표가 다른 공식이어야 한다 */
-            (r.stale ? ' <span class="badge core">' + (r.recalc.done ? '재계산됨' : '재계산 대기') + '</span>' : '') +
+            /* 확정 속성으로 목표를 다시 잡은 행 · 그 사실을 줄에 남긴다 */
+            (r.stale ? ' <span class="badge plan">확정 반영</span>' : '') +
             '</td>' +
           '<td class="num" data-label="보유 → 목표"><span>' +
             '<button class="linkq" type="button" data-q="' + UI.esc(r.q) + '">' +
@@ -388,10 +389,10 @@
     }
     if (s.staleN) {
       bar.hidden = false;
-      bar.innerHTML = '<span class="ni">↻</span><span><b>속성이 바뀐 ' + UI.num(s.staleN) + '품목</b> · ' +
-        UI.num(s.staleN - s.recalcN) + '품목은 명세 규칙으로 목표 0 이 됐고, ' +
-        UI.num(s.recalcN) + '품목은 소요 이력이 필요해 엔진 재계산을 기다립니다</span>' +
-        '<a class="nx" href="attr.html#done" style="color:var(--brand)">확정 내보내기 →</a>';
+      bar.innerHTML = '<span class="ni">↻</span><span><b>확정 속성이 반영된 ' +
+        UI.num(s.staleN) + '품목</b> · 목표재고 · 조치 · 금액이 그 속성으로 계산돼 있습니다' +
+        (s.recalcN ? ' (' + UI.num(s.recalcN) + '품목은 구운 목표가 없어 대기)' : '') + '</span>' +
+        '<a class="nx" href="attr.html#done" style="color:var(--brand)">확정 내역 →</a>';
       return;
     }
     bar.hidden = true;
@@ -483,7 +484,7 @@
       POP.show(c, {
         title: r.name + ' · ' + r.q,
         rows: S.stockBreak(r),
-        formula: r.reason || '',
+        formula: r.reasonNow || r.reason || '',
         note: '조달 ' + (r.proc || '미확인') + ' · 리드타임 평균 ' + UI.num(r.ltMean) +
               '일 · 공급사 ' + UI.num(r.suppliers) + '곳'
       });
@@ -504,7 +505,7 @@
         POP.show(lq, {
           title: r.name + ' · ' + r.q,
           rows: S.stockBreak(r),
-          formula: r.reason || '',
+          formula: r.reasonNow || r.reason || '',
           note: '조달 ' + (r.proc || '미확인') + ' · 리드타임 평균 ' + UI.num(r.ltMean) +
                 '일 · 공급사 ' + UI.num(r.suppliers) + '곳'
         });
