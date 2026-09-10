@@ -23,6 +23,15 @@ vectorstore:
 
 retrieval:
   mode: "hybrid"          # hybrid | bm25
+  # ★ 문서수준 dense 게이트
+  # 색인의 chunk_id 정렬은 재현되지 않아(정합 20%) 본문 하이드레이션에 쓸 수 없다.
+  # 반면 doc_id 는 30/30 일치하므로 "어느 문서가 관련 있는가" 신호는 신뢰할 수 있다.
+  # 따라서 dense 는 문서 순위만 제공하고, 실제 청크·본문은 로컬 BM25 에서만 가져온다.
+  doc_gate:
+    enabled: true
+    dense_limit: 50       # 문서 신호 수집용 dense 히트 수
+    doc_top: 5            # 가중할 상위 문서 수
+    doc_weight: 0.6       # 곱셈 가중 계수. 1위 문서 ×1.6, 5위 문서 ×1.12
   fusion: "rrf"
   rrf_k: 10
   dense_limit: 20

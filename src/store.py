@@ -7,10 +7,12 @@ class ChunkStore:
     def __init__(self, path=None):
         path = path or cfg.path("paths.chunks_file")
         self.by_id = {}
+        self.doc_ids = set()
         with open(path, encoding="utf-8") as f:
             for line in f:
                 c = json.loads(line)
                 self.by_id[c["chunk_id"]] = c
+                self.doc_ids.add(c["doc_id"])
 
     def __len__(self):
         return len(self.by_id)
