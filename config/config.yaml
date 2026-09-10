@@ -89,6 +89,10 @@ api:
   allowed_origin_regex: null
 
 security:
+  # 시연 편의: 서버가 도는 노트북 자신(127.0.0.1)에서 온 요청은 토큰을 요구하지 않는다.
+  # 외부(0.0.0.0 바인딩 시 같은 네트워크의 다른 PC)는 그대로 X-API-Token 을 요구한다.
+  # 판단은 요청의 실제 소스 IP 로만 한다 — X-Forwarded-For 같은 헤더는 위조되므로 믿지 않는다.
+  allow_localhost_without_token: true
   mask_pii: true
   audit_log: true
   log_raw_query: false

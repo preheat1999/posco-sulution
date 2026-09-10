@@ -1,5 +1,6 @@
 """01_검증_체크리스트.md 2단계 관문 자동 확인. 한글 질의는 파일/파이썬으로 보낸다."""
 import json, os, sys, time
+from pathlib import Path
 import httpx
 from dotenv import load_dotenv
 load_dotenv()
@@ -51,8 +52,34 @@ d2 = ask("우주선 부품 재고를 알려주세요")
 print("\n[Q2]", d2["answer"][:120])
 results.append(("12 무응답 정책", d2["no_answer"] and "찾을 수 없습니다" in d2["answer"]))
 
-r = httpx.post(f"{BASE}/api/chat", json={"question": "테스트"}, timeout=30)
-results.append(("보안4 토큰 없이 401", r.status_code == 401))
+# 토큰 정책: 로컬(시연 노트북)은 면제, 외부는 요구.
+# 로컬에서 토큰 없이 호출 → 통과해야 한다(시연 편의)
+r = httpx.post(f"{BASE}/api/chat", json={"question": "테스트"}, timeout=180)
+results.append(("보안4a 로컬은 토큰 없이 사용 가능", r.status_code == 200))
+
+# 외부 IP 에서 온 요청은 여전히 401 이어야 한다.
+# 로컬에서 외부 접속을 만들 수 없으므로 인증 판정 함수를 직접 검사한다.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+import api as api_mod
+
+
+class _FakeClient:
+    def __init__(self, host):
+        self.host = host
+
+
+class _FakeReq:
+    def __init__(self, host):
+        self.client = _FakeClient(host)
+
+
+remote_blocked = not api_mod._auth_ok(_FakeReq("192.168.0.50"), None)
+remote_ok_with_token = api_mod._auth_ok(_FakeReq("192.168.0.50"),
+                                        os.environ.get("RAG_API_TOKEN"))
+local_ok = api_mod._auth_ok(_FakeReq("127.0.0.1"), None)
+results.append(("보안4b 외부 IP 는 토큰 없이 거부", remote_blocked))
+results.append(("보안4c 외부 IP 도 토큰 있으면 허용", remote_ok_with_token))
+results.append(("보안4d 로컬은 면제", local_ok))
 
 print("\n" + "=" * 60)
 for name, passed in results:

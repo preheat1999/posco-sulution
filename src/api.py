@@ -2,7 +2,7 @@
 import logging, os, sys, time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -73,7 +73,7 @@ def ui():
 
 
 @app.get("/api/health")
-def health():
+def health(request: Request):
     vs = STATE["vs"]
     reachable = bool(vs and vs.reachable)
     mode = STATE["searcher"].mode if STATE["searcher"] else "bm25"
@@ -86,13 +86,36 @@ def health():
         "vectorstore": {"collection": cfg.get("vectorstore.collection_name"),
                         "points": vs.points if vs else 0, "reachable": reachable},
         "llm": {"provider": cfg.get("llm.provider"), "model": cfg.get("llm.model")},
-        "auth_required": bool(os.environ.get("RAG_API_TOKEN")),
+        # 이 호출자에게 토큰이 필요한지 알려준다(로컬 시연은 불필요) → UI 가 입력칸을 숨긴다
+        "auth_required": not _auth_ok(request, None),
+        "auth_required_remote": bool(os.environ.get("RAG_API_TOKEN")),
     }
 
 
-def _guard(req, x_api_token):
+LOCALHOST = {"127.0.0.1", "::1", "localhost"}
+
+
+def _is_local(request):
+    """요청의 실제 소스 IP 로만 판단한다.
+
+    X-Forwarded-For 같은 헤더는 클라이언트가 마음대로 넣을 수 있으므로 믿지 않는다."""
+    client = getattr(request, "client", None)
+    return bool(client) and client.host in LOCALHOST
+
+
+def _auth_ok(request, x_api_token):
     token = os.environ.get("RAG_API_TOKEN")
-    if token and x_api_token != token:
+    if not token:
+        return True                                   # 토큰 미설정 = 인증 없음
+    if x_api_token == token:
+        return True
+    # 시연 편의: 서버가 도는 노트북 자신에서 온 요청은 토큰을 요구하지 않는다.
+    # 외부(같은 네트워크의 다른 PC)는 그대로 401 이다.
+    return bool(cfg.get("security.allow_localhost_without_token")) and _is_local(request)
+
+
+def _guard(request, req, x_api_token):
+    if not _auth_ok(request, x_api_token):
         raise HTTPException(status_code=401, detail="invalid token")
     if not req.question or not req.question.strip():
         raise HTTPException(status_code=400, detail="question is required")
@@ -100,9 +123,10 @@ def _guard(req, x_api_token):
 
 
 @app.post("/api/chat/stream")
-def chat_stream(req: ChatRequest, x_api_token: str | None = Header(default=None)):
+def chat_stream(request: Request, req: ChatRequest,
+                x_api_token: str | None = Header(default=None)):
     """진행 단계 + 답변 토큰을 NDJSON 으로 흘린다 (8-2). 이벤트 계약은 stream_api.py."""
-    q = _guard(req, x_api_token)
+    q = _guard(request, req, x_api_token)
     return StreamingResponse(
         stream_api.event_stream(STATE, q, req.history, log),
         media_type="application/x-ndjson",
@@ -110,8 +134,9 @@ def chat_stream(req: ChatRequest, x_api_token: str | None = Header(default=None)
 
 
 @app.post("/api/chat")
-def chat(req: ChatRequest, x_api_token: str | None = Header(default=None)):
-    q = _guard(req, x_api_token)
+def chat(request: Request, req: ChatRequest,
+         x_api_token: str | None = Header(default=None)):
+    q = _guard(request, req, x_api_token)
     t0 = time.time()
     trace, metrics = [], {}
 
