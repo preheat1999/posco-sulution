@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>구매신청 (PR) · AI 자재 솔루션</title>
+<link rel="stylesheet" href="assets/shell.css">
+<script>window.PAGE = 'purchase';</script>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="side" id="side"></aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="top-left">
+        <button class="hamb" id="hamb" aria-label="메뉴" aria-expanded="false">&#9776;</button>
+        <div>
+          <div class="crumb" data-group="업무">&nbsp;</div>
+          <h1>구매신청 (PR)</h1>
+        </div>
+      </div>
+      <div class="top-right">
+        <span class="pill" id="asof">기준일 확인 중</span>
+        <div class="avatar">이</div>
+      </div>
+    </div>
+
+    <!-- 네 단계 · 마지막은 사내 시스템 연동이라 파선으로 둔다. 되는 척하지 않는다 -->
+    <section class="card">
+      <header>
+        <div><h2>진행 단계</h2></div>
+        <div class="card-tools">
+          <span class="badge">발행은 사내 시스템 연동 예정 구간입니다</span>
+        </div>
+      </header>
+      <div class="prsteps" id="steps"></div>
+    </section>
+
+    <div class="split">
+      <div>
+        <div class="phead">
+          <div><h2 style="font-size:15.5px;font-weight:600">발주 소요 자재</h2></div>
+          <div class="ptools"><span class="badge" id="lcount">&nbsp;</span></div>
+        </div>
+        <div class="picklist" id="list"></div>
+        <p class="note" style="margin-top:12px" id="lnote">&nbsp;</p>
+      </div>
+
+      <section class="card sticky" id="form"></section>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<script src="assets/config.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/org.js"></script>
+<script src="assets/popover.js"></script>
+<script src="assets/db-master.js"></script>
+<script src="assets/db-derived.js"></script>
+<script src="assets/db-changes.js"></script>
+<script src="assets/db.js"></script>
+<script src="assets/db-biz.js"></script>
+<script src="assets/plan-data.js"></script>
+<script src="assets/analysis-data.js"></script>
+<script src="assets/screen-data.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var S = window.SCREEN;
+  var picked = null;
+  var rows = [];
+
+  function el(id) { return document.getElementById(id); }
+  function asof() { return window.DB ? DB.meta().asof : (window.CFG && CFG.BASE_DATE); }
+
+  function paintSteps() {
+    el('steps').innerHTML = S.prSteps().map(function (s) {
+      return '<div class="prstep ' + s.state + '">' +
+        '<span class="sc">' + s.mark + '</span>' +
+        '<span class="sk">' + UI.esc(s.k) + '</span>' +
+        '<span class="sv">' + UI.esc(s.v) + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  function paintList() {
+    rows = S.prList();
+    if (!picked || !rows.filter(function (r) { return r.q === picked; }).length) {
+      picked = rows.length ? rows[0].q : null;
+    }
+    el('lcount').textContent = '총 ' + UI.num(rows.length) + '건';
+
+    el('list').innerHTML = rows.length ? rows.map(function (r) {
+      return '<button class="pick' + (r.q === picked ? ' on' : '') + '" type="button" ' +
+        'data-q="' + UI.esc(r.q) + '">' +
+        '<span class="pick-dot" style="background:' +
+          (r.active ? 'var(--ok)' : 'var(--core)') + '"></span>' +
+        '<span class="pick-body">' +
+          '<span class="pick-name">' + UI.esc(r.name) + ' ' +
+            (r.active ? '<span class="badge ok">구매 가능</span>'
+              : '<span class="badge core">정보 보완 필요</span>') +
+          '</span>' +
+          '<span class="pick-meta">' + UI.esc(r.q) + ' · 소요 ' + UI.num(r.qty) + ' ' +
+            UI.esc(r.unit) + ' · ' + UI.esc(r.kind || '구분 미확인') +
+            (r.eq ? ' · ' + UI.esc(r.eq) : '') + '</span>' +
+        '</span>' +
+        '<span class="pick-right">' +
+          '<span class="pick-v">' + UI.wonShort(r.amount) + '</span>' +
+          '<span class="pick-k">' + UI.wonShortUnit(r.amount) + ' 추정</span>' +
+        '</span></button>';
+    }).join('') :
+      '<div class="empty"><strong>구매신청 대상이 없습니다</strong>' +
+      '적정재고 분석에서 발주 필요 자재를 확인하세요</div>';
+
+    var block = rows.filter(function (r) { return !r.active; }).length;
+    el('lnote').innerHTML = UI.num(rows.length - block) + '건은 바로 신청할 수 있고 <b>' +
+      UI.num(block) + '건은 자재 정보를 보완해야 합니다</b>. ' +
+      '금액은 정본 단가 × 소요 수량으로 추정한 값입니다 · 실제 계약 단가와 다를 수 있습니다.';
+  }
+
+  /* 신청서 초안. 값마다 어디서 왔는지 적는다.
+     「AI 가 채웠다」 고만 적으면 어디서 온 값인지 물어볼 수 없다 */
+  function paintForm() {
+    var p = picked ? rows.filter(function (r) { return r.q === picked; })[0] : null;
+    if (!p) {
+      el('form').innerHTML = '<div class="empty"><strong>왼쪽에서 자재를 고르세요</strong>' +
+        '고른 자재의 신청서 초안이 여기에 채워집니다</div>';
+      return;
+    }
+    var fields = S.prDraft(p, asof());
+    var saved = window.DB ? DB.changes().pr_drafts.filter(function (d) {
+      return d.q === p.q;
+    }).length : 0;
+
+    el('form').innerHTML =
+      '<p class="gt"><span>PR 구매신청서 초안</span>' +
+        '<span class="gt-sub">' + (saved ? '초안 ' + saved + '건 저장됨' : '저장 전') + '</span></p>' +
+      '<h2 style="font-size:18px;letter-spacing:-.5px;margin-bottom:3px">' +
+        UI.esc(p.name) + '</h2>' +
+      '<p class="sub">' + UI.esc(p.q) + ' · ' + UI.esc(p.type || '') + ' ' +
+        (p.grade ? UI.gradeBadge(p.grade) : '') + '</p>' +
+
+      '<div class="fgrid" style="margin-top:16px">' + fields.map(function (f, i) {
+        var wide = f[0] === '품명' || f[0] === '신청 사유';
+        return '<div class="' + (wide ? 'wide' : '') + '">' +
+          '<div class="flab"><span class="fn">' + UI.esc(f[0]) + '</span>' +
+            '<button class="askbtn" type="button" data-why="' + i + '" ' +
+              'aria-label="이 값의 출처">?</button>' +
+            (f[3] ? '<span class="fsrc">AI 채움</span>' : '') +
+          '</div>' +
+          '<div class="fval' + (f[3] ? ' ai' : '') + '">' +
+            '<span>' + UI.esc(f[1]) + '</span></div>' +
+          '</div>';
+      }).join('') + '</div>' +
+
+      '<div class="callout pln" style="margin-top:16px">' +
+        '<span class="ci">✦</span>' +
+        '<span><b>AI 가 채운 칸은 두 개입니다</b>' +
+        '납기희망일(요청일 + 리드타임 평균)과 신청 사유(작업주문 · 자재계획)입니다. ' +
+        '나머지는 원천 값을 그대로 옮겼고, 예산 계정은 원천에 없어 비워 뒀습니다.</span></div>' +
+
+      '<div class="decide">' +
+        '<p class="decide-note">초안은 3층에 쌓입니다 · 정본과 판정값은 그대로입니다</p>' +
+        '<div class="decide-row">' +
+          '<button class="btn ghost" type="button" data-act="reset">초기화</button>' +
+          '<button class="btn pln" type="button" data-act="save">구매신청 초안 저장</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function wire() {
+    el('list').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('.pick');
+      if (!b) { return; }
+      picked = b.getAttribute('data-q');
+      paintList(); paintForm();
+    });
+
+    el('form').addEventListener('click', function (e) {
+      var p = picked ? rows.filter(function (r) { return r.q === picked; })[0] : null;
+      if (!p) { return; }
+
+      var w = e.target.closest && e.target.closest('[data-why]');
+      if (w) {
+        var f = S.prDraft(p, asof())[Number(w.getAttribute('data-why'))];
+        POP.show(w, {
+          title: f[0],
+          rows: [['값', f[1]], ['출처', f[2] || '원천에 없습니다'],
+                 ['AI 채움', f[3] ? '예' : '아니오']],
+          note: f[3] ? '이 값은 계산해서 채웠습니다. 저장 전에 확인하세요.'
+            : '원천 값을 그대로 옮겼습니다.'
+        });
+        return;
+      }
+
+      var a = e.target.closest && e.target.closest('[data-act]');
+      if (!a) { return; }
+      if (a.getAttribute('data-act') === 'save') {
+        try {
+          DB.draft('PR', {
+            q: p.q,
+            data: { qty: p.qty, unit: p.unit, wo: p.wo, eq: p.eq, why: '구매신청 화면 저장' }
+          });
+          POP.show(a, {
+            title: '초안을 저장했습니다',
+            rows: [['자재', p.name + ' · ' + p.q], ['수량', UI.num(p.qty) + ' ' + p.unit],
+                   ['다음 단계', 'PR 발행 · 사내 시스템 연동 예정']],
+            note: '발행은 아직 연동 전입니다. 지금은 초안까지가 우리 몫입니다.'
+          });
+        } catch (err) {
+          POP.show(a, { title: '저장하지 못했습니다', rows: [['이유', String(err.message)]] });
+        }
+      } else {
+        /* 초기화는 이 자재의 초안만 지운다. 다른 자재의 초안은 남는다 */
+        var mine = DB.changes().pr_drafts.filter(function (d) { return d.q === p.q; });
+        mine.forEach(function (d) { DB.undo('pr_drafts', d.seq); });
+        POP.show(a, {
+          title: mine.length ? '초안 ' + mine.length + '건을 지웠습니다' : '지울 초안이 없습니다',
+          rows: [['자재', p.name + ' · ' + p.q]]
+        });
+      }
+    });
+  }
+
+  function paintAll() {
+    var m = window.DB ? DB.meta() : null;
+    el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
+    paintSteps(); paintList(); paintForm();
+  }
+
+  paintAll();
+  wire();
+  S.on(paintAll);
+})();
+</script>
+<script src="assets/tour.js"></script>
+</body>
+</html>

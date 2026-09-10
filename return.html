@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>자재반납 (QR) · AI 자재 솔루션</title>
+<link rel="stylesheet" href="assets/shell.css">
+<script>window.PAGE = 'return';</script>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="side" id="side"></aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="top-left">
+        <button class="hamb" id="hamb" aria-label="메뉴" aria-expanded="false">&#9776;</button>
+        <div>
+          <div class="crumb" data-group="업무">&nbsp;</div>
+          <h1>자재반납 (QR)</h1>
+        </div>
+      </div>
+      <div class="top-right">
+        <span class="pill" id="asof">기준일 확인 중</span>
+        <div class="avatar">이</div>
+      </div>
+    </div>
+
+    <!-- 물품 상태별로 나눈다. 명세의 7갈래 판정은 알고리즘이 낼 값이라 아직 없다 -->
+    <div class="tagrow" id="tabs"></div>
+
+    <div class="split">
+      <section class="card" id="table-card">
+        <header>
+          <div><h2>불출 잔여 자재</h2><p class="sub" id="tsub">&nbsp;</p></div>
+          <div class="card-tools"><span class="badge" id="tcount">&nbsp;</span></div>
+        </header>
+        <div class="callout ok" style="margin-top:0">
+          <span class="ci">↩</span>
+          <span><b>반납하면 재고가 바로 다시 계산됩니다</b>
+          적정재고 조치도 같이 바뀝니다 · 현재고를 저장하지 않고 트랜잭션으로 더합니다</span>
+        </div>
+        <div class="tablewrap" id="table"></div>
+        <p class="note" style="margin-top:12px" id="tnote">&nbsp;</p>
+      </section>
+
+      <div class="sticky">
+        <section class="card">
+          <p class="gt"><span>스마트 반납 QR</span><span class="gt-sub">현장용</span></p>
+          <div class="qrbox" id="qr"></div>
+          <p class="qr-title">휴대폰으로 찍으면 반납 화면이 열립니다</p>
+          <p class="qr-sub">불출 잔여 수량과 물품 상태를 현장에서 바로 입력합니다 ·
+            <b>지금은 자리표시입니다</b> · 아래 버튼으로 같은 화면을 엽니다</p>
+          <a class="btn line" href="mobile-return.html" style="width:100%;margin-top:14px">
+            모바일 반납 화면 열기</a>
+        </section>
+
+        <section class="card" id="effect"></section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<script src="assets/config.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/org.js"></script>
+<script src="assets/popover.js"></script>
+<script src="assets/db-master.js"></script>
+<script src="assets/db-derived.js"></script>
+<script src="assets/db-changes.js"></script>
+<script src="assets/db.js"></script>
+<script src="assets/db-biz.js"></script>
+<script src="assets/plan-data.js"></script>
+<script src="assets/analysis-data.js"></script>
+<script src="assets/screen-data.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var S = window.SCREEN;
+  var tab = 'all';
+  var picked = null;
+
+  function el(id) { return document.getElementById(id); }
+
+  /* QR 자리표시.
+   * 무작위 모듈을 그려 두면 스캔되는 QR 처럼 보이는데 실제로는 아무것도 안 읽힌다.
+   * 시연에서 심사위원이 찍어 보면 그게 더 나쁘다.
+   * 그래서 찾기 패턴(세 모서리)만 그리고 가운데에 「연동 예정」 이라고 적는다.
+   * 실제 인코더는 assets/qr.js 로 따로 만든다 (버전 3 · 바이트 모드 · ECC L) */
+  function qrPlaceholder() {
+    var N = 21, cell = 8, S2 = N * cell;
+    function rect(x, y, w, h, c) {
+      return '<rect x="' + (x * cell) + '" y="' + (y * cell) + '" width="' + (w * cell) +
+        '" height="' + (h * cell) + '" fill="' + c + '"></rect>';
+    }
+    function finder(x, y) {
+      return rect(x, y, 7, 7, '#0B0E15') + rect(x + 1, y + 1, 5, 5, '#FFFFFF') +
+             rect(x + 2, y + 2, 3, 3, '#0B0E15');
+    }
+    var timing = '';
+    var i;
+    for (i = 8; i < N - 8; i += 2) {
+      timing += rect(i, 6, 1, 1, '#0B0E15') + rect(6, i, 1, 1, '#0B0E15');
+    }
+    return '<svg viewBox="0 0 ' + S2 + ' ' + S2 + '" role="img" ' +
+      'aria-label="반납 화면 QR 자리표시 · 인코더 연동 예정">' +
+      '<rect width="100%" height="100%" fill="#FFFFFF"></rect>' +
+      finder(0, 0) + finder(N - 7, 0) + finder(0, N - 7) + timing +
+      '<rect x="' + (4.5 * cell) + '" y="' + (8.5 * cell) + '" width="' + (12 * cell) +
+        '" height="' + (4 * cell) + '" rx="6" fill="#0B0E15"></rect>' +
+      '<text x="' + (S2 / 2 + 12) + '" y="' + (10.9 * cell) +
+        '" text-anchor="middle" fill="#F3F5F9" font-size="13" font-weight="600">QR</text>' +
+      '<text x="' + (S2 / 2 + 12) + '" y="' + (12 * cell) +
+        '" text-anchor="middle" fill="#7C859A" font-size="9">연동 예정</text>' +
+      '</svg>';
+  }
+
+  function paintTabs() {
+    var tabs = S.retTabs();
+    el('tabs').innerHTML = tabs.map(function (t) {
+      return '<button class="tab' + (t.key === tab ? ' on' : '') + '" type="button" ' +
+        'data-tab="' + UI.esc(t.key) + '">' + UI.esc(t.label) +
+        ' <span class="n">' + t.n + '</span></button>';
+    }).join('');
+  }
+
+  function paintTable() {
+    var rows = S.retList(tab);
+    var all = S.retList('all');
+    el('tcount').textContent = UI.num(rows.length) + '건';
+    el('tsub').textContent = tab === 'all'
+      ? ('물품 상태 ' + (S.retTabs().length - 1) + '가지 · 전체 ' + UI.num(all.length) + '건')
+      : ('물품 상태 ' + tab);
+
+    if (!picked || !rows.filter(function (r) { return r.q === picked; }).length) {
+      picked = rows.length ? rows[0].q : null;
+    }
+
+    el('table').innerHTML = rows.length ?
+      '<table><thead><tr><th>자재 · 코드</th><th>불출 창고</th>' +
+      '<th class="num">불출 잔여</th><th>물품 상태</th><th>반납</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr' + (r.q === picked ? ' class="on"' : '') + '>' +
+          '<td data-label="자재 · 코드"><div class="cell-2">' +
+            '<div class="cell-1st">' + UI.esc(r.name) + '</div>' +
+            '<div class="cell-2nd">' + UI.esc(r.q) +
+              (r.asm ? ' · ' + UI.esc(r.asm) : '') +
+              (r.locator ? ' · 보관 ' + UI.esc(r.locator) : '') + '</div>' +
+          '</div></td>' +
+          '<td data-label="불출 창고">' + UI.esc(r.issueWh || '미확인') + '</td>' +
+          '<td class="num" data-label="불출 잔여">' + UI.num(r.left) + ' ' +
+            UI.esc(r.unit) + '</td>' +
+          '<td data-label="물품 상태">' + condBadge(r.cond) + '</td>' +
+          '<td data-label="반납">' +
+            '<button class="btn sm" type="button" data-ret="' + UI.esc(r.q) + '">반납</button>' +
+            ' <button class="btn line sm" type="button" data-pick="' + UI.esc(r.q) + '">미리보기</button>' +
+          '</td></tr>';
+      }).join('') + '</tbody></table>' :
+      '<div class="empty"><strong>이 상태의 반납 대상이 없습니다</strong>' +
+      '다른 상태를 눌러 보세요</div>';
+
+    var txn = window.DB ? DB.changes().stock_transactions.filter(function (t) {
+      return t.txnType === '반납';
+    }).length : 0;
+    el('tnote').innerHTML = '반납 대상은 <b>불출 후 남은 수량</b>입니다. ' +
+      '물품 상태는 원천 값을 그대로 씁니다 · 명세의 7갈래 반납 유형 판정은 알고리즘이 낼 값이라 ' +
+      '아직 데이터에 없습니다.' + (txn ? ' 지금까지 <b>' + txn + '건</b> 반납했습니다.' : '');
+  }
+
+  function condBadge(c) {
+    var cls = { '신품': 'ok', '중고': 'plan', '불용': 'insur' }[c] || '';
+    return '<span class="badge ' + cls + '">' + UI.esc(c) + '</span>';
+  }
+
+  /* 반납하면 무엇이 바뀌는지 먼저 보여 준다. 눌러 보고 알게 하면 안 된다 */
+  function paintEffect() {
+    var rows = S.retList(tab);
+    var r = picked ? rows.filter(function (x) { return x.q === picked; })[0] : null;
+    if (!r) {
+      el('effect').innerHTML = '<div class="empty"><strong>반납 대상을 고르세요</strong>' +
+        '반납하면 무엇이 바뀌는지 미리 보여 줍니다</div>';
+      return;
+    }
+    var e = S.retEffect(r);
+    el('effect').innerHTML =
+      '<p class="gt"><span>반납하면 이렇게 바뀝니다</span>' +
+        '<span class="gt-sub">' + UI.esc(r.q) + '</span></p>' +
+      '<h2 style="font-size:16px;letter-spacing:-.4px;margin-bottom:10px">' +
+        UI.esc(r.name) + '</h2>' +
+      (e ? '<div class="pgrid">' +
+        '<div><div class="pk">현재고</div><div class="pv">' + UI.num(e.stock[0]) +
+          ' → ' + UI.num(e.stock[1]) + '</div></div>' +
+        '<div><div class="pk">조치</div><div class="pv">' + UI.esc(e.action[0]) +
+          ' → ' + UI.esc(e.action[1]) + '</div></div>' +
+        '<div><div class="pk">반납 수량</div><div class="pv">' + UI.num(r.left) + ' ' +
+          UI.esc(r.unit) + '</div></div>' +
+        '<div><div class="pk">회수 금액</div><div class="pv">' + UI.won(e.amount) +
+          '</div></div>' +
+      '</div>' : '') +
+      '<div class="formula">' +
+        '<div class="ft"><span>재고 계산</span><span>현재고를 저장하지 않습니다</span></div>' +
+        '<code>현재고 = 스냅샷 + Σ 트랜잭션 (반납 +1 · 불출 -1)</code>' +
+        '<div class="ft" style="margin:8px 0 5px"><span>불출 근거</span></div>' +
+        UI.esc((r.wo ? '작업주문 ' + r.wo : '작업주문 미확인') + ' · ' +
+          (r.acc || '계정 미확인')) +
+      '</div>' +
+      '<div class="decide">' +
+        '<div class="decide-row">' +
+          '<button class="btn pln" type="button" data-ret="' + UI.esc(r.q) + '">' +
+            '반납 ' + UI.num(r.left) + ' ' + UI.esc(r.unit) + ' 처리</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function doReturn(q, anchor) {
+    var rows = S.retList('all');
+    var r = rows.filter(function (x) { return x.q === q; })[0];
+    if (!r) { return; }
+    var before = DB.item(q);
+    try {
+      /* 부호는 config 가 정한다. 화면이 -1 을 만들지 않는다 */
+      DB.txn({ q: q, type: '반납', qty: r.left, note: '자재반납 (QR) · ' + r.cond });
+      var after = DB.item(q);
+      POP.show(anchor, {
+        title: '반납했습니다',
+        rows: [['자재', r.name + ' · ' + q],
+               ['수량', UI.num(r.left) + ' ' + r.unit + ' · ' + r.cond],
+               ['현재고', UI.num(before.stock) + ' → ' + UI.num(after.stock)],
+               ['조치', before.actionNow + ' → ' + after.actionNow]],
+        note: '재고를 저장하지 않고 트랜잭션으로 더했습니다. 적정재고 화면 숫자도 같이 움직입니다.'
+      });
+    } catch (err) {
+      POP.show(anchor, { title: '반납하지 못했습니다', rows: [['이유', String(err.message)]] });
+    }
+  }
+
+  function wire() {
+    el('tabs').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('.tab');
+      if (!b) { return; }
+      tab = b.getAttribute('data-tab');
+      paintTabs(); paintTable(); paintEffect();
+    });
+
+    document.addEventListener('click', function (e) {
+      var p = e.target.closest && e.target.closest('[data-pick]');
+      if (p) { picked = p.getAttribute('data-pick'); paintTable(); paintEffect(); return; }
+      var r = e.target.closest && e.target.closest('[data-ret]');
+      if (r && window.DB) { doReturn(r.getAttribute('data-ret'), r); }
+    });
+  }
+
+  function paintAll() {
+    var m = window.DB ? DB.meta() : null;
+    el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
+    paintTabs(); paintTable(); paintEffect();
+  }
+
+  el('qr').innerHTML = qrPlaceholder();
+  paintAll();
+  wire();
+  S.on(function () { paintTable(); paintEffect(); });
+})();
+</script>
+<script src="assets/tour.js"></script>
+</body>
+</html>

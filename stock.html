@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>적정재고 분석 · AI 자재 솔루션</title>
+<link rel="stylesheet" href="assets/shell.css">
+<script>window.PAGE = 'stock';</script>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="side" id="side"></aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="top-left">
+        <button class="hamb" id="hamb" aria-label="메뉴" aria-expanded="false">&#9776;</button>
+        <div>
+          <div class="crumb" data-group="분석">&nbsp;</div>
+          <h1>적정재고 분석</h1>
+        </div>
+      </div>
+      <div class="top-right">
+        <span class="pill" id="asof">기준일 확인 중</span>
+        <div class="avatar">이</div>
+      </div>
+    </div>
+
+    <!-- 값 네 개를 한 줄에. 카드 네 개를 쓰면 화면이 카드로 도배된다 -->
+    <div class="statrow" id="stat"></div>
+
+    <!-- 계산 순서를 그대로 단계로 둔다. 첫 단계만 열려 있다 -->
+    <div id="steps"></div>
+
+    <p class="note" style="margin-top:16px">
+      목표재고 · 조치 · 등급은 모두 명세의 산식으로 계산한 값입니다 ·
+      <b>화면이 상수를 만들지 않습니다</b>
+    </p>
+  </main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<script src="assets/config.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/org.js"></script>
+<script src="assets/popover.js"></script>
+<script src="assets/db-master.js"></script>
+<script src="assets/db-derived.js"></script>
+<script src="assets/db-changes.js"></script>
+<script src="assets/db.js"></script>
+<script src="assets/db-biz.js"></script>
+<script src="assets/plan-data.js"></script>
+<script src="assets/analysis-data.js"></script>
+<script src="assets/screen-data.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var S = window.SCREEN;
+  var A = window.ANALYSIS;
+  var tab = 'order';        // 발주 필요부터 본다. 지금 해야 하는 일이다
+  var query = '';
+  var PAGE = 8;
+  var page = 0;
+
+  function el(id) { return document.getElementById(id); }
+
+  // ------------------------------------------------------------ 머리 숫자
+  function paintStat() {
+    var w = A.money(), s = A.summary(), c = S.stockCounts();
+    el('stat').innerHTML =
+      cell(UI.num(c.all), '품목', '분석 대상', '전수 분석 완료') +
+      cell(UI.num(c.order), '품목', '발주 필요', '즉시 ' + UI.num(s.signal.red || 0) + '건', 'core') +
+      cell(UI.num(c.cut), '품목', '감축 가능', UI.won(w.cutAmt) + ' 감축분', 'ok') +
+      cell(UI.wonShort(s.poolAmt), UI.wonShortUnit(s.poolAmt), '공용화 회수',
+           UI.num(s.poolItems) + '품목 정체', 'plan');
+  }
+
+  function cell(v, unit, k, x, cls) {
+    return '<div><div class="sv' + (cls ? ' ' + cls : '') + '">' + v +
+      (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
+      '<div class="sk">' + k + '</div><div class="sx">' + x + '</div></div>';
+  }
+
+  // ------------------------------------------------------------ 단계
+  function paintSteps() {
+    var steps = S.stockSteps();
+    el('steps').innerHTML = steps.map(function (st) {
+      return '<section class="sect' + (st.open ? ' open' : '') + '" id="s-' + st.n + '">' +
+        '<div class="sect-head" role="button" tabindex="0" aria-expanded="' +
+          (st.open ? 'true' : 'false') + '">' +
+          '<div class="sect-title">' +
+            '<h2><span style="color:var(--muted);font-weight:600">' + st.n + '</span> &nbsp;' +
+              UI.esc(st.title) + '</h2>' +
+          '</div>' +
+          '<div class="card-tools">' +
+            '<span class="sect-n">' + UI.esc(st.right) + '</span>' +
+            '<span class="sect-arrow">' + (st.open ? '∧' : '∨') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="sb">' + body(st) + '</div>' +
+        '</section>';
+    }).join('');
+    paintTable();
+  }
+
+  function body(st) {
+    if (st.kind === 'formula') { return formulaBody(st); }
+    if (st.kind === 'target') {
+      return '<div class="formula"><div class="ft"><span>목표재고 산식</span>' +
+        '<span>명세 부록 A~N</span></div><code>' + UI.esc(st.note) + '</code></div>' +
+        '<p class="note" style="margin-top:10px">두 속성이 서로 다른 공식을 쓰기 때문에 ' +
+        '목표재고는 품목마다 따로 계산됩니다. 보유 수량을 누르면 그 품목의 계산을 그대로 볼 수 있습니다.</p>';
+    }
+    if (st.kind === 'table') { return tableBody(st); }
+    if (st.kind === 'pool') { return poolBody(st); }
+    if (st.kind === 'fin') { return finBody(st); }
+    if (st.kind === 'zero') { return zeroBody(st); }
+    return '';
+  }
+
+  /* 1 · 속성별로 다른 공식.
+   * 보험품과 계획품을 나란히 두어야 「왜 계획품은 0 인가」 가 한눈에 보인다 */
+  function formulaBody(st) {
+    var z = st.z, sl = st.sl;
+    var zChips = Object.keys(z).map(function (k) {
+      var cls = k === 'S' ? 'insur' : (k === 'A' ? 'core' : (k === 'B' ? 'plan' : ''));
+      return '<span class="badge ' + cls + '">' + k + ' ' + z[k] +
+        ' <span style="opacity:.7">(' + (sl[k] * 100).toFixed(1) + '%)</span></span>';
+    }).join(' ');
+
+    return '<div class="dashrow c2" style="margin-bottom:0">' +
+      '<div class="fbox">' +
+        '<p class="gt"><span>' + UI.typeBadge('보험품') + ' ' + UI.num(st.ins) + '품목</span>' +
+          '<span class="gt-sub">고장 정지 위험 방어</span></p>' +
+        '<div class="formula"><div class="ft"><span>안전재고 공식</span></div>' +
+          st.insFormula.map(function (x) {
+            return '<code>' + UI.esc(x) + '</code>';
+          }).join('<br>') + '</div>' +
+        '<p class="gt" style="margin:12px 0 7px"><span>안전계수 Z · 등급별</span></p>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">' + zChips + '</div>' +
+        '<p class="note" style="margin-top:9px">' + UI.esc(st.zNote) + '</p>' +
+      '</div>' +
+      '<div class="fbox">' +
+        '<p class="gt"><span>' + UI.typeBadge('계획품') + ' ' + UI.num(st.pln) + '품목</span>' +
+          '<span class="gt-sub">정비 일정에 맞춰 직납</span></p>' +
+        '<div class="formula"><div class="ft"><span>무재고 원칙</span></div>' +
+          '<code>목표 = 0 (상시 무재고)</code><br>' +
+          st.plnFormula.map(function (x) {
+            return '<code>' + UI.esc(x) + '</code>';
+          }).join('<br>') + '</div>' +
+        '<p class="note" style="margin-top:9px">' + UI.esc(st.plnNote) + '</p>' +
+      '</div>' +
+      '</div>';
+  }
+
+  /* 3 · 조치 판정 · 목록이 들어간다 */
+  function tableBody(st) {
+    return '<div class="phead" style="margin-bottom:12px">' +
+        '<div class="tabs" id="stabs"></div>' +
+        '<div class="ptools">' +
+          '<input class="input" id="sq" type="search" placeholder="자재명 · 자재코드 검색" ' +
+            'style="width:230px;padding:8px 12px;min-height:0" value="' + UI.esc(query) + '">' +
+        '</div>' +
+      '</div>' +
+      '<div class="tablewrap" id="stable"></div>' +
+      '<div class="pagerow"><span id="sinfo">&nbsp;</span>' +
+        '<span class="pg"><button class="btn line sm" type="button" id="sprev">이전</button>' +
+        '<button class="btn line sm" type="button" id="snext">다음</button></span></div>' +
+      '<div class="formula" style="margin-top:12px">' +
+        '<div class="ft"><span>보험품 신호</span></div>' +
+        st.signalIns.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
+        '<div class="ft" style="margin:8px 0 5px"><span>계획품 신호</span></div>' +
+        st.signalPln.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
+      '</div>';
+  }
+
+  function paintTable() {
+    if (!el('stable')) { return; }
+    var c = S.stockCounts();
+    el('stabs').innerHTML = S.STOCK_TABS.map(function (t) {
+      return '<button class="tab' + (t.key === tab ? ' on' : '') + '" type="button" ' +
+        'data-stab="' + t.key + '">' + UI.esc(t.label) + ' ' + UI.num(c[t.key]) + '</button>';
+    }).join('');
+
+    var rows = S.stockList(tab, query);
+    var max = Math.max(0, Math.ceil(rows.length / PAGE) - 1);
+    if (page > max) { page = max; }
+    var view = rows.slice(page * PAGE, page * PAGE + PAGE);
+
+    el('stable').innerHTML = view.length ?
+      '<table><thead><tr><th>자재 · 코드</th><th>속성 · 등급</th>' +
+      '<th class="num">보유 → 목표</th><th>조치</th><th>작업</th></tr></thead><tbody>' +
+      view.map(function (r) {
+        var move = Math.max(0, Number(r.stockAll) - Number(r.stock));
+        return '<tr>' +
+          '<td data-label="자재 · 코드"><div class="cell-2">' +
+            '<div class="cell-1st">' + UI.esc(r.name || '품명 미확인') + '</div>' +
+            '<div class="cell-2nd">' + UI.esc(r.q) +
+              (r.eq ? ' · ' + UI.esc(r.eq) : '') +
+              (r.csp ? ' · 핵심예비품' : '') + '</div>' +
+          '</div></td>' +
+          '<td data-label="속성 · 등급">' + UI.typeBadge(r.type) + ' ' +
+            UI.gradeBadge(r.grade) + '</td>' +
+          '<td class="num" data-label="보유 → 목표"><span>' +
+            '<button class="linkq" type="button" data-q="' + UI.esc(r.q) + '">' +
+              UI.num(r.stock) + '</button>' +
+            '<span class="arrow">→</span>' + UI.num(r.target) + '</span></td>' +
+          '<td data-label="조치">' + actionBadge(r) + '</td>' +
+          '<td data-label="작업">' + work(r, move) + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table>' :
+      '<div class="empty"><strong>' + (query ? '찾는 자재가 없습니다' : '이 칸에는 자재가 없습니다') +
+      '</strong>' + (query ? '코드 앞 두 자리만 넣어 보거나 품명으로 찾으세요'
+        : '다른 칸을 눌러 보세요') + '</div>';
+
+    el('sinfo').textContent = rows.length
+      ? ('표시 ' + view.length + '건 · 전체 ' + UI.num(rows.length) + '건 · ' +
+         (page + 1) + ' / ' + (max + 1))
+      : '표시할 자재가 없습니다';
+    el('sprev').disabled = page <= 0;
+    el('snext').disabled = page >= max;
+  }
+
+  function actionBadge(r) {
+    if (r.actionNow === '발주') {
+      return '<span class="badge core">발주 ' + UI.num(r.needNow) + '</span>';
+    }
+    if (r.actionNow === '감축') {
+      return '<span class="badge ok">감축 ' + UI.num(Math.max(0, r.stock - r.target)) + '</span>';
+    }
+    return '<span class="badge">유지</span>';
+  }
+
+  /* 작업은 3층에 쌓는다. 정본과 판정은 그대로 남는다 */
+  function work(r, move) {
+    if (r.actionNow === '발주') {
+      return '<button class="btn sm" type="button" data-draft="' + UI.esc(r.q) + '">' +
+        'PR 초안</button>' +
+        (move > 0 ? ' <span class="badge plan">이관 ' + UI.num(move) + '</span>' : '');
+    }
+    if (r.actionNow === '감축') {
+      return '<button class="btn soft sm" type="button" data-pool="' + UI.esc(r.q) + '">' +
+        '공용 전환</button>';
+    }
+    return '<span class="sub">적정 운용중</span>';
+  }
+
+  /* 4 · 공용화 후보 · 회수액을 두 값으로 나눈다.
+   * review 는 핵심이고 보험품이라 공용화 대상이 아니다. 전부 더하면 회수액이 부풀려진다 */
+  function poolBody(st) {
+    return '<div class="dashrow c2" style="margin-bottom:0">' +
+      '<div class="fbox">' +
+        '<div class="statrow" style="box-shadow:none;border:0;padding:0;margin:0;background:none">' +
+          cell(UI.wonShort(st.amt), UI.wonShortUnit(st.amt), '회수 가능', '즉시공용화 · 권장', 'ok') +
+          cell(UI.num(st.hold), '품목', '보류', UI.won(st.holdAmt) + ' · 재분류 검토', 'core') +
+        '</div>' +
+      '</div>' +
+      '<div class="fbox">' +
+        '<div class="formula"><div class="ft"><span>정체 판정</span></div>' +
+          '<code>' + UI.esc(st.stale) + '</code>' +
+          '<div class="ft" style="margin:8px 0 5px"><span>공용화 규칙</span></div>' +
+          st.pool.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
+        '</div>' +
+      '</div></div>';
+  }
+
+  /* 5 · 금융비용 · 상수를 화면이 만들지 않는다. 명세 문장에서 읽은 값이다 */
+  function finBody(st) {
+    return '<div class="fin-pill" style="margin-top:0">' +
+        '<span class="fic">₩</span>' +
+        '<span><b>연 ' + UI.won(st.finance) + '</b>' +
+        '감축 ' + UI.won(st.cutAmt) + ' + 공용화 회수 ' + UI.won(st.poolAmt) +
+        ' 기준 (부서 모집단)</span></div>' +
+      '<div class="formula"><div class="ft"><span>절감액 산식</span>' +
+        '<span>명세에서 읽은 상수</span></div>' +
+        '<code>' + UI.esc(st.text) + '</code><br>' +
+        '<code>(' + UI.num(st.cutAmt) + ' + ' + UI.num(st.poolAmt) + ') × ' +
+        st.rate + ' × ' + st.interest + ' = ' + UI.num(st.finance) + '원</code></div>';
+  }
+
+  /* 6 · 무재고가 왜 정상인지. 이걸 안 적으면 데이터가 빈 것처럼 보인다 */
+  function zeroBody(st) {
+    var pct = UI.pct(st.zeroTarget, st.items);
+    return '<div class="callout ok"><span class="ci">✓</span>' +
+      '<span><b>목표재고 0 이 ' + UI.num(st.zeroTarget) + '품목 · ' + pct + '</b>' +
+      '계획품은 상시 재고 0 이 원칙입니다. 데이터가 빈 것이 아니라 ' +
+      '정비 일정에 맞춰 직납받는 것이 정답인 품목입니다.</span></div>' +
+      '<p class="note">핵심설비 · 최근 3년 소요 · 활발한 소요가 모두 맞을 때만 1 을 둡니다.</p>';
+  }
+
+  // ------------------------------------------------------------ 이벤트
+  function wire() {
+    UI.accordion(document);
+
+    el('steps').addEventListener('click', function (e) {
+      var t = e.target;
+      var stab = t.closest && t.closest('[data-stab]');
+      if (stab) { tab = stab.getAttribute('data-stab'); page = 0; paintTable(); return; }
+      if (t.closest && t.closest('#sprev')) { page -= 1; paintTable(); return; }
+      if (t.closest && t.closest('#snext')) { page += 1; paintTable(); return; }
+
+      /* 보유 수량을 누르면 그 값이 어떻게 나왔는지 그대로 보여 준다 */
+      var lq = t.closest && t.closest('.linkq');
+      if (lq) {
+        var r = DB.item(lq.getAttribute('data-q'));
+        if (!r) { return; }
+        POP.show(lq, {
+          title: r.name + ' · ' + r.q,
+          rows: S.stockBreak(r),
+          formula: r.reason || '',
+          note: '조달 ' + (r.proc || '미확인') + ' · 리드타임 평균 ' + UI.num(r.ltMean) +
+                '일 · 공급사 ' + UI.num(r.suppliers) + '곳'
+        });
+        return;
+      }
+
+      /* 초안 · 공용 전환은 3층에 쌓는다. 정본은 손대지 않는다 */
+      var dq = t.closest && t.closest('[data-draft]');
+      if (dq) {
+        var q = dq.getAttribute('data-draft');
+        var m = DB.item(q);
+        try {
+          DB.draft('PR', { q: q, data: { qty: m.needNow, why: '적정재고 분석 · 발주 필요' } });
+          POP.show(dq, {
+            title: '구매신청 초안을 만들었습니다',
+            rows: [['자재', m.name + ' · ' + q], ['수량', UI.num(m.needNow)],
+                   ['다음', '구매신청 (PR) 화면에서 확인']],
+            note: '초안은 3층에 쌓입니다. 정본과 판정값은 그대로입니다.'
+          });
+        } catch (err) {
+          POP.show(dq, { title: '초안을 만들지 못했습니다', rows: [['이유', String(err.message)]] });
+        }
+        return;
+      }
+
+      var pq = t.closest && t.closest('[data-pool]');
+      if (pq) {
+        var q2 = pq.getAttribute('data-pool');
+        var m2 = DB.item(q2);
+        try {
+          DB.pool({ q: q2, action: '공용전환', note: '적정재고 분석 · 감축 대상' });
+          POP.show(pq, {
+            title: '공용 전환으로 표시했습니다',
+            rows: [['자재', m2.name + ' · ' + q2],
+                   ['넘치는 수량', UI.num(Math.max(0, m2.stock - m2.target))],
+                   ['회수 금액', UI.won(Math.max(0, m2.stock - m2.target) * m2.price)]],
+            note: '재고를 바꾸지 않습니다. 공용 전환 의사만 3층에 기록합니다.'
+          });
+        } catch (err) {
+          POP.show(pq, { title: '기록하지 못했습니다', rows: [['이유', String(err.message)]] });
+        }
+      }
+    });
+
+    /* 검색은 입력할 때마다 다시 센다. 743행이라 눌러도 바로 나온다 */
+    el('steps').addEventListener('input', function (e) {
+      if (e.target.id !== 'sq') { return; }
+      query = e.target.value;
+      page = 0;
+      var pos = e.target.selectionStart;
+      paintTable();
+      var again = el('sq');
+      if (again) { again.focus(); again.setSelectionRange(pos, pos); }
+    });
+  }
+
+  function paintAll() {
+    var m = window.DB ? DB.meta() : null;
+    el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
+    paintStat();
+    paintSteps();
+  }
+
+  paintAll();
+  wire();
+  S.on(function () { paintStat(); paintTable(); });
+
+  /* 주소에 #order 가 붙어 오면 조치 판정 단계를 펼친다.
+   * 대시보드의 「적정재고 분석 열기」 가 그 주소로 온다 */
+  if ((location.hash || '').indexOf('order') >= 0 || (location.hash || '').indexOf('cut') >= 0) {
+    tab = (location.hash.indexOf('cut') >= 0) ? 'cut' : 'order';
+    var s3 = el('s-3');
+    if (s3) {
+      s3.classList.add('open');
+      s3.querySelector('.sect-arrow').textContent = '∧';
+      s3.querySelector('.sect-head').setAttribute('aria-expanded', 'true');
+      paintTable();
+      s3.scrollIntoView({ block: 'start' });
+    }
+  }
+})();
+</script>
+<script src="assets/tour.js"></script>
+</body>
+</html>

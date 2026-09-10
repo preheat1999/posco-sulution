@@ -42,6 +42,9 @@
       </section>
     </div>
 
+    <!-- 숫자 하나와 갈 곳 하나. 대시보드에서 바로 손이 가는 세 가지다 -->
+    <div class="quick" id="quick"></div>
+
     <div class="dashrow c3">
       <a class="kpigroup" id="kpi-attr" href="attr.html"></a>
       <a class="kpigroup" id="kpi-stock" href="stock.html"></a>
@@ -52,7 +55,10 @@
             <h2>정비 예정 · 발주 마감</h2>
             <p class="sub" id="due-sub">&nbsp;</p>
           </div>
-          <div class="card-tools"><a class="btn line sm" href="plan.html">열기</a></div>
+          <div class="card-tools">
+            <a class="btn line sm" href="plan.html">정비계획</a>
+            <a class="btn sm" href="purchase.html">구매신청</a>
+          </div>
         </header>
         <div class="due" id="due"></div>
         <p class="note" id="due-note">&nbsp;</p>
@@ -241,6 +247,27 @@
 
   function metaCell(value, label) {
     return '<div><b>' + value + '</b><span>' + label + '</span></div>';
+  }
+
+  /* 빠른 실행 · 지금 손이 가야 하는 세 곳을 숫자와 함께 둔다.
+   * 링크만 있으면 「몇 건인지」 를 모르고, 숫자만 있으면 「어디로 가는지」 를 모른다 */
+  function paintQuick() {
+    var d = A.donut(), w = A.money(), s = A.summary();
+    var q = [
+      { cls: 'plan', ico: '◐', v: UI.num(d.change) + '건', k: '재분류 추천 · 속성값 판단',
+        href: 'attr.html#all' },
+      { cls: 'ok', ico: '▦', v: UI.wonShort(w.cutAmt) + UI.wonShortUnit(w.cutAmt),
+        k: '재고 절감 · 적정재고 분석', href: 'stock.html#cut' },
+      { cls: 'ins', ico: '⚙', v: UI.num(s.signal.red || 0) + '품목', k: '긴급 발주 · 구매신청',
+        href: 'purchase.html' }
+    ];
+    document.getElementById('quick').innerHTML = q.map(function (x) {
+      return '<a class="' + x.cls + '" href="' + x.href + '">' +
+        '<span class="qi">' + x.ico + '</span>' +
+        '<span class="qb"><span class="qv">' + x.v + '</span>' +
+          '<span class="qk">' + UI.esc(x.k) + '</span></span>' +
+        '<span class="qa">→</span></a>';
+    }).join('');
   }
 
   function paintKpi() {
@@ -598,6 +625,7 @@
   // ------------------------------------------------------------ 시작 · 구독
   function paintAll() {
     paintKpi();
+    paintQuick();
     paintTodo();
     paintDue();
     paintPipe();
@@ -622,6 +650,7 @@
   }
 })();
 </script>
+<script src="assets/chat.js"></script>
 <script src="assets/tour.js"></script>
 </body>
 </html>

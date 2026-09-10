@@ -19,8 +19,8 @@
       label: '관리',
       items: [
         { key: 'main', name: 'Dashboard', href: 'main.html', ico: '▤' },
-        { key: 'search', name: '자재 검색', href: 'search.html', ico: '⌕', sub: 'POS APPIA' },
-        { key: 'evidence', name: '데이터 근거', href: 'evidence.html', ico: '◈', sub: '0건이 네 개' }
+        { key: 'search', name: '자재 검색', href: 'search.html', ico: '⌕', soon: true },
+        { key: 'evidence', name: '데이터 근거', href: 'evidence.html', ico: '◈', soon: true }
       ]
     },
     {
@@ -29,7 +29,7 @@
         { key: 'attr', name: '속성값 판단', href: 'attr.html', ico: '◐', count: 'gray' },
         { key: 'stock', name: '적정재고 분석', href: 'stock.html', ico: '▦', count: 'order' },
         { key: 'plan', name: '정비계획 소요 발주', href: 'plan.html', ico: '⚙', count: 'over' },
-        { key: 'report', name: '주간 리포트', href: 'report.html', ico: '✉', sub: '메일 발송' }
+        { key: 'report', name: '주간 리포트', href: 'report.html', ico: '✉', soon: true }
       ]
     },
     {
@@ -89,6 +89,18 @@
       html += '<div class="navgroup"><div class="navgroup-label">' + esc(g.label) + '</div>';
       g.items.forEach(function (it) {
         var c = it.count ? n[it.count] : null;
+        /* 아직 만들지 않은 화면은 링크로 두지 않는다.
+         * 누르면 404 가 뜨는 메뉴는 시연에서 제일 나쁜 것이다.
+         * 「준비 중」 이라고 적어 두고 화면이 생기면 soon 만 지운다 */
+        if (it.soon) {
+          html += '<span class="navitem soon" aria-disabled="true">' +
+            '<span class="navitem-ico" aria-hidden="true">' + it.ico + '</span>' +
+            '<span class="navitem-body">' +
+              '<span class="navitem-name">' + esc(it.name) + '</span>' +
+              '<span class="navitem-sub">준비 중</span>' +
+            '</span></span>';
+          return;
+        }
         html += '<a class="navitem' + (it.key === page ? ' on' : '') + '" href="' + esc(it.href) + '">' +
           '<span class="navitem-ico" aria-hidden="true">' + it.ico + '</span>' +
           '<span class="navitem-body">' +

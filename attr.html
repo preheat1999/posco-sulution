@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>속성값 판단 · AI 자재 솔루션</title>
+<link rel="stylesheet" href="assets/shell.css">
+<script>window.PAGE = 'attr';</script>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="side" id="side"></aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="top-left">
+        <button class="hamb" id="hamb" aria-label="메뉴" aria-expanded="false">&#9776;</button>
+        <div>
+          <div class="crumb" data-group="분석">&nbsp;</div>
+          <div class="phead" style="margin-bottom:0">
+            <h1>속성값 판단</h1>
+            <span class="badge ok" id="progress">&nbsp;</span>
+          </div>
+        </div>
+      </div>
+      <div class="top-right">
+        <span class="pill" id="asof">기준일 확인 중</span>
+        <div class="avatar">이</div>
+      </div>
+    </div>
+
+    <!-- 손대야 하는 것만 목록에 올린다. 판정일치와 배제는 셈에서 빼고 아래에 적는다 -->
+    <div class="phead">
+      <div class="tabs" id="tabs"></div>
+      <div class="ptools">
+        <div class="seg" id="sort">
+          <button type="button" data-sort="amt" class="on">재고금액 순</button>
+          <button type="button" data-sort="gap">점수차 순</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div>
+        <div class="picklist" id="list"></div>
+        <div class="pagerow">
+          <span id="pinfo">&nbsp;</span>
+          <span class="pg">
+            <button class="btn line sm" type="button" id="prev">이전</button>
+            <button class="btn line sm" type="button" id="next">다음</button>
+          </span>
+        </div>
+        <p class="note" id="lnote" style="margin-top:12px">&nbsp;</p>
+      </div>
+
+      <section class="card sticky" id="panel"></section>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<script src="assets/config.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/org.js"></script>
+<script src="assets/popover.js"></script>
+<script src="assets/db-master.js"></script>
+<script src="assets/db-derived.js"></script>
+<script src="assets/db-changes.js"></script>
+<script src="assets/db.js"></script>
+<script src="assets/db-biz.js"></script>
+<script src="assets/plan-data.js"></script>
+<script src="assets/analysis-data.js"></script>
+<script src="assets/screen-data.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var S = window.SCREEN;
+  var PAGE = 12;                 // 한 번에 보여 줄 줄 수
+  var tab = 'gray';              // 사람이 판단할 것부터 띄운다
+  var sort = 'amt';
+  var page = 0;
+  var picked = null;             // 고른 자재의 PK
+  var listRows = [];
+
+  /* 대시보드에서 「속성값 판단 열기」 로 들어오면 보류 건부터 본다.
+   * 주소에 다른 칸이 적혀 있으면 그것을 존중한다 */
+  var hash = (location.hash || '').replace('#', '');
+  if (hash && ['all', 'i2p', 'p2i', 'gray', 'done'].indexOf(hash) >= 0) { tab = hash; }
+
+  function el(id) { return document.getElementById(id); }
+
+  // ------------------------------------------------------------ 칸 · 목록
+  function paintTabs() {
+    var c = S.attrCounts();
+    el('tabs').innerHTML = S.ATTR_TABS.map(function (t) {
+      return '<button class="tab' + (t.key === tab ? ' on' : '') + '" type="button" ' +
+        'data-tab="' + t.key + '">' + UI.esc(t.label) + ' ' + UI.num(c[t.key]) + '</button>';
+    }).join('');
+
+    var done = c.done;
+    el('progress').textContent = done
+      ? ('승인 ' + UI.num(done) + '건 · 검토 ' + UI.num(c.gray + done) + ' → ' + UI.num(c.gray) + '품목')
+      : ('검토 대기 ' + UI.num(c.gray) + '품목');
+  }
+
+  function paintList() {
+    listRows = S.attrList(tab, sort);
+    var total = listRows.length;
+    var max = Math.max(0, Math.ceil(total / PAGE) - 1);
+    if (page > max) { page = max; }
+    var view = listRows.slice(page * PAGE, page * PAGE + PAGE);
+
+    /* 고른 줄이 이번 칸에 없으면 첫 줄로 옮긴다.
+     * 안 그러면 오른쪽 패널만 옛 자재로 남는다 */
+    if (!view.filter(function (r) { return r.key === picked; }).length) {
+      picked = view.length ? view[0].key : null;
+    }
+
+    el('list').innerHTML = view.length ? view.map(function (r) {
+      var b = S.attrBucket(r);
+      var col = { i2p: 'var(--brand)', p2i: 'var(--insur)', gray: 'var(--core)',
+                  done: 'var(--ok)' }[b] || 'var(--slate)';
+      return '<button class="pick' + (r.key === picked ? ' on' : '') + '" type="button" ' +
+        'data-key="' + UI.esc(r.key) + '">' +
+        '<span class="pick-dot" style="background:' + col + '"></span>' +
+        '<span class="pick-body">' +
+          '<span class="pick-name">' + UI.esc(r.name || '품명 미확인') + ' ' +
+            UI.typeBadge(r.type) +
+            (r.csp ? ' <span class="badge core">핵심예비품</span>' : '') +
+            (r.typeSrc === 'override' ? ' <span class="badge ok">승인 완료</span>' : '') +
+          '</span>' +
+          '<span class="pick-meta">' + UI.esc(r.q) + ' · ' + UI.esc(r.grade || '?') +
+            '등급 · 재고 ' + UI.num(r.stock) + ' · ' + UI.won(r.stock * r.price) + '</span>' +
+        '</span>' +
+        '<span class="pick-right">' +
+          '<span class="pick-v">' + S.gap(r).toFixed(1) + '</span>' +
+          '<span class="pick-k">점수차</span>' +
+        '</span></button>';
+    }).join('') :
+      '<div class="empty"><strong>이 칸에는 자재가 없습니다</strong>' +
+      '다른 칸을 눌러 보세요 · 「현행유지」 가 사람이 판단할 몫입니다</div>';
+
+    el('pinfo').textContent = total
+      ? ('표시 ' + UI.num(view.length) + '건 · 전체 ' + UI.num(total) + '건 · ' +
+         (page + 1) + ' / ' + (max + 1))
+      : '표시할 자재가 없습니다';
+    el('prev').disabled = page <= 0;
+    el('next').disabled = page >= max;
+
+    var c = S.attrCounts();
+    el('lnote').innerHTML = '이 목록은 <b>손대야 하는 ' + UI.num(c.all) + '품목</b>입니다. ' +
+      '판정일치 ' + UI.num(c.same) + '품목과 배제 ' + UI.num(c.out) +
+      '품목(소모품 · 순환품)은 목록에 올리지 않습니다. ' +
+      '점수차가 작은 것이 알고리즘이 가장 헷갈린 자재입니다.';
+  }
+
+  // ------------------------------------------------------------ 근거 패널
+  function paintPanel() {
+    var r = picked && window.DB ? DB.item(picked.split('|')[0], picked.split('|')[1]) : null;
+    var d = S.attrDetail(r);
+    if (!d) {
+      el('panel').innerHTML = '<div class="empty"><strong>왼쪽에서 자재를 고르세요</strong>' +
+        '고른 자재의 점수와 근거가 여기에 나옵니다</div>';
+      return;
+    }
+
+    var si = Number(r.si) || 0, sp = Number(r.sp) || 0;
+    var cls = d.bucket === 'gray' ? 'gray'
+      : (d.bucket === 'done' ? 'ok' : (r.verdict === '보험품' ? 'ins' : 'pln'));
+    var mark = d.bucket === 'gray' ? '△' : (d.bucket === 'done' ? '✓' : '✦');
+
+    el('panel').innerHTML =
+      '<p class="gt"><span>자재 판정 근거</span>' +
+        '<span class="gt-sub">' + UI.srcLabel(r.typeSrc) + '</span></p>' +
+
+      '<h2 style="font-size:20px;letter-spacing:-.6px;margin-bottom:4px">' +
+        UI.esc(r.name || '품명 미확인') + '</h2>' +
+      /* 소속 이름은 로그인이 고른 조직 트리에서 온다.
+         정본의 부서 경로를 쓰면 빵조각과 다른 이름이 떠서 두 부서처럼 보인다 */
+      '<p class="sub">' + UI.esc(r.q) + ' · ' +
+        UI.esc((window.ORG ? ORG.load().part : '') || r.dept) + ' · ' +
+        UI.esc(r.dept) + ' · ' + UI.gradeBadge(r.grade) + '</p>' +
+
+      /* 점수 두 개를 한 축에 놓는다. 두 점이 붙어 있으면 그게 회색지대다 */
+      '<div class="axis2">' +
+        '<div class="axis2-head">' +
+          '<span style="color:var(--brand)">계획품 점수 <b>' + sp.toFixed(1) + '</b></span>' +
+          '<span style="color:var(--insur)">보험품 점수 <b>' + si.toFixed(1) + '</b></span>' +
+        '</div>' +
+        '<div class="axis2-track">' +
+          '<span class="axis2-mid"></span>' +
+          '<span class="axis2-dot sp" style="left:' + clamp(sp) + '%"></span>' +
+          '<span class="axis2-dot si" style="left:' + clamp(si) + '%"></span>' +
+        '</div>' +
+        '<div class="axis2-foot"><span>0점</span>' +
+          '<span>점수차 ' + d.gap.toFixed(1) + '점</span><span>100점</span></div>' +
+      '</div>' +
+
+      '<div class="callout ' + cls + '">' +
+        '<span class="ci">' + mark + '</span>' +
+        '<span><b>' + UI.esc(d.bucket === 'done' ? ('담당자 확정 · ' + r.type)
+          : UI.verdict(r.verdict)) + '</b>' + UI.esc(d.verdictText) + '</span>' +
+      '</div>' +
+
+      '<p class="gt" style="margin:14px 0 8px"><span>점수를 만든 값</span>' +
+        '<span class="gt-sub">신뢰도 ' + UI.esc(d.confText) + '</span></p>' +
+      '<div class="pgrid">' + d.params.map(function (p) {
+        return '<div><div class="pk">' + UI.esc(p[0]) + '</div>' +
+          '<div class="pv' + (p[2] ? ' ' + p[2] : '') + '">' + UI.esc(p[1]) + '</div></div>';
+      }).join('') + '</div>' +
+
+      /* 산식과 가중치는 명세에서 읽은 값이다. 화면이 만들지 않는다 */
+      '<div class="formula">' +
+        '<div class="ft"><span>적용 가중치</span><span>명세 부록 · 7요인 가중합</span></div>' +
+        '<code>' + UI.esc(d.weightText) + '</code>' +
+        (d.why ? '<div class="ft" style="margin:8px 0 0"><span>판정 메모</span></div>' +
+          UI.esc(d.why) : '') +
+      '</div>' +
+
+      /* 승인은 반드시 DB 로 간다. 화면에 숫자를 적어 두지 않는다 */
+      '<div class="decide">' +
+        '<p class="decide-note">' + (r.typeSrc === 'override'
+          ? '담당자가 <b>' + UI.esc(r.type) + '</b> 으로 확정한 자재입니다'
+          : '담당자 승인이 이 자재의 <b>첫 라벨</b>이 됩니다') + '</p>' +
+        (r.typeSrc === 'override'
+          ? '<div class="decide-row"><button class="btn ghost" type="button" ' +
+            'data-act="revert">승인 되돌리기</button></div>'
+          : '<div class="decide-row">' +
+            '<button class="btn ins" type="button" data-act="보험품">보험품으로 확정</button>' +
+            '<button class="btn pln" type="button" data-act="계획품">계획품으로 확정</button>' +
+            '</div>' +
+            '<div class="decide-row" style="margin-top:8px">' +
+            '<button class="btn ghost" type="button" data-act="keep">현행유지 · ' +
+              UI.esc(r.baseType) + ' 그대로</button></div>') +
+      '</div>';
+  }
+
+  function clamp(v) { return Math.max(2, Math.min(98, Number(v) || 0)).toFixed(1); }
+
+  // ------------------------------------------------------------ 이벤트 (한 번만 붙인다)
+  function wire() {
+    el('tabs').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('.tab');
+      if (!b) { return; }
+      tab = b.getAttribute('data-tab');
+      page = 0;
+      location.hash = tab;
+      paintTabs(); paintList(); paintPanel();
+    });
+
+    el('sort').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('button');
+      if (!b) { return; }
+      sort = b.getAttribute('data-sort');
+      [].forEach.call(el('sort').children, function (x) {
+        x.classList.toggle('on', x === b);
+      });
+      page = 0;
+      paintList(); paintPanel();
+    });
+
+    el('list').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('.pick');
+      if (!b) { return; }
+      picked = b.getAttribute('data-key');
+      paintList(); paintPanel();
+    });
+
+    el('prev').addEventListener('click', function () { page -= 1; paintList(); paintPanel(); });
+    el('next').addEventListener('click', function () { page += 1; paintList(); paintPanel(); });
+
+    /* 승인 · 되돌리기. 여기가 이 서비스의 핵심 동작이다.
+     * 화면이 값을 고치지 않고 DB 에 쓰면, 구독이 화면 전체를 다시 그린다 */
+    el('panel').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-act]');
+      if (!b || !picked || !window.DB) { return; }
+      var q = picked.split('|')[0], dept = picked.split('|')[1];
+      var act = b.getAttribute('data-act');
+      var r = DB.item(q, dept);
+      if (!r) { return; }
+      try {
+        if (act === 'revert') { DB.revertAttr({ q: q, dept: dept }); }
+        else {
+          DB.approveAttr({
+            q: q, dept: dept,
+            newType: act === 'keep' ? r.baseType : act,
+            reason: act === 'keep' ? '담당자 확인 · 현행유지' : '담당자 확정 · 속성값 판단'
+          });
+        }
+      } catch (err) {
+        POP.show(b, { title: '승인하지 못했습니다', rows: [['이유', String(err.message || err)]] });
+      }
+    });
+  }
+
+  function paintAll() {
+    var m = window.DB ? DB.meta() : null;
+    el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
+    paintTabs(); paintList(); paintPanel();
+  }
+
+  paintAll();
+  wire();
+
+  /* 승인 한 건이 이 화면과 사이드바 배지를 같이 움직인다 */
+  S.on(paintAll);
+
+  if (!S.live) {
+    el('lnote').innerHTML = '<b>DB 스크립트가 뜨지 않았습니다.</b> ' +
+      'assets/db-master.js 부터 db.js 까지 로드 순서를 확인하세요.';
+  }
+})();
+</script>
+<script src="assets/tour.js"></script>
+</body>
+</html>

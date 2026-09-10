@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정비계획 소요 발주 · AI 자재 솔루션</title>
+<link rel="stylesheet" href="assets/shell.css">
+<script>window.PAGE = 'plan';</script>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="side" id="side"></aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="top-left">
+        <button class="hamb" id="hamb" aria-label="메뉴" aria-expanded="false">&#9776;</button>
+        <div>
+          <div class="crumb" data-group="분석">&nbsp;</div>
+          <h1>정비계획 소요 발주</h1>
+        </div>
+      </div>
+      <div class="top-right">
+        <span class="pill" id="asof">기준일 확인 중</span>
+        <div class="avatar">이</div>
+      </div>
+    </div>
+
+    <div class="statrow" id="stat"></div>
+
+    <!-- 마감일이 무엇인지 먼저 말한다. 이 산식을 모르면 「초과 287일」 이 뜻을 잃는다 -->
+    <section class="card" id="rule"></section>
+
+    <div class="phead">
+      <div class="tabs" id="tabs"></div>
+      <div class="ptools">
+        <div class="seg" id="sort">
+          <button type="button" data-sort="due" class="on">마감 급한 순</button>
+          <button type="button" data-sort="stop">휴지일 순</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="list"></div>
+    <div class="pagerow">
+      <span id="pinfo">&nbsp;</span>
+      <span class="pg">
+        <button class="btn line sm" type="button" id="prev">이전</button>
+        <button class="btn line sm" type="button" id="next">다음</button>
+      </span>
+    </div>
+
+    <p class="note" style="margin-top:14px" id="foot">&nbsp;</p>
+  </main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<script src="assets/config.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/org.js"></script>
+<script src="assets/popover.js"></script>
+<script src="assets/db-master.js"></script>
+<script src="assets/db-derived.js"></script>
+<script src="assets/db-changes.js"></script>
+<script src="assets/db.js"></script>
+<script src="assets/db-biz.js"></script>
+<script src="assets/plan-data.js"></script>
+<script src="assets/analysis-data.js"></script>
+<script src="assets/screen-data.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var S = window.SCREEN;
+  var sort = 'due';
+  var tab = 'over';
+  var PAGE = 6;
+  var page = 0;
+  var open = {};        // 펼친 WO
+
+  var TABS = [
+    { key: 'over', label: '마감 초과' },
+    { key: 'need', label: '발주 필요' },
+    { key: 'all', label: '전체' }
+  ];
+
+  function el(id) { return document.getElementById(id); }
+  function asof() { return window.DB ? DB.meta().asof : (window.CFG && CFG.BASE_DATE); }
+
+  function paintStat() {
+    var c = S.planCounts();
+    el('stat').innerHTML =
+      cell(UI.num(c.wos), '건', '정비계획', '기준일 이후 · 우리 부서 설비') +
+      cell(UI.num(c.over), '건', '마감 초과', '발주 마감일을 넘겼습니다', 'ins') +
+      cell(UI.num(c.now), '건', '지금 신청', '재고가 예상 소요보다 적습니다', 'core') +
+      cell(UI.num(c.mats), '품목', '소요 자재', '정비계획에 걸린 자재');
+  }
+
+  function cell(v, unit, k, x, cls) {
+    return '<div><div class="sv' + (cls ? ' ' + cls : '') + '">' + v +
+      (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
+      '<div class="sk">' + k + '</div><div class="sx">' + x + '</div></div>';
+  }
+
+  /* 마감일 산식. 상수는 명세에서 읽는다 · 화면이 만들지 않는다 */
+  function paintRule() {
+    var P = window.PLAN;
+    if (!P) { el('rule').innerHTML = '<div class="empty"><strong>정비계획 데이터가 없습니다</strong>' +
+      'assets/plan-data.js 를 확인하세요</div>'; return; }
+    var lead = P.meta.leadDays || {};
+    el('rule').innerHTML =
+      '<header><div><h2>발주 마감일은 이렇게 나옵니다</h2></div>' +
+        '<div class="card-tools"><span class="badge plan">역산 · 내림</span></div></header>' +
+      '<div class="formula" style="margin-top:0">' +
+        '<div class="ft"><span>산식</span><span>명세 · 2단계 적정재고</span></div>' +
+        '<code>' + UI.esc(P.meta.formula) + '</code>' +
+        '<div class="ft" style="margin:9px 0 5px"><span>휴지구분별 선행일수</span></div>' +
+        '<code>' + Object.keys(lead).map(function (k) {
+          return k + ' ' + lead[k] + '일';
+        }).join(' · ') + '</code>' +
+      '</div>' +
+      '<p class="note" style="margin-top:10px">' + UI.esc(P.meta.dueNote) + ' · ' +
+        UI.esc(P.meta.woNote) + '</p>';
+  }
+
+  // ------------------------------------------------------------ 목록
+  function filtered() {
+    var rows = S.planList(sort);
+    if (tab === 'over') { return rows.filter(function (w) { return w.tone === 'over'; }); }
+    if (tab === 'need') { return rows.filter(function (w) { return w.needCount > 0; }); }
+    return rows;
+  }
+
+  function paintTabs() {
+    var all = S.planList('due');
+    var n = {
+      over: all.filter(function (w) { return w.tone === 'over'; }).length,
+      need: all.filter(function (w) { return w.needCount > 0; }).length,
+      all: all.length
+    };
+    el('tabs').innerHTML = TABS.map(function (t) {
+      return '<button class="tab' + (t.key === tab ? ' on' : '') + '" type="button" ' +
+        'data-tab="' + t.key + '">' + t.label + ' ' + UI.num(n[t.key]) + '</button>';
+    }).join('');
+  }
+
+  function paintList() {
+    var rows = filtered();
+    var max = Math.max(0, Math.ceil(rows.length / PAGE) - 1);
+    if (page > max) { page = max; }
+    var view = rows.slice(page * PAGE, page * PAGE + PAGE);
+
+    el('list').innerHTML = view.length ? view.map(function (w) {
+      var on = !!open[w.wo];
+      var tone = w.tone || 'fine';
+      return '<div class="wo' + (on ? ' open' : '') + '" data-wo="' + UI.esc(w.wo) + '">' +
+        '<div class="wo-head" role="button" tabindex="0">' +
+          UI.face(tone) +
+          '<div style="min-width:0">' +
+            '<div class="wo-code">' + UI.esc(w.wo) + '</div>' +
+            '<div class="wo-name">' + UI.esc(w.eq || '설비 미확인') + '</div>' +
+            '<div class="wo-sub">' + UI.esc(w.kind || '휴지구분 미확인') + ' · ' +
+              UI.esc(w.factory || '') + ' · 자재 ' + UI.num(w.matCount) + '품목' +
+              (w.needCount ? ' · 발주 필요 ' + UI.num(w.needCount) + '품목' : '') + '</div>' +
+          '</div>' +
+          '<div class="wo-right">' +
+            '<div class="due-d tone-' + tone + '" style="font-size:13px">' +
+              UI.esc(UI.dleft(w.left)) + '</div>' +
+            '<div class="due-date">마감 ' + UI.esc(UI.date(w.dueDate)) + '</div>' +
+            '<div class="due-date">휴지 ' + UI.esc(UI.date(w.stopStart)) + '</div>' +
+          '</div>' +
+          '<span class="sect-arrow" style="margin-left:10px">' + (on ? '∧' : '∨') + '</span>' +
+        '</div>' +
+        '<div class="wo-body">' + (on ? woBody(w) : '') + '</div>' +
+        '</div>';
+    }).join('') :
+      '<div class="empty"><strong>이 칸에는 정비계획이 없습니다</strong>' +
+      '다른 칸을 눌러 보세요</div>';
+
+    el('pinfo').textContent = rows.length
+      ? ('표시 ' + view.length + '건 · 전체 ' + UI.num(rows.length) + '건 · ' +
+         (page + 1) + ' / ' + (max + 1))
+      : '표시할 정비계획이 없습니다';
+    el('prev').disabled = page <= 0;
+    el('next').disabled = page >= max;
+
+    var c = S.planCounts();
+    el('foot').innerHTML = '마감을 넘긴 ' + UI.num(c.over) + '건 중 <b>지금 신청해야 하는 것은 ' +
+      UI.num(c.now) + '건</b>입니다. 나머지는 마감을 넘겼지만 재고로 충당됩니다. ' +
+      '마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다릅니다.';
+  }
+
+  /* 펼친 WO · 세 날짜를 한 줄에 놓고, 걸린 자재를 표로 낸다 */
+  function woBody(w) {
+    var ax = S.planAxis(w, asof());
+    var mats = S.planMats(w);
+    var need = mats.filter(function (m) { return m.needOrder; });
+
+    /* 점 세 개를 위치 순으로 훑어 가까운 것에만 alt 를 붙인다.
+       점을 벌리면 날짜 간격을 거짓으로 보여 주는 셈이 된다 */
+    var marks = [];
+    if (ax.due !== null) { marks.push(['due', ax.due, '마감 ' + short(w.dueDate)]); }
+    marks.push(['now', ax.now, '오늘 ' + short(asof())]);
+    marks.push(['stop', ax.stop, '휴지 ' + short(w.stopStart)]);
+    marks.sort(function (a, b) { return a[1] - b[1]; });
+    var last = -99;
+    marks.forEach(function (m) {
+      m[3] = (m[1] - last) < 13;      // 13% 안쪽이면 글자를 아래로
+      last = m[1];
+    });
+
+    var line = '<div class="tline">' +
+      '<div class="tline-bar"></div>' +
+      (ax.fill ? '<div class="tline-fill" style="left:' + ax.fill[0].toFixed(1) +
+        '%;width:' + (ax.fill[1] - ax.fill[0]).toFixed(1) + '%"></div>' : '') +
+      marks.map(function (m) { return pt(m[0] + (m[3] ? ' alt' : ''), m[1], m[2]); }).join('') +
+      '</div>';
+
+    var table = mats.length ?
+      '<div class="tablewrap"><table><thead><tr>' +
+        '<th>자재 · 코드</th><th>속성</th><th class="num">예상 소요</th>' +
+        '<th class="num">현재고</th><th>과부족</th><th>조치</th>' +
+      '</tr></thead><tbody>' +
+      mats.map(function (m) {
+        if (m.missing) {
+          return '<tr><td data-label="자재 · 코드">' + UI.esc(m.q) +
+            '</td><td data-label="속성" colspan="5">정본에 없는 코드입니다</td></tr>';
+        }
+        return '<tr>' +
+          '<td data-label="자재 · 코드"><div class="cell-2">' +
+            '<div class="cell-1st">' + UI.esc(m.name || '품명 미확인') + '</div>' +
+            '<div class="cell-2nd">' + UI.esc(m.q) + '</div></div></td>' +
+          '<td data-label="속성">' + UI.typeBadge(m.type) + ' ' + UI.gradeBadge(m.grade) + '</td>' +
+          '<td class="num" data-label="예상 소요">' + UI.num(m.expect) + '</td>' +
+          '<td class="num" data-label="현재고">' + UI.num(m.stock) + '</td>' +
+          '<td data-label="과부족">' + (m.need > 0
+            ? '<span class="badge insur">' + UI.num(m.need) + ' 부족</span>'
+            : '<span class="badge ok">충당</span>') + '</td>' +
+          '<td data-label="조치">' + (m.needOrder
+            ? '<button class="btn sm" type="button" data-draft="' + UI.esc(m.q) +
+              '" data-wo="' + UI.esc(w.wo) + '">구매신청 초안</button>'
+            : '<span class="sub">준비 완료</span>') + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table></div>' :
+      '<div class="empty"><strong>이 정비계획에 걸린 자재가 없습니다</strong>' +
+      '원천의 자재계획에 연결이 없습니다</div>';
+
+    return line +
+      '<p class="note" style="margin:10px 0 12px">마감 ' + UI.esc(UI.date(w.dueDate)) +
+        ' · 오늘 ' + UI.esc(UI.date(asof())) + ' · 휴지 착수 ' + UI.esc(UI.date(w.stopStart)) +
+        ' · 리드타임 평균 ' + UI.num(w.ltMean) + '일' +
+        (w.driver ? ' · 마감을 정한 자재 ' + UI.esc(w.driver) : '') + '</p>' +
+      '<p class="gt"><span>소요 자재 ' + UI.num(mats.length) + '품목' +
+        (need.length ? ' · 발주 필요 ' + UI.num(need.length) + '품목' : '') + '</span></p>' +
+      table;
+  }
+
+  function pt(cls, at, label) {
+    return '<div class="tline-pt ' + cls + '" style="left:' +
+      Math.max(6, Math.min(94, at)).toFixed(1) + '%"><i></i><span>' + UI.esc(label) + '</span></div>';
+  }
+
+  function short(d) { return window.UI ? UI.dateShort(d) : String(d); }
+
+  // ------------------------------------------------------------ 이벤트
+  function wire() {
+    el('tabs').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('.tab');
+      if (!b) { return; }
+      tab = b.getAttribute('data-tab'); page = 0;
+      paintTabs(); paintList();
+    });
+
+    el('sort').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('button');
+      if (!b) { return; }
+      sort = b.getAttribute('data-sort'); page = 0;
+      [].forEach.call(el('sort').children, function (x) { x.classList.toggle('on', x === b); });
+      paintList();
+    });
+
+    el('prev').addEventListener('click', function () { page -= 1; paintList(); });
+    el('next').addEventListener('click', function () { page += 1; paintList(); });
+
+    el('list').addEventListener('click', function (e) {
+      /* 초안 버튼은 접기를 건드리지 않는다 */
+      var d = e.target.closest && e.target.closest('[data-draft]');
+      if (d) {
+        var q = d.getAttribute('data-draft'), wo = d.getAttribute('data-wo');
+        var m = DB.item(q);
+        try {
+          DB.draft('PR', { q: q, data: { wo: wo, why: '정비계획 ' + wo + ' 소요 부족' } });
+          POP.show(d, {
+            title: '구매신청 초안을 만들었습니다',
+            rows: [['자재', (m ? m.name : '') + ' · ' + q], ['근거 정비계획', wo],
+                   ['다음', '구매신청 (PR) 화면에서 확인']],
+            note: '초안은 3층에 쌓입니다. 정본과 판정값은 그대로입니다.'
+          });
+        } catch (err) {
+          POP.show(d, { title: '초안을 만들지 못했습니다', rows: [['이유', String(err.message)]] });
+        }
+        return;
+      }
+      var h = e.target.closest && e.target.closest('.wo-head');
+      if (!h) { return; }
+      var wo2 = h.parentNode.getAttribute('data-wo');
+      open[wo2] = !open[wo2];
+      paintList();
+    });
+  }
+
+  function paintAll() {
+    var m = window.DB ? DB.meta() : null;
+    el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
+    paintStat(); paintRule(); paintTabs(); paintList();
+  }
+
+  paintAll();
+  wire();
+  S.on(paintList);
+})();
+</script>
+<script src="assets/tour.js"></script>
+</body>
+</html>

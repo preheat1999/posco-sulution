@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>자재반납 · 현장</title>
+<link rel="stylesheet" href="assets/shell.css">
+<script>window.PAGE = 'return';</script>
+</head>
+<body>
+
+<!-- 셸을 쓰지 않는다. 현장에서 한 손으로 쓰는 화면이라 사이드바가 방해가 된다 -->
+<div class="phone">
+  <div class="phone-top">
+    <a class="homebtn" href="return.html" aria-label="돌아가기">←</a>
+    <div style="min-width:0">
+      <div style="font-size:13.5px;font-weight:600">자재반납</div>
+      <div style="font-size:10.5px;color:var(--muted)" id="who">&nbsp;</div>
+    </div>
+    <span class="pill" style="margin-left:auto" id="asof">&nbsp;</span>
+  </div>
+
+  <div class="phone-body">
+    <div id="pick"></div>
+    <div id="panel"></div>
+  </div>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/org.js"></script>
+<script src="assets/popover.js"></script>
+<script src="assets/db-master.js"></script>
+<script src="assets/db-derived.js"></script>
+<script src="assets/db-changes.js"></script>
+<script src="assets/db.js"></script>
+<script src="assets/db-biz.js"></script>
+<script src="assets/plan-data.js"></script>
+<script src="assets/analysis-data.js"></script>
+<script src="assets/screen-data.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var S = window.SCREEN;
+  var q = (location.hash || '').replace('#', '') || null;
+  var qty = null;
+  var cond = null;
+  var done = false;
+
+  function el(id) { return document.getElementById(id); }
+  function rows() { return S.retList('all'); }
+
+  function paintHead() {
+    var me = window.ORG ? ORG.load() : null;
+    el('who').textContent = me ? (me.name + ' 사원 · ' + me.part) : '현장 반납';
+    var m = window.DB ? DB.meta() : null;
+    el('asof').textContent = m && m.asof ? UI.dateShort(m.asof) : '';
+  }
+
+  /* 자재를 안 고르고 들어오면 목록부터 보여 준다.
+   * QR 로 들어오면 코드가 주소에 붙어 있어 바로 그 자재로 간다 */
+  function paintPick() {
+    var list = rows();
+    if (q) { el('pick').innerHTML = ''; return; }
+    el('pick').innerHTML =
+      '<p class="gt"><span>반납할 자재를 고르세요</span>' +
+        '<span class="gt-sub">' + UI.num(list.length) + '건</span></p>' +
+      '<div class="picklist">' + list.map(function (r) {
+        return '<button class="pick" type="button" data-q="' + UI.esc(r.q) + '">' +
+          '<span class="pick-body">' +
+            '<span class="pick-name">' + UI.esc(r.name) + '</span>' +
+            '<span class="pick-meta">' + UI.esc(r.q) + ' · ' + UI.esc(r.cond) +
+              ' · 잔여 ' + UI.num(r.left) + ' ' + UI.esc(r.unit) + '</span>' +
+          '</span>' +
+          '<span class="pick-right"><span class="pick-v">' + UI.num(r.left) + '</span>' +
+            '<span class="pick-k">잔여</span></span></button>';
+      }).join('') + '</div>';
+  }
+
+  function paintPanel() {
+    if (!q) { el('panel').innerHTML = ''; return; }
+    var r = rows().filter(function (x) { return x.q === q; })[0];
+    if (!r) {
+      el('panel').innerHTML = '<div class="empty"><strong>반납 대상이 아닙니다</strong>' +
+        '불출 잔여가 있는 자재만 반납할 수 있습니다</div>' +
+        '<a class="btn line" href="mobile-return.html" style="width:100%;margin-top:12px">' +
+        '목록으로</a>';
+      return;
+    }
+    if (qty === null) { qty = r.left; }
+    if (cond === null) { cond = r.cond; }
+
+    if (done) { el('panel').innerHTML = doneView(r); return; }
+
+    var e = S.retEffect({ q: r.q, left: qty });
+    el('panel').innerHTML =
+      '<p class="gt"><span>불출 잔여</span><span class="gt-sub">' + UI.esc(r.q) + '</span></p>' +
+      '<h1 style="font-size:19px;font-weight:600;letter-spacing:-.5px;margin-bottom:2px">' +
+        UI.esc(r.name) + '</h1>' +
+      '<p class="sub">' + UI.esc(r.asm || '') +
+        (r.locator ? ' · 보관 ' + UI.esc(r.locator) : '') + '</p>' +
+
+      /* 큰 숫자 하나와 큰 버튼 두 개. 장갑을 끼고도 눌러야 한다 */
+      '<div class="card" style="margin-top:14px;text-align:center">' +
+        '<div style="font-size:44px;font-weight:600;letter-spacing:-2px;line-height:1.1">' +
+          UI.num(qty) + '<small style="font-size:16px;color:var(--muted);margin-left:4px">' +
+          UI.esc(r.unit) + '</small></div>' +
+        '<div class="sub">반납 수량 · 잔여 ' + UI.num(r.left) + '</div>' +
+        '<div style="display:flex;gap:12px;justify-content:center;margin-top:14px">' +
+          '<button class="stepbtn" type="button" data-step="-1" aria-label="하나 줄이기">−</button>' +
+          '<button class="stepbtn" type="button" data-step="1" aria-label="하나 늘리기">+</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<p class="gt" style="margin:16px 0 8px"><span>물품 상태</span>' +
+        '<span class="gt-sub">원천 값 ' + UI.esc(r.cond) + '</span></p>' +
+      '<div class="condlist">' + condList(r).map(function (c) {
+        return '<button class="condbtn' + (c[0] === cond ? ' on' : '') + '" type="button" ' +
+          'data-cond="' + UI.esc(c[0]) + '">' +
+          '<span class="cn">' + UI.esc(c[0]) + '</span>' +
+          '<span class="cd">' + UI.esc(c[1]) + '</span></button>';
+      }).join('') + '</div>' +
+
+      (e ? '<div class="callout ok" style="margin-top:16px"><span class="ci">↩</span>' +
+        '<span><b>재고 ' + UI.num(e.stock[0]) + ' → ' + UI.num(e.stock[1]) + '</b>' +
+        '조치 ' + UI.esc(e.action[0]) + ' → ' + UI.esc(e.action[1]) +
+        ' · 회수 ' + UI.won(e.amount) + '</span></div>' : '') +
+
+      '<button class="btn block" type="button" id="go" ' +
+        'style="min-height:52px;margin-top:16px">반납 처리</button>' +
+      '<a class="btn line block" href="mobile-return.html" ' +
+        'style="margin-top:10px">다른 자재 고르기</a>';
+  }
+
+  /* 상태 설명은 원천 값에 붙는 뜻만 적는다. 없는 갈래를 만들지 않는다 */
+  function condList(r) {
+    var known = {
+      '신품': '뜯지 않았습니다 · 그대로 입고',
+      '중고': '썼습니다 · 검사 후 입고',
+      '불용': '못 씁니다 · 폐기 대상',
+      '철강재': '철강재 · 별도 처리',
+      '투자': '투자자재 · 별도 계정',
+      'Consignment': '위탁 · 공급사 반품'
+    };
+    var out = [[r.cond, known[r.cond] || '원천 값']];
+    Object.keys(known).forEach(function (k) {
+      if (k !== r.cond) { out.push([k, known[k]]); }
+    });
+    return out.slice(0, 4);
+  }
+
+  function doneView(r) {
+    var t = window.DB ? DB.item(r.q) : null;
+    return '<div class="card" style="text-align:center;margin-top:20px">' +
+woChk() +
+      '<h1 style="font-size:20px;font-weight:600;margin:12px 0 4px">반납 완료</h1>' +
+      '<p class="sub">' + UI.esc(r.name) + ' · ' + UI.num(qty) + ' ' + UI.esc(r.unit) + '</p>' +
+      (t ? '<div class="pgrid" style="margin-top:16px;text-align:left">' +
+        '<div><div class="pk">현재고</div><div class="pv">' + UI.num(t.stock) + '</div></div>' +
+        '<div><div class="pk">조치</div><div class="pv">' + UI.esc(t.actionNow) + '</div></div>' +
+      '</div>' : '') +
+      '</div>' +
+      '<a class="btn block" href="mobile-return.html" style="margin-top:14px">' +
+        '다른 자재 반납</a>' +
+      '<a class="btn line block" href="return.html" style="margin-top:10px">' +
+        '반납 화면으로</a>';
+  }
+
+  function woChk() {
+    return '<svg viewBox="0 0 48 48" style="width:48px;height:48px" role="img" ' +
+      'aria-label="완료"><circle cx="24" cy="24" r="21" fill="none" ' +
+      'stroke="var(--ok)" stroke-width="2.5"/>' +
+      '<path d="M15 25 L21 31 L33 18" fill="none" stroke="var(--ok)" ' +
+      'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  document.addEventListener('click', function (e) {
+    var p = e.target.closest && e.target.closest('[data-q]');
+    if (p) {
+      q = p.getAttribute('data-q'); qty = null; cond = null;
+      location.hash = q;
+      paintPick(); paintPanel();
+      return;
+    }
+    var st = e.target.closest && e.target.closest('[data-step]');
+    if (st) {
+      var r = rows().filter(function (x) { return x.q === q; })[0];
+      if (!r) { return; }
+      qty = Math.max(1, Math.min(Number(r.left), qty + Number(st.getAttribute('data-step'))));
+      paintPanel();
+      return;
+    }
+    var c = e.target.closest && e.target.closest('[data-cond]');
+    if (c) { cond = c.getAttribute('data-cond'); paintPanel(); return; }
+
+    if (e.target.closest && e.target.closest('#go')) {
+      var r2 = rows().filter(function (x) { return x.q === q; })[0];
+      if (!r2 || !window.DB) { return; }
+      try {
+        DB.txn({ q: q, type: '반납', qty: qty, note: '현장 반납 · ' + cond });
+        done = true;
+        paintPanel();
+      } catch (err) {
+        POP.show(e.target, { title: '반납하지 못했습니다', rows: [['이유', String(err.message)]] });
+      }
+    }
+  });
+
+  paintHead();
+  paintPick();
+  paintPanel();
+})();
+</script>
+</body>
+</html>
