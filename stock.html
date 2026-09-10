@@ -175,85 +175,153 @@
   }
 
   // ------------------------------------------------------------ 히트맵
-  /* 핵심예비품 25품목 · 상자 크기는 과부족 금액, 색은 방향이다 (초과 빨강 · 부족 파랑).
-   * 상자를 직사각형 하나에 빈틈없이 채운다 · 남는 자리가 있으면 크기 비교가 거짓이 된다 */
+  /* 핵심예비품의 과부족을 한 판에 깐다.
+   *
+   * 상자 넓이 = 과부족 금액 · 색 = 방향(초과 빨강 · 부족 파랑) · 농도 = 목표 대비 배수.
+   * 배치는 squarified treemap(Bruls et al.) 이다 · 값 합을 반으로 가르는 방식은
+   * 얇고 긴 상자를 만들어서 이름이 들어가지 않았다. 이 방식은 상자를 정사각형에
+   * 가깝게 만들어 글자가 들어간다 */
   function paintHeat() {
     var box = el('heat');
     if (stage !== 'done') { box.hidden = true; return; }
-    var h = S.stockHeat();
+    /* 상자 수를 판 너비에 맞춘다. 폰에서는 여덟 개만 깔아야 이름이 들어간다.
+     * 폭은 카드를 보인 뒤에 재야 한다 · 숨은 요소의 clientWidth 는 0 이다 */
     box.hidden = false;
+    var wide = box.clientWidth || 1000;
+    /* 좁을수록 상자를 줄이고 눈금을 더 누른다. 폰에서 스무 개를 깔면 이름이 안 들어간다 */
+    var h = wide < 620 ? S.stockHeat(6, 0.5)
+      : (wide < 1000 ? S.stockHeat(14, 0.6) : S.stockHeat(20, 0.7));
 
-    var rects = h.boxes.length ? tile(h.boxes, 0, 0, 100, 100, []) : [];
+    var rects = h.boxes.length ? squarify(h.boxes, 0, 0, 100, 100) : [];
     var cells = rects.map(function (t) {
       var b = t.d;
-      /* 작은 상자에 글자를 다 넣으면 겹친다. 자리가 되는 것만 숫자까지 적는다 */
-      var size = t.w * t.h;
-      var cls = size > 60 ? 'lg' : (size > 18 ? 'md' : 'sm');
-      return '<button class="tm ' + b.dir + ' l' + b.lvl + ' ' + cls + '" type="button" ' +
+      var sign = b.dir === 'over' ? '+' : '−';
+      /* 글자를 얼마나 넣을지는 그린 뒤 실제 픽셀로 정한다 (fitCells).
+       * %로 정하면 폰(판 너비 293px)에서 1% 가 3px 라 글자가 잘린다 */
+      return '<button class="tm ' + b.dir + ' l' + b.lvl + '" type="button" ' +
         'data-q="' + UI.esc(b.q) + '" data-dept="' + UI.esc(b.dept) + '" ' +
-        'style="left:' + t.x.toFixed(3) + '%;top:' + t.y.toFixed(3) + '%;width:' +
-          t.w.toFixed(3) + '%;height:' + t.h.toFixed(3) + '%" ' +
-        'title="' + UI.esc(b.name + ' · ' + b.q + ' · 보유 ' + b.stock + ' 목표 ' + b.target +
-          ' · ' + (b.dir === 'over' ? '초과 ' : '부족 ') + Math.abs(b.gap) + '개 · ' +
+        'style="left:' + t.x.toFixed(4) + '%;top:' + t.y.toFixed(4) + '%;width:' +
+          t.w.toFixed(4) + '%;height:' + t.h.toFixed(4) + '%" ' +
+        'title="' + UI.esc(b.name + ' · ' + b.q + ' · ' + b.grade + '등급 · 보유 ' +
+          b.stock + ' 목표 ' + b.target + ' · ' +
+          (b.dir === 'over' ? '초과 ' : '부족 ') + Math.abs(b.gap) + '개 · ' +
           UI.won(b.amt)) + '">' +
-        '<span class="tm-n">' + UI.esc(b.name) + '</span>' +
-        '<span class="tm-v">' + (b.dir === 'over' ? '+' : '−') + Math.abs(b.gap) + '개</span>' +
-        '<span class="tm-a">' + UI.esc(UI.won(b.amt)) + '</span>' +
-        '</button>';
+        '<span class="tm-in">' +
+          '<span class="tm-n">' + UI.esc(b.name) + '</span>' +
+          '<span class="tm-v">' + sign + Math.abs(b.gap) + '<small>개</small></span>' +
+          '<span class="tm-a">' + UI.esc(UI.wonShort(b.amt)) +
+            UI.esc(UI.wonShortUnit(b.amt)) + '</span>' +
+        '</span></button>';
     }).join('');
 
     box.innerHTML =
       '<div class="heat-head">' +
-        '<div style="min-width:0">' +
-          '<p class="gt" style="margin-bottom:4px"><span>적정재고 과부족 · 핵심예비품 ' +
-            UI.num(h.boxes.length) + '품목</span>' +
-            '<span class="gt-sub">상자 크기 = 과부족 금액 · 색 = 초과 빨강 · 부족 파랑</span></p>' +
-          '<p class="note" style="margin:0">분석 실행 <b>' +
-            UI.esc(S.stockStamp() || '시각 미기록') + '</b> · 핵심예비품 ' + UI.num(h.csp) +
-            '품목 중 과부족 금액이 큰 ' + UI.num(h.n) + '품목 · 나머지 중 ' + UI.num(h.fine) +
-            '품목은 목표와 같습니다' +
-            (h.staleN ? ' · 확정 속성 반영 ' + UI.num(h.staleN) + '품목' : '') + '</p>' +
+        '<div class="hh-t">' +
+          '<h2>적정재고 과부족</h2>' +
+          '<p class="sub">핵심예비품 ' + UI.num(h.csp) + '품목 중 과부족 금액이 큰 ' +
+            UI.num(h.boxes.length) + '품목 · 상자가 클수록 금액이 큽니다</p>' +
         '</div>' +
-        '<div class="heat-tools">' +
-          '<span class="tm-lg"><i class="sw short"></i>부족 ' + UI.num(h.shortN) + '품목 · ' +
-            UI.esc(UI.won(h.shortAmt)) + '</span>' +
-          '<span class="tm-lg"><i class="sw over"></i>초과 ' + UI.num(h.overN) + '품목 · ' +
-            UI.esc(UI.won(h.overAmt)) + '</span>' +
+        '<div class="hh-r">' +
+          '<div class="hh-num"><b class="short">' + UI.num(h.shortN) + '</b>' +
+            '<span>부족 ' + UI.esc(UI.won(h.shortAmt)) + '</span></div>' +
+          '<div class="hh-num"><b class="over">' + UI.num(h.overN) + '</b>' +
+            '<span>초과 ' + UI.esc(UI.won(h.overAmt)) + '</span></div>' +
           '<button class="btn line sm" type="button" id="reana">다시 분석</button>' +
         '</div>' +
       '</div>' +
       (cells
-        ? '<div class="tmap">' + cells + '</div>'
+        ? '<div class="tmap">' + cells + '</div>' +
+          '<div class="heat-foot">' +
+            '<span class="hf-l">부족</span>' +
+            '<i class="sw short l4"></i><i class="sw short l3"></i>' +
+            '<i class="sw short l2"></i><i class="sw short l1"></i>' +
+            '<span class="hf-m">목표와 같음</span>' +
+            '<i class="sw over l1"></i><i class="sw over l2"></i>' +
+            '<i class="sw over l3"></i><i class="sw over l4"></i>' +
+            '<span class="hf-l">초과</span>' +
+            '<span class="hf-x">넓이 눈금 금액^' + h.pow + ' · 목표와 같은 ' + UI.num(h.fine) +
+              '품목 제외 · 분석 ' + UI.esc(S.stockStamp() || '시각 미기록') +
+              (h.staleN ? ' · 확정 속성 반영 ' + UI.num(h.staleN) + '품목' : '') + '</span>' +
+          '</div>'
         : '<div class="empty"><strong>핵심예비품이 모두 목표재고와 같습니다</strong>' +
-          '손댈 것이 없습니다</div>') +
-      '<p class="note" style="margin-top:12px">상자를 누르면 그 품목의 목표재고 계산을 ' +
-        '그대로 볼 수 있습니다. 핵심예비품은 설비 정지에 직접 걸리는 자재라 이 화면에서 ' +
-        '먼저 봅니다 · 전체 ' + UI.num(h.items) + '품목은 아래 <b>조치 판정</b> 표에 있습니다.</p>';
+          '손댈 것이 없습니다</div>');
+
+    fitCells();
   }
 
-  /* 트리맵 자리 계산 · 값 합을 반으로 가르고 긴 변을 쪼갠다.
-   * 넓이 합이 늘 100% 라 빈틈이 없고, 큰 상자가 왼쪽 위에 모인다 */
-  function tile(items, x, y, w, h, out) {
-    if (!items.length) { return out; }
-    if (items.length === 1) { out.push({ d: items[0], x: x, y: y, w: w, h: h }); return out; }
-    var total = items.reduce(function (t, d) { return t + d.value; }, 0);
-    if (total <= 0) { return out; }
-    var acc = 0, cut = 1, best = Infinity, i;
-    for (i = 1; i < items.length; i++) {
-      acc += items[i - 1].value;
-      var diff = Math.abs(0.5 - acc / total);
-      if (diff < best) { best = diff; cut = i; }
+  /* 상자마다 실제 크기를 재서 글자를 얼마나 넣을지 정한다.
+   * 자리가 없는데 넣으면 잘려서 더 지저분하다 · 화면 폭이 바뀌면 다시 잰다 */
+  function fitCells() {
+    var cells = document.querySelectorAll('#heat .tm');
+    var i, c, r, tier;
+    for (i = 0; i < cells.length; i += 1) {
+      c = cells[i];
+      r = c.getBoundingClientRect();
+      tier = (r.width >= 150 && r.height >= 92) ? 'lg'
+        : ((r.width >= 96 && r.height >= 64) ? 'md'
+          : ((r.width >= 54 && r.height >= 40) ? 'sm' : 'xs'));
+      c.classList.remove('lg', 'md', 'sm', 'xs');
+      c.classList.add(tier);
     }
-    var a = items.slice(0, cut), b = items.slice(cut);
-    var fa = a.reduce(function (t, d) { return t + d.value; }, 0) / total;
-    if (w >= h) {
-      tile(a, x, y, w * fa, h, out);
-      tile(b, x + w * fa, y, w * (1 - fa), h, out);
-    } else {
-      tile(a, x, y, w, h * fa, out);
-      tile(b, x, y + h * fa, w, h * (1 - fa), out);
+  }
+
+  /* squarified treemap · 상자를 정사각형에 가깝게 채운다.
+   * 짧은 변을 따라 줄을 만들고, 줄에 상자를 더할수록 비율이 나빠지면 그 줄을 닫는다 */
+  function squarify(items, x, y, w, h) {
+    var out = [];
+    var rest = items.slice();
+    while (rest.length) {
+      if (w <= 0.001 || h <= 0.001) { break; }
+      var total = sum(rest);
+      if (total <= 0) { break; }
+      var row = [], best = Infinity, i;
+      for (i = 0; i < rest.length; i += 1) {
+        var cand = row.concat([rest[i]]);
+        var a = worstAspect(cand, total, w, h);
+        if (a > best) { break; }
+        best = a; row = cand;
+      }
+      var rowSum = sum(row);
+      var frac = rowSum / total;
+      if (w <= h) {
+        var rh = h * frac, cx = x;
+        row.forEach(function (d) {
+          var cw = w * (d.value / rowSum);
+          out.push({ d: d, x: cx, y: y, w: cw, h: rh });
+          cx += cw;
+        });
+        y += rh; h -= rh;
+      } else {
+        var rw = w * frac, cy = y;
+        row.forEach(function (d) {
+          var ch = h * (d.value / rowSum);
+          out.push({ d: d, x: x, y: cy, w: rw, h: ch });
+          cy += ch;
+        });
+        x += rw; w -= rw;
+      }
+      rest = rest.slice(row.length);
     }
     return out;
+  }
+
+  function sum(a) { return a.reduce(function (t, d) { return t + d.value; }, 0); }
+
+  /* 이 줄에 넣었을 때 가장 못난 상자의 가로세로 비 · 1 에 가까울수록 정사각형이다 */
+  function worstAspect(row, total, w, h) {
+    var rowSum = sum(row);
+    if (rowSum <= 0) { return Infinity; }
+    var along = w <= h ? w : h;              // 줄이 뻗는 길이
+    var band = (w <= h ? h : w) * (rowSum / total);   // 줄의 두께
+    if (band <= 0) { return Infinity; }
+    var worst = 0;
+    row.forEach(function (d) {
+      var seg = along * (d.value / rowSum);
+      if (seg <= 0) { worst = Infinity; return; }
+      var ar = Math.max(seg / band, band / seg);
+      if (ar > worst) { worst = ar; }
+    });
+    return worst;
   }
 
   // ------------------------------------------------------------ 단계
@@ -586,6 +654,14 @@
 
   paintAll();
   wire();
+
+  /* 창 폭이 바뀌면 상자 크기도 바뀐다. 글자 양을 다시 정한다 */
+  var fitTimer = null;
+  window.addEventListener('resize', function () {
+    if (fitTimer) { window.clearTimeout(fitTimer); }
+    /* 폭이 바뀌면 상자 수와 글자 양이 둘 다 달라진다. 히트맵을 다시 그린다 */
+    fitTimer = window.setTimeout(paintHeat, 140);
+  });
   S.on(function () { paintStat(); paintStageBar(); paintHeat(); paintTable(); });
 
   /* 주소에 #cut 이 붙어 오면 감축 칸부터 본다.

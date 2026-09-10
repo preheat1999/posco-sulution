@@ -207,9 +207,13 @@
    *
    * 상자 크기 = |보유 - 목표| × 단가 (과부족 금액) · 색 = 초과 빨강 · 부족 파랑.
    * 과부족이 0 인 품목은 넓이가 0 이라 애초에 들어가지 않는다 (수를 따로 적는다) */
-  var HEAT_N = 25;
-  function stockHeat() {
-    if (!live) { return { boxes: [], items: 0, csp: 0, fine: 0 }; }
+  var HEAT_N = 20;
+  function stockHeat(limit, pow) {
+    /* 몇 개를 깔지 · 넓이 눈금을 얼마나 누를지는 화면이 정한다.
+     * 좁은 화면에 스무 개를 깔면 글자가 하나도 안 들어간다 */
+    var n = Number(limit) > 0 ? Number(limit) : HEAT_N;
+    var p = Number(pow) > 0 ? Number(pow) : 0.7;
+    if (!live) { return { boxes: [], items: 0, csp: 0, fine: 0, n: n, pow: p }; }
     var all = DB.list();
     var csp = all.filter(function (r) { return r.csp; });
     var boxes = csp.map(function (r) {
@@ -228,14 +232,20 @@
     var fine = boxes.filter(function (b) { return b.dir === 'fine'; }).length;
     boxes = boxes.filter(function (b) { return b.dir !== 'fine' && b.amt > 0; })
       .sort(function (a, b) { return b.amt - a.amt; })
-      .slice(0, HEAT_N);
+      .slice(0, n);
     boxes.forEach(function (b) {
       b.lvl = b.ratio >= 3 ? 4 : (b.ratio >= 1.5 ? 3 : (b.ratio >= 0.8 ? 2 : 1));
-      b.value = b.amt;
+      /* 넓이는 금액을 0.7 승으로 눌러서 준다.
+       *
+       * 금액 차이가 15.0억 대 190만원(약 800배)이라 그대로 넓이에 쓰면 큰 상자 둘이
+       * 판을 95% 먹고 나머지 열여덟 개가 글자도 안 들어가는 띠가 된다.
+       * 순서와 크기 관계는 그대로 두면서(단조 증가) 격차만 눌렀다 ·
+       * 「넓이가 금액에 정비례한다」 고 말하지 않고 눈금을 화면에 적는다 */
+      b.value = Math.pow(b.amt, p);
     });
     var s = DB.summary();
     return {
-      boxes: boxes, items: all.length, csp: csp.length, fine: fine, n: HEAT_N,
+      boxes: boxes, items: all.length, csp: csp.length, fine: fine, n: n, pow: p,
       overN: boxes.filter(function (b) { return b.dir === 'over'; }).length,
       shortN: boxes.filter(function (b) { return b.dir === 'short'; }).length,
       overAmt: boxes.reduce(function (t, b) { return t + (b.dir === 'over' ? b.amt : 0); }, 0),

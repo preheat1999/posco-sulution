@@ -1493,59 +1493,119 @@ td.num, th.num { text-align: right; }
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
 }
-.heat-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex: none; }
-.heat-tools .tm-lg { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
-.heat-tools .sw { width: 10px; height: 10px; border-radius: 3px; }
-.heat-tools .sw.over { background: var(--insur); }
-.heat-tools .sw.short { background: var(--brand); }
+/* 히트맵 머리 · 제목 하나 · 숫자 둘 · 단추 하나. 그 이상은 그림을 방해한다 */
+.heat-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.heat-head .hh-t { min-width: 0; }
+.heat-head h2 { font-size: 15px; font-weight: 600; letter-spacing: -.3px; margin-bottom: 3px; }
+.heat-head .sub { font-size: 11.5px; color: var(--muted); }
+.heat-head .hh-r { display: flex; align-items: flex-end; gap: 22px; flex: none; }
+.heat-head .hh-num { text-align: right; }
+.heat-head .hh-num b {
+  display: block; font-size: 22px; font-weight: 600; letter-spacing: -.6px;
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.heat-head .hh-num b.short { color: var(--brand); }
+.heat-head .hh-num b.over { color: var(--insur); }
+.heat-head .hh-num span { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
 
-/* 트리맵 · 상자가 직사각형 하나를 빈틈없이 채운다.
- * 넓이가 곧 과부족 금액이라 남는 자리를 두면 크기 비교가 거짓이 된다 */
+/* 판 · 상자가 직사각형 하나를 빈틈없이 채운다.
+ * 배경을 본문보다 어둡게 두어 상자 사이 2px 틈이 선처럼 읽힌다 */
 .tmap {
-  position: relative; width: 100%; height: 520px;
-  border-radius: 12px; overflow: hidden; background: var(--surface-2);
+  position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 380px;
+  background: var(--bg); border-radius: 12px; overflow: hidden;
 }
 .tm {
-  position: absolute; overflow: hidden; cursor: pointer;
-  border: 1px solid var(--bg); padding: 8px 9px; text-align: left;
-  display: flex; flex-direction: column; justify-content: center; gap: 2px;
-  color: #F3F5F9; font: inherit;
+  position: absolute; overflow: hidden; cursor: pointer; padding: 0;
+  border: 0; background: none; font: inherit; color: #F7F9FC;
+  transition: filter .12s ease;
 }
-.tm:hover, .tm:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; z-index: 2; }
+/* 틈은 안쪽 상자에 주어 넓이(=금액)를 건드리지 않는다 */
+.tm .tm-in {
+  position: absolute; inset: 1px; border-radius: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 10px 12px; text-align: center; overflow: hidden;
+}
+.tm:hover { filter: brightness(1.12); z-index: 3; }
+.tm:hover .tm-in, .tm:focus-visible .tm-in {
+  outline: 1.5px solid #F7F9FC; outline-offset: -2px;
+}
+.tm:focus-visible { outline: none; }
+
 .tm .tm-n {
-  font-size: 12px; font-weight: 600; letter-spacing: -.2px; line-height: 1.25;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11.5px; font-weight: 500; line-height: 1.25; opacity: .82;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.tm .tm-v { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.tm .tm-a { font-size: 10px; opacity: .8; }
-/* 큰 상자는 이름을 두 줄까지, 작은 상자는 숫자만 남긴다 */
-.tm.lg .tm-n { font-size: 15px; white-space: normal; }
-.tm.lg .tm-v { font-size: 24px; }
-.tm.md .tm-v { font-size: 14px; }
-.tm.sm { padding: 4px 5px; }
+.tm .tm-v {
+  font-size: 17px; font-weight: 600; letter-spacing: -.4px; line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.tm .tm-v small { font-size: 10px; font-weight: 500; margin-left: 1px; opacity: .8; }
+.tm .tm-a {
+  font-size: 10.5px; opacity: .72; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.tm .tm-v { white-space: nowrap; }
+/* 등급이 정해지기 전 한 순간에 큰 글자가 넘치지 않게 · 기본은 가장 작은 모양이다 */
+.tm .tm-in { overflow: hidden; }
+
+/* 자리에 맞춰 글자를 덜어낸다. 넣을 자리가 없는데 넣으면 잘려서 더 지저분하다 */
+.tm.lg .tm-in { padding: 14px 16px; gap: 4px; }
+.tm.lg .tm-n { font-size: 13px; white-space: normal; }
+.tm.lg .tm-v { font-size: 27px; letter-spacing: -.9px; }
+.tm.lg .tm-a { font-size: 11.5px; }
+.tm.md .tm-in { padding: 8px 9px; gap: 2px; }
+.tm.md .tm-v { font-size: 18px; }
+.tm.md .tm-n { font-size: 10.5px; }
+.tm.md .tm-a { font-size: 10px; }
+.tm.sm .tm-in { padding: 6px 7px; }
 .tm.sm .tm-n, .tm.sm .tm-a { display: none; }
-.tm.sm .tm-v { font-size: 11px; }
+.tm.sm .tm-v { font-size: 13px; }
+.tm.sm .tm-v small { display: none; }
+.tm.xs .tm-in { padding: 2px; }
+.tm.xs .tm-n, .tm.xs .tm-a, .tm.xs .tm-v { display: none; }
 
-/* 초과 · 빨강 (묶어 두면 목표를 넘는 돈이다) */
-.tm.over.l1 { background: #8E3634; }
-.tm.over.l2 { background: #B2453F; }
-.tm.over.l3 { background: #D45A54; }
-.tm.over.l4 { background: #F0716F; color: var(--on-accent); }
-/* 부족 · 파랑 (설비가 멈출 수 있는 자리다) */
-.tm.short.l1 { background: #27408F; }
-.tm.short.l2 { background: #3A63D9; }
-.tm.short.l3 { background: #5B8CFF; }
-.tm.short.l4 { background: #7FA6FF; color: var(--on-accent); }
+/* 색 · 방향 두 가지 × 농도 네 단계. 다섯 개를 넘기면 색이 뜻을 잃는다 */
+.tm.short.l1 .tm-in { background: #24356B; }
+.tm.short.l2 .tm-in { background: #33509F; }
+.tm.short.l3 .tm-in { background: #3F6BD1; }
+.tm.short.l4 .tm-in { background: #5B8CFF; }
+.tm.over.l1 .tm-in { background: #6B2E33; }
+.tm.over.l2 .tm-in { background: #9C3D3F; }
+.tm.over.l3 .tm-in { background: #C74F4C; }
+.tm.over.l4 .tm-in { background: #F0716F; color: #12161F; }
 
-@media (max-width: 760px) {
-  .tmap { height: 420px; }
-  .tm.lg .tm-n { font-size: 13px; }
-  .tm.lg .tm-v { font-size: 18px; }
+/* 색 눈금 · 부족에서 초과까지 한 줄로 */
+.heat-foot {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  margin-top: 14px; font-size: 10.5px; color: var(--muted);
 }
+.heat-foot .sw { width: 22px; height: 8px; border-radius: 2px; flex: none; }
+.heat-foot .hf-l { font-weight: 600; }
+.heat-foot .hf-m { margin: 0 7px; }
+.heat-foot .hf-x { margin-left: auto; color: var(--muted); }
+.heat-foot .sw.short.l1 { background: #24356B; }
+.heat-foot .sw.short.l2 { background: #33509F; }
+.heat-foot .sw.short.l3 { background: #3F6BD1; }
+.heat-foot .sw.short.l4 { background: #5B8CFF; }
+.heat-foot .sw.over.l1 { background: #6B2E33; }
+.heat-foot .sw.over.l2 { background: #9C3D3F; }
+.heat-foot .sw.over.l3 { background: #C74F4C; }
+.heat-foot .sw.over.l4 { background: #F0716F; }
 
-
+@media (max-width: 1180px) {
+  .tmap { aspect-ratio: 3 / 2; }
+}
 @media (max-width: 760px) {
   .heat { padding: 16px 14px; }
+  .tmap { aspect-ratio: 4 / 5; min-height: 420px; }
+  .heat-head { align-items: flex-start; }
+  .heat-head .hh-r { gap: 16px; }
+  .heat-foot { gap: 4px; }
+  .heat-foot .sw { width: 16px; height: 7px; }
+  .heat-foot .hf-m { margin: 0 4px; }
+  .heat-foot .hf-x { margin-left: 0; width: 100%; }
 }
 
 /* 판단 시각 줄 · 제목 바로 밑. 기준일(스냅샷)과 실행 시각은 다른 값이다 */
