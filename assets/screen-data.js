@@ -161,25 +161,84 @@
     var ins = s.type['보험품'] || 0, pln = s.type['계획품'] || 0;
     var zeroT = s.zeroTarget || 0;
     return [
-      { n: 1, title: '속성별로 다른 공식', right: '보험품 ' + ins + ' · 계획품 ' + pln,
-        open: true, kind: 'formula',
-        ins: ins, pln: pln,
-        insFormula: sp.insFormula || [], plnFormula: sp.plnFormula || [],
-        z: sp.z || {}, sl: sp.sl || {}, zNote: sp.zNote || '', plnNote: sp.plnNote || '' },
-      { n: 2, title: '목표재고 계산', right: UInum(s.items) + '품목', kind: 'target',
-        note: sp.formula || '' },
+      /* 1(공식) · 2(목표재고 계산) · 6(무재고 설명)은 히트맵 아래 근거 줄로 옮겼다.
+       * 분석 결과를 히트맵으로 먼저 보이고, 손으로 할 일(3 · 4 · 5)만 단계로 남긴다 */
       { n: 3, title: '조치 판정', right: '발주 ' + (s.action['발주'] || 0) +
           ' · 유지 ' + (s.action['유지'] || 0) + ' · 감축 ' + (s.action['감축'] || 0),
-        kind: 'table', signalIns: sp.signalIns || [], signalPln: sp.signalPln || [] },
+        open: true, kind: 'table',
+        signalIns: sp.signalIns || [], signalPln: sp.signalPln || [] },
       { n: 4, title: '공용화 후보', right: UInum(s.poolItems) + '품목 · 회수 ' + won(s.poolAmt),
         kind: 'pool', pool: sp.pool || [], stale: sp.stale || '',
         items: s.poolItems, amt: s.poolAmt, hold: s.poolHoldItems, holdAmt: s.poolHoldAmt },
       { n: 5, title: '금융비용 절감', right: '연 ' + won(s.finance), kind: 'fin',
         text: sp.finance || '', rate: s.financeRate, interest: s.financeInterest,
-        cutAmt: s.cutAmt, poolAmt: s.poolAmt, finance: s.finance },
-      { n: 6, title: '무재고 99.2% 는 오류가 아닙니다', right: '목표 0 · ' + UInum(zeroT) + '품목',
-        kind: 'zero', zeroTarget: zeroT, items: s.items }
+        cutAmt: s.cutAmt, poolAmt: s.poolAmt, finance: s.finance }
     ];
+  }
+
+  // ================================================================ 적정재고 분석 단계
+  /* 속성값 판단과 같은 얼개 · 처음엔 분석 전이고, 사람이 「분석」 을 눌러야 결과가 올라온다.
+   * 여기서 계산하는 것은 없다 · feat/algo 엔진이 확정 속성으로 낸 결과를 올린다.
+   * 이 단계는 시연 초기화가 지운다 */
+  var ST_KEY = ((window.CFG || {}).STAGE_KEY || 'mtrl.stage.v1') + '.stock';
+  function stockStage() {
+    var v = null;
+    try { v = window.localStorage.getItem(ST_KEY); } catch (e) { v = null; }
+    return v === 'done' ? 'done' : 'raw';
+  }
+  function setStockStage(v) {
+    try { window.localStorage.setItem(ST_KEY, v); } catch (e) { /* 무시 */ }
+  }
+  function stockStamp() {
+    try { return window.localStorage.getItem(ST_KEY + '.at') || ''; } catch (e) { return ''; }
+  }
+  function setStockStamp(v) {
+    try { window.localStorage.setItem(ST_KEY + '.at', v); } catch (e) { /* 무시 */ }
+  }
+
+  /* 히트맵 · 743품목을 조치별로 묶고, 칸 색 농도는 그 품목이 걸고 있는 금액이다.
+   *
+   * 금액의 뜻이 묶음마다 다르다 · 발주는 부족분 금액, 감축은 초과분 금액,
+   * 유지는 보유 금액이다. 한 칸이 한 품목이라 「어디에 돈이 걸렸나」 가 한눈에 보인다.
+   * 농도는 그 묶음 안 순위의 5분위다 · 절대 금액으로 나누면 큰 품목 몇 개만 진해진다 */
+  var HEAT_GROUPS = [
+    { key: '발주', label: '발주 필요', tone: 'core', amtLabel: '부족분 금액' },
+    { key: '유지', label: '적정 유지', tone: 'keep', amtLabel: '보유 금액' },
+    { key: '감축', label: '감축 대상', tone: 'cut', amtLabel: '초과분 금액' }
+  ];
+  function stockHeat() {
+    if (!live) { return { groups: [], items: 0, spec: null }; }
+    var all = DB.list();
+    var groups = HEAT_GROUPS.map(function (g) {
+      var cells = all.filter(function (r) { return r.actionNow === g.key; })
+        .map(function (r) {
+          var price = Number(r.price) || 0;
+          var over = Math.max(0, (Number(r.stock) || 0) - (Number(r.targetNow) || 0));
+          var amt = g.key === '발주' ? price * (Number(r.needNow) || 0)
+            : (g.key === '감축' ? price * over : price * (Number(r.stock) || 0));
+          return { q: r.q, dept: r.dept, name: r.name || '품명 미확인', type: r.type,
+                   grade: r.grade, stock: Number(r.stock) || 0, target: Number(r.targetNow) || 0,
+                   stale: !!r.stale, amt: amt, lvl: 0 };
+        });
+      /* 금액 순위를 5분위로 · 같은 금액이 많아도 칸 색이 뭉치지 않는다 */
+      var byAmt2 = cells.slice().sort(function (a, b) { return a.amt - b.amt; });
+      byAmt2.forEach(function (c, i) {
+        c.lvl = byAmt2.length < 2 ? 4 : Math.min(4, Math.floor(i / (byAmt2.length / 5)));
+      });
+      cells.sort(function (a, b) { return b.amt - a.amt; });
+      return { key: g.key, label: g.label, tone: g.tone, amtLabel: g.amtLabel,
+               cells: cells, n: cells.length,
+               amt: cells.reduce(function (t, c) { return t + c.amt; }, 0) };
+    });
+    var sp = spec(), s = DB.summary();
+    return {
+      groups: groups, items: all.length,
+      /* 히트맵 아래 근거 줄 · 단계 1 · 2 · 6 에 있던 것을 여기로 옮겼다 */
+      formula: sp.formula || '', insFormula: sp.insFormula || [], plnFormula: sp.plnFormula || [],
+      z: sp.z || {}, zNote: sp.zNote || '', plnNote: sp.plnNote || '',
+      zeroTarget: s.zeroTarget || 0, staleN: s.staleN || 0, recalcN: s.recalcN || 0,
+      ins: s.type['보험품'] || 0, pln: s.type['계획품'] || 0
+    };
   }
 
   /* 보유 수량을 눌렀을 때 보여 줄 분해. 원천에 없는 칸은 「미확인」 이라고 적는다 */
@@ -449,6 +508,8 @@
     prSteps: prSteps, prList: prList, prDraft: prDraft,
     retTabs: retTabs, retList: retList, retEffect: retEffect,
     stage: stage, setStage: setStage, exportClassification: exportClassification,
+    stockStage: stockStage, setStockStage: setStockStage,
+    stockStamp: stockStamp, setStockStamp: setStockStamp, stockHeat: stockHeat,
     stamp: stamp, setStamp: setStamp, nowStamp: nowStamp,
     /* 승인 · 반납이 일어나면 화면이 다시 그려져야 한다 */
     on: function (fn) { if (live) { DB.on(fn); } }

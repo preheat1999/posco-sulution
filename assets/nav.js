@@ -132,8 +132,12 @@
         if (window.confirm('승인 · 반납 이력을 모두 지우고 처음 상태로 돌립니다. 계속할까요?')) {
           window.DB.reset();
           /* 단계도 처음으로. 승인이 없는데 「실행함」 상태만 남으면 어색하다 */
-          try { window.localStorage.removeItem((window.CFG || {}).STAGE_KEY || 'mtrl.stage.v1'); }
-          catch (e) { /* 저장소가 막힌 환경 · 무시 */ }
+          try {
+            var sk = (window.CFG || {}).STAGE_KEY || 'mtrl.stage.v1';
+            [sk, sk + '.at', sk + '.stock', sk + '.stock.at'].forEach(function (k) {
+              window.localStorage.removeItem(k);
+            });
+          } catch (e) { /* 저장소가 막힌 환경 · 무시 */ }
           window.location.reload();
         }
       });

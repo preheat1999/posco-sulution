@@ -100,8 +100,9 @@ const seen = {};
 PAGES.forEach((p) => {
   let s = null, err = null;
   try {
-    s = run(p, p === 'attr' ? { 'mtrl.stage.v1': 'algo' } : null,
-            p === 'attr' ? { hash: '#gray' } : null);
+    var deep = { attr: '#gray', stock: '#order' }[p] || '';
+    s = run(p, deep ? { 'mtrl.stage.v1': 'algo', 'mtrl.stage.v1.stock': 'done' } : null,
+            deep ? { hash: deep } : null);
   } catch (e) { err = e; }
   ok(!err, p + '.html 오류 없이 실행' + (err ? ' · ' + err.message : ''));
   if (!s) { return; }
@@ -120,20 +121,20 @@ PAGES.forEach((p) => {
   ok(!new RegExp('#' + '000' + '\\b').test(all), p + ' · 순수 검정 없음');
 });
 
-/* attr 의 원본 단계 · 알고리즘 숫자가 새면 안 되고 실행 버튼이 있어야 한다 */
-{
+/* 실행 전 화면 · 결과 숫자가 새면 안 되고 실행 버튼이 있어야 한다 */
+[['attr', '알고리즘 실행', /점수차 \d/, '점수차'],
+ ['stock', '적정재고 분석', /목표재고 산식/, '목표재고 산식']].forEach(([p, cta, leak, leakName]) => {
   let raw = null, err = null;
-  try { raw = run('attr'); } catch (e) { err = e; }
-  ok(!err, 'attr(원본 단계) 오류 없이 실행' + (err ? ' · ' + err.message : ''));
-  if (raw) {
-    let all = '';
-    const st = raw.document._store;
-    Object.keys(st).forEach((k) => { all += st[k]._html + ' ' + st[k]._text + ' '; });
-    ok(/알고리즘 실행/.test(all), 'attr(원본) · 실행 버튼이 있다');
-    ok(!/점수차 \d/.test(all), 'attr(원본) · 점수차가 새지 않는다');
-    ok(!/undefined|NaN/.test(all), 'attr(원본) · undefined · NaN 없음');
-  }
-}
+  try { raw = run(p); } catch (e) { err = e; }
+  ok(!err, p + '(실행 전) 오류 없이 실행' + (err ? ' · ' + err.message : ''));
+  if (!raw) { return; }
+  let all = '';
+  const st = raw.document._store;
+  Object.keys(st).forEach((k) => { all += st[k]._html + ' ' + st[k]._text + ' '; });
+  ok(all.indexOf(cta) >= 0, p + '(실행 전) · 「' + cta + '」 버튼이 있다');
+  ok(!leak.test(all), p + '(실행 전) · ' + leakName + ' 가 새지 않는다');
+  ok(!/undefined|NaN/.test(all), p + '(실행 전) · undefined · NaN 없음');
+})
 
 console.log('');
 console.log('=== 실제 값이 실렸는가 ===');

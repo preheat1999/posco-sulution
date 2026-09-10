@@ -33,8 +33,14 @@
     <!-- 속성값 판단 단계와 이어진다 · 원본 단계면 그 사실을, 확정이 바뀌었으면 재계산 대기를 적는다 -->
     <div class="noticebar" id="stagebar" style="margin-bottom:16px" hidden></div>
 
-    <!-- 계산 순서를 그대로 단계로 둔다. 첫 단계만 열려 있다 -->
-    <div id="steps"></div>
+    <!-- 분석 전 · 여기서 사람이 분석을 실행한다 -->
+    <section class="card runhero" id="anahero" hidden></section>
+
+    <!-- 분석 결과 · 한 칸이 한 품목이다. kpistrip 과 단계 사이를 이것으로 채운다 -->
+    <section class="card heat" id="heat" hidden></section>
+
+    <!-- 손으로 할 일만 단계로 남긴다 · 3 조치 판정 · 4 공용화 · 5 금융비용 -->
+    <div id="steps" hidden></div>
 
     <p class="note" style="margin-top:16px">
       목표재고 · 조치 · 등급은 모두 명세의 산식으로 계산한 값입니다 ·
@@ -68,6 +74,15 @@
   var query = '';
   var PAGE = 8;
   var page = 0;
+  var stage = S.stockStage();   // 'raw' · 분석 전 | 'done' · 결과가 올라와 있다
+  var running = false;
+
+  /* 대시보드의 「적정재고 분석 열기」 처럼 결과를 직접 가리키는 주소로 들어오면
+   * 분석된 화면을 바로 본다. 그냥 메뉴로 들어오면 분석 전부터 시작한다 */
+  if ((location.hash || '').indexOf('order') >= 0 || (location.hash || '').indexOf('cut') >= 0) {
+    stage = 'done'; S.setStockStage('done');
+    if (!S.stockStamp()) { S.setStockStamp(S.nowStamp()); }
+  }
 
   function el(id) { return document.getElementById(id); }
 
@@ -98,8 +113,139 @@
       '</div>';
   }
 
+  // ------------------------------------------------------------ 분석 실행
+  /* 분석 전 큰 카드. 무엇을 하는지 그대로 적는다 ·
+   * 여기서 계산하는 것이 아니라 확정 속성으로 낸 엔진 결과를 올린다 */
+  function paintHero() {
+    var h = el('anahero');
+    if (stage === 'done') { h.hidden = true; return; }
+    var conf = window.DB ? (DB.changes().attribute_overrides || []).length : 0;
+    var s = DB.summary();
+    h.hidden = false;
+    h.innerHTML =
+      '<div class="rh-left">' +
+        '<p class="gt"><span>지금 보고 있는 것</span></p>' +
+        '<h2>아직 분석하지 않았습니다</h2>' +
+        '<p class="sub">보유 수량과 속성만 있는 상태입니다. 목표재고 · 조치 · 금액은 ' +
+          '분석을 실행하면 올라옵니다.</p>' +
+        '<div class="rh-nums">' +
+          '<div><b>' + UI.num(s.items) + '</b><span>분석 대상</span></div>' +
+          '<div><b>' + UI.num(conf) + '</b><span>확정 속성 반영</span></div>' +
+        '</div>' +
+        (conf ? '' : '<p class="note" style="margin-top:12px">속성값 판단에서 확정한 것이 ' +
+          '없으면 알고리즘 판정 속성으로 분석합니다</p>') +
+      '</div>' +
+      '<div class="rh-right">' +
+        '<button class="btn" type="button" id="ana" style="min-height:52px;padding:0 26px">' +
+          '<span class="cbi">✦</span> 적정재고 분석</button>' +
+        '<p class="note" style="margin-top:10px">확정 속성별 공식으로 목표재고를 잡고, ' +
+          '보유와의 차이로 조치를 판정합니다</p>' +
+        '<div class="runsteps" id="anasteps" hidden></div>' +
+      '</div>';
+  }
+
+  /* 「분석」 · 확정 속성으로 낸 결과(2층)를 화면에 올린다. 문구는 실제로 하는 일만 적는다 */
+  function runAnalysis() {
+    if (running) { return; }
+    running = true;
+    var conf = (DB.changes().attribute_overrides || []).length;
+    var STEPS = [
+      '확정 속성 반영 · ' + UI.num(conf) + '품목',
+      '속성별 공식으로 목표재고 결과 불러오기',
+      '보유 → 목표 차이로 조치 판정',
+      '감축 · 회수 · 금융비용 금액 환산'
+    ];
+    var box = el('anasteps'), btn = el('ana');
+    box.hidden = false; btn.disabled = true;
+    var i = 0;
+    (function tick() {
+      if (i >= STEPS.length) {
+        S.setStockStage('done'); S.setStockStamp(S.nowStamp());
+        stage = 'done'; running = false;
+        paintAll();
+        return;
+      }
+      box.innerHTML = STEPS.map(function (t, j) {
+        return '<div class="rs' + (j < i ? ' done' : (j === i ? ' now' : '')) + '">' +
+          '<span>' + (j < i ? '✓' : (j === i ? '●' : '·')) + '</span>' + UI.esc(t) + '</div>';
+      }).join('');
+      i += 1;
+      window.setTimeout(tick, 750);      // 4단계 × 750ms 로 3초
+    })();
+  }
+
+  // ------------------------------------------------------------ 히트맵
+  /* 한 칸이 한 품목이다. 743칸을 조치별로 묶고 색 농도는 그 품목이 걸고 있는 금액이다.
+   * 표로는 8행씩만 보이던 것을 여기서 한 화면에 다 보인다 */
+  function paintHeat() {
+    var box = el('heat');
+    if (stage !== 'done') { box.hidden = true; return; }
+    var h = S.stockHeat();
+    box.hidden = false;
+
+    var rows = h.groups.map(function (g) {
+      return '<div class="heat-row">' +
+        '<div class="hr-k">' +
+          '<b class="t-' + g.tone + '">' + UI.esc(g.label) + '</b>' +
+          '<span>' + UI.num(g.n) + '품목</span>' +
+          '<span class="hr-a">' + UI.esc(g.amtLabel) + ' ' + UI.won(g.amt) + '</span>' +
+        '</div>' +
+        '<div class="heat-grid">' + g.cells.map(function (c) {
+          return '<button class="hc t-' + g.tone + ' l' + c.lvl + '" type="button" ' +
+            'data-q="' + UI.esc(c.q) + '" data-dept="' + UI.esc(c.dept) + '" ' +
+            'title="' + UI.esc(c.name + ' · ' + c.q + ' · 보유 ' + c.stock + ' 목표 ' +
+              c.target + ' · ' + g.amtLabel + ' ' + UI.won(c.amt)) + '"' +
+            (c.stale ? ' data-stale="1"' : '') + '></button>';
+        }).join('') + '</div>' +
+        '</div>';
+    }).join('');
+
+    /* 단계 1 · 2 · 6 에 있던 근거를 여기로 옮겼다. 색만 있고 공식이 없으면 히트맵이 뜻을 잃는다 */
+    var zChips = Object.keys(h.z).map(function (k) {
+      var cls = k === 'S' ? 'insur' : (k === 'A' ? 'core' : (k === 'B' ? 'plan' : ''));
+      return '<span class="badge ' + cls + '">' + k + ' ' + h.z[k] + '</span>';
+    }).join(' ');
+
+    box.innerHTML =
+      '<div class="heat-head">' +
+        '<div style="min-width:0">' +
+          '<p class="gt" style="margin-bottom:4px"><span>적정재고 분석 결과</span>' +
+            '<span class="gt-sub">한 칸이 한 품목 · 색이 진할수록 걸린 금액이 큽니다</span></p>' +
+          '<p class="note" style="margin:0">분석 실행 <b>' +
+            UI.esc(S.stockStamp() || '시각 미기록') + '</b> · ' +
+            UI.num(h.items) + '품목 · 보험품 ' + UI.num(h.ins) + ' · 계획품 ' + UI.num(h.pln) +
+            (h.staleN ? ' · 속성 변경 ' + UI.num(h.staleN) + '품목 반영' : '') + '</p>' +
+        '</div>' +
+        '<div class="heat-legend">' +
+          '<span>금액 작음</span>' +
+          '<i class="hc t-cut l0"></i><i class="hc t-cut l1"></i><i class="hc t-cut l2"></i>' +
+          '<i class="hc t-cut l3"></i><i class="hc t-cut l4"></i>' +
+          '<span>큼</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="heat-rows">' + rows + '</div>' +
+      '<div class="formula" style="margin-top:16px">' +
+        '<div class="ft"><span>목표재고 산식</span>' +
+          '<span>명세 부록 A~N · 화면이 상수를 만들지 않습니다</span></div>' +
+        '<code>' + UI.esc(h.formula) + '</code>' +
+        '<div class="ft" style="margin:9px 0 5px"><span>보험품 · 안전재고</span></div>' +
+        h.insFormula.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
+        '<div class="ft" style="margin:9px 0 5px"><span>안전계수 Z · 등급별</span></div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">' + zChips + '</div>' +
+        '<div class="ft" style="margin:9px 0 5px"><span>계획품 · 무재고 원칙</span></div>' +
+        '<code>목표 = 0 (상시 무재고)</code><br>' +
+        h.plnFormula.map(function (x) { return '<code>' + UI.esc(x) + '</code>'; }).join('<br>') +
+      '</div>' +
+      '<p class="note" style="margin-top:10px">' +
+        '목표재고 0 이 <b>' + UI.num(h.zeroTarget) + '품목 · ' +
+        UI.pct(h.zeroTarget, h.items) + '</b> 입니다. 계획품은 상시 재고 0 이 원칙이라 ' +
+        '데이터가 빈 것이 아닙니다 · ' + UI.esc(h.zNote) + '</p>';
+  }
+
   // ------------------------------------------------------------ 단계
   function paintSteps() {
+    el('steps').hidden = stage !== 'done';
+    if (stage !== 'done') { el('steps').innerHTML = ''; return; }
     var steps = S.stockSteps();
     el('steps').innerHTML = steps.map(function (st) {
       return '<section class="sect' + (st.open ? ' open' : '') + '" id="s-' + st.n + '">' +
@@ -121,53 +267,10 @@
   }
 
   function body(st) {
-    if (st.kind === 'formula') { return formulaBody(st); }
-    if (st.kind === 'target') {
-      return '<div class="formula"><div class="ft"><span>목표재고 산식</span>' +
-        '<span>명세 부록 A~N</span></div><code>' + UI.esc(st.note) + '</code></div>' +
-        '<p class="note" style="margin-top:10px">두 속성이 서로 다른 공식을 쓰기 때문에 ' +
-        '목표재고는 품목마다 따로 계산됩니다. 보유 수량을 누르면 그 품목의 계산을 그대로 볼 수 있습니다.</p>';
-    }
     if (st.kind === 'table') { return tableBody(st); }
     if (st.kind === 'pool') { return poolBody(st); }
     if (st.kind === 'fin') { return finBody(st); }
-    if (st.kind === 'zero') { return zeroBody(st); }
     return '';
-  }
-
-  /* 1 · 속성별로 다른 공식.
-   * 보험품과 계획품을 나란히 두어야 「왜 계획품은 0 인가」 가 한눈에 보인다 */
-  function formulaBody(st) {
-    var z = st.z, sl = st.sl;
-    var zChips = Object.keys(z).map(function (k) {
-      var cls = k === 'S' ? 'insur' : (k === 'A' ? 'core' : (k === 'B' ? 'plan' : ''));
-      return '<span class="badge ' + cls + '">' + k + ' ' + z[k] +
-        ' <span style="opacity:.7">(' + (sl[k] * 100).toFixed(1) + '%)</span></span>';
-    }).join(' ');
-
-    return '<div class="dashrow c2" style="margin-bottom:0">' +
-      '<div class="fbox">' +
-        '<p class="gt"><span>' + UI.typeBadge('보험품') + ' ' + UI.num(st.ins) + '품목</span>' +
-          '<span class="gt-sub">고장 정지 위험 방어</span></p>' +
-        '<div class="formula"><div class="ft"><span>안전재고 공식</span></div>' +
-          st.insFormula.map(function (x) {
-            return '<code>' + UI.esc(x) + '</code>';
-          }).join('<br>') + '</div>' +
-        '<p class="gt" style="margin:12px 0 7px"><span>안전계수 Z · 등급별</span></p>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap">' + zChips + '</div>' +
-        '<p class="note" style="margin-top:9px">' + UI.esc(st.zNote) + '</p>' +
-      '</div>' +
-      '<div class="fbox">' +
-        '<p class="gt"><span>' + UI.typeBadge('계획품') + ' ' + UI.num(st.pln) + '품목</span>' +
-          '<span class="gt-sub">정비 일정에 맞춰 직납</span></p>' +
-        '<div class="formula"><div class="ft"><span>무재고 원칙</span></div>' +
-          '<code>목표 = 0 (상시 무재고)</code><br>' +
-          st.plnFormula.map(function (x) {
-            return '<code>' + UI.esc(x) + '</code>';
-          }).join('<br>') + '</div>' +
-        '<p class="note" style="margin-top:9px">' + UI.esc(st.plnNote) + '</p>' +
-      '</div>' +
-      '</div>';
   }
 
   /* 3 · 조치 판정 · 목록이 들어간다 */
@@ -334,19 +437,29 @@
         st.rate + ' × ' + st.interest + ' = ' + UI.num(st.finance) + '원</code></div>';
   }
 
-  /* 6 · 무재고가 왜 정상인지. 이걸 안 적으면 데이터가 빈 것처럼 보인다 */
-  function zeroBody(st) {
-    var pct = UI.pct(st.zeroTarget, st.items);
-    return '<div class="callout ok"><span class="ci">✓</span>' +
-      '<span><b>목표재고 0 이 ' + UI.num(st.zeroTarget) + '품목 · ' + pct + '</b>' +
-      '계획품은 상시 재고 0 이 원칙입니다. 데이터가 빈 것이 아니라 ' +
-      '정비 일정에 맞춰 직납받는 것이 정답인 품목입니다.</span></div>' +
-      '<p class="note">핵심설비 · 최근 3년 소요 · 활발한 소요가 모두 맞을 때만 1 을 둡니다.</p>';
-  }
-
   // ------------------------------------------------------------ 이벤트
   function wire() {
     UI.accordion(document);
+
+    /* 분석 실행 · 한 번만 배선한다. 카드 안을 다시 그려도 살아 있게 카드에 건다 */
+    el('anahero').addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('#ana')) { runAnalysis(); }
+    });
+
+    /* 히트맵 칸 · 한 품목의 계산을 그대로 펼친다. 표의 보유 수량과 같은 분해다 */
+    el('heat').addEventListener('click', function (e) {
+      var c = e.target.closest && e.target.closest('.hc');
+      if (!c || !c.getAttribute('data-q')) { return; }
+      var r = DB.item(c.getAttribute('data-q'), c.getAttribute('data-dept'));
+      if (!r) { return; }
+      POP.show(c, {
+        title: r.name + ' · ' + r.q,
+        rows: S.stockBreak(r),
+        formula: r.reason || '',
+        note: '조달 ' + (r.proc || '미확인') + ' · 리드타임 평균 ' + UI.num(r.ltMean) +
+              '일 · 공급사 ' + UI.num(r.suppliers) + '곳'
+      });
+    });
 
     el('steps').addEventListener('click', function (e) {
       var t = e.target;
@@ -425,25 +538,25 @@
     el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
     paintStat();
     paintStageBar();
+    paintHero();
+    paintHeat();
     paintSteps();
   }
 
   paintAll();
   wire();
-  S.on(function () { paintStat(); paintStageBar(); paintTable(); });
+  S.on(function () { paintStat(); paintStageBar(); paintHeat(); paintTable(); });
 
-  /* 주소에 #order 가 붙어 오면 조치 판정 단계를 펼친다.
-   * 대시보드의 「적정재고 분석 열기」 가 그 주소로 온다 */
-  if ((location.hash || '').indexOf('order') >= 0 || (location.hash || '').indexOf('cut') >= 0) {
-    tab = (location.hash.indexOf('cut') >= 0) ? 'cut' : 'order';
-    var s3 = el('s-3');
-    if (s3) {
-      s3.classList.add('open');
-      s3.querySelector('.sect-arrow').textContent = '∧';
-      s3.querySelector('.sect-head').setAttribute('aria-expanded', 'true');
-      paintTable();
-      s3.scrollIntoView({ block: 'start' });
-    }
+  /* 주소에 #cut 이 붙어 오면 감축 칸부터 본다.
+   * 조치 판정 단계는 기본으로 열려 있어서 따로 펼칠 것이 없다 ·
+   * 단계로 스크롤만 맞춘다 (대시보드의 「적정재고 분석 열기」 가 이 주소로 온다) */
+  if (stage === 'done' && (location.hash || '').indexOf('cut') >= 0) {
+    tab = 'cut';
+    paintTable();
+  }
+  var jump = el('s-3');
+  if (stage === 'done' && jump && jump.scrollIntoView && (location.hash || '')) {
+    jump.scrollIntoView({ block: 'start' });
   }
 })();
 </script>

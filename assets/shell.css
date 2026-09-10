@@ -1447,6 +1447,70 @@ td.num, th.num { text-align: right; }
 .prstep.doing .sv { color: var(--brand); }
 .prstep.done .sv { color: var(--ok); }
 
+/* 적정재고 히트맵 · 한 칸이 한 품목이다.
+ *
+ * 표는 8행씩만 보여 준다. 743품목이 「어디에 얼마나」 걸려 있는지는 칸으로 깔아야 보인다.
+ * 색은 조치(발주 · 유지 · 감축), 농도는 그 품목이 걸고 있는 금액의 5분위다 */
+.heat { margin-bottom: 18px; padding: 20px 22px; }
+.heat-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.heat-legend {
+  display: flex; align-items: center; gap: 5px; flex: none;
+  font-size: 10px; color: var(--muted);
+}
+.heat-legend .hc { cursor: default; }
+.heat-rows { display: grid; gap: 14px; }
+.heat-row {
+  display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: start;
+  padding-top: 12px; border-top: 1px solid var(--line);
+}
+.heat-row:first-child { padding-top: 0; border-top: 0; }
+.hr-k { display: grid; gap: 2px; }
+.hr-k b { font-size: 13px; font-weight: 600; }
+.hr-k span { font-size: 11px; color: var(--muted); }
+.hr-k .hr-a { font-size: 11px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.hr-k b.t-core { color: var(--core); }
+.hr-k b.t-keep { color: var(--text-2); }
+.hr-k b.t-cut { color: var(--brand); }
+
+.heat-grid { display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start; }
+.hc {
+  width: 13px; height: 13px; border-radius: 3px; padding: 0;
+  border: 1px solid transparent; cursor: pointer;
+  transition: transform .08s ease, border-color .08s ease;
+}
+.hc:hover, .hc:focus-visible {
+  transform: scale(1.55); border-color: var(--text); outline: none; z-index: 2;
+}
+/* 속성이 바뀌어 목표를 다시 본 품목은 테두리로 구분한다 */
+.hc[data-stale] { border-color: var(--core); }
+
+/* 발주 필요 · 코랄 (#F0716F) */
+.hc.t-core.l0 { background: rgba(240, 113, 111, .16); }
+.hc.t-core.l1 { background: rgba(240, 113, 111, .34); }
+.hc.t-core.l2 { background: rgba(240, 113, 111, .55); }
+.hc.t-core.l3 { background: rgba(240, 113, 111, .78); }
+.hc.t-core.l4 { background: rgba(240, 113, 111, 1); }
+/* 적정 유지 · 슬레이트. 할 일이 없는 칸이라 가장 조용하게 둔다 */
+.hc.t-keep.l0 { background: rgba(65, 76, 107, .40); }
+.hc.t-keep.l1 { background: rgba(65, 76, 107, .60); }
+.hc.t-keep.l2 { background: rgba(65, 76, 107, .80); }
+.hc.t-keep.l3 { background: #414C6B; }
+.hc.t-keep.l4 { background: #6B7794; }
+/* 감축 대상 · 블루 (#5B8CFF) */
+.hc.t-cut.l0 { background: rgba(91, 140, 255, .16); }
+.hc.t-cut.l1 { background: rgba(91, 140, 255, .34); }
+.hc.t-cut.l2 { background: rgba(91, 140, 255, .55); }
+.hc.t-cut.l3 { background: rgba(91, 140, 255, .78); }
+.hc.t-cut.l4 { background: rgba(91, 140, 255, 1); }
+
+@media (max-width: 760px) {
+  .heat { padding: 16px 14px; }
+  .heat-row { grid-template-columns: 1fr; gap: 8px; }
+}
+
 /* 판단 시각 줄 · 제목 바로 밑. 기준일(스냅샷)과 실행 시각은 다른 값이다 */
 .stampbar {
   display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
