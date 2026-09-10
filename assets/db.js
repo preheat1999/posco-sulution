@@ -246,7 +246,8 @@
         type: {}, typeSource: {}, status: {},
         /* 2차 버킷팅 · 1단계 판정을 정본 Type 과 견준다.
          * 화면 세 곳(대시보드 · 속성값 판단 · 주간 리포트)이 같은 값을 봐야 한다 */
-        bucket: { '보험품→계획품': 0, '계획품→보험품': 0, '현행유지': 0, '판정일치': 0, '배제': 0 }
+        bucket: { '보험품→계획품': 0, '계획품→보험품': 0, '현행유지': 0, '판정일치': 0, '배제': 0 },
+        holdOpen: 0
       };
       var nowAmt = 0, tgtAmt = 0, cutAmt = 0, i, r, price, b;
 
@@ -269,6 +270,10 @@
         else if (r.baseType === '계획품' && r.verdict === '보험품') { b = '계획품→보험품'; }
         else { b = '판정일치'; }
         out.bucket[b] += 1;
+        /* 사람이 아직 확정하지 않은 회색지대. 「해야 할 건수」 는 이 값이다.
+         * bucket 은 2층 판정을 1층 정본과 견준 값이라 승인해도 안 줄어든다.
+         * 사이드바 배지에 bucket 을 쓰면 대시보드는 30, 배지는 31 로 어긋난다 */
+        if (b === '현행유지' && r.typeSrc !== 'override') { out.holdOpen += 1; }
 
         price = Number(r.price) || 0;
         nowAmt += price * (Number(r.stock) || 0);

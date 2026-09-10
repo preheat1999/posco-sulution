@@ -48,7 +48,9 @@
     if (!window.DB) { return out; }
     try {
       var s = window.DB.summary();
-      out.gray = s.bucket['현행유지'] || 0;          // 사람이 판단해야 하는 것
+      /* 승인하면 줄어드는 값을 써야 한다.
+       * bucket['현행유지'] 는 판정 기준이라 승인해도 안 줄고, 배지만 옛 값으로 남는다 */
+      out.gray = s.holdOpen === undefined ? (s.bucket['현행유지'] || 0) : s.holdOpen;
       out.order = s.action['발주'] || 0;             // 발주 필요
       if (window.PLAN && window.PLAN.meta) {
         out.over = window.PLAN.meta.counts.tone.over || 0;

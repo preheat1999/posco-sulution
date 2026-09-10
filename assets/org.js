@@ -3,10 +3,22 @@
  * 로그인 화면과 주간 리포트의 수신자 선택기가 **같은 데이터**를 쓴다.
  * 두 곳에 따로 두면 어긋난다. 리포트에 없는 사람이 로그인에 뜨거나 그 반대가 된다.
  *
+ * 계층은 부 → 섹션 → 파트다. 사람이 붙는 단위는 맨 아래 파트다.
+ * 부서코드(dept)도 파트에 붙는다. 섹션에 붙이면 파트가 달라도 같은 재고를
+ * 보게 되어 「내 자재」 라는 말이 뜻을 잃는다.
+ *
+ * 이름을 압연 쪽으로 둔 이유.
+ * 반출 데이터의 설비 14기가 FM Main Motor · FM Crop Shear · Stand Main TR ·
+ * QOC Servo 처럼 전부 열연 압연 설비다. 조직 이름만 하역 쪽이면
+ * 화면에서 설비와 소속이 어긋나 보인다.
+ * 다만 1층 정본의 부서 표(db-master.js depts[0].path)에는 원천 CSV 값이
+ * 그대로 남아 있다. 정본은 손대지 않는다. 화면에 뜨는 소속 이름은
+ * 로그인이 고른 이 트리에서 온다.
+ *
  * 부서코드(dept)는 실제 원장에 있는 것만 넣는다.
  * 반출 데이터에는 SEO26FF 하나뿐이다. 없는 코드를 지어 넣으면
  * 화면이 그 코드로 조회하다 빈 화면을 띄우고, 불변식 4(모든 DeptCode 가
- * 부서 표에 있다)가 잡는다. 그래서 다른 섹션은 dept 를 비워 두고
+ * 부서 표에 있다)가 잡는다. 그래서 다른 파트는 dept 를 비워 두고
  * 「이 시연 데이터에 없다」 고 화면에 적는다.
  *
  * 사람 정보는 시연용이다. 인사 DB 와 연동하지 않는다.
@@ -21,15 +33,15 @@
   var ROLE = { LEAD: '정비 리더', OWNER: '정비 담당자', BUY: '구매 담당자' };
 
   var TREE = {
-    division: '설비자재부문',
-    parts: [
+    division: '압연설비 1부',
+    sections: [
       {
-        name: '원료처리파트',
-        sections: [
+        name: '열연정비 1섹션',
+        parts: [
           {
-            name: '원료정비섹션',
+            name: 'FM기계파트',
             dept: 'SEO26FF',              // 실제 원장에 있는 코드
-            eqGroup: '하역설비군',
+            eqGroup: '열연 압연설비군',
             tel: '061-790-1111',
             people: [
               { name: '이예열', rank: '사원', role: ROLE.OWNER, mail: 'yeyeol.lee@demo.local' },
@@ -39,67 +51,68 @@
               { name: '윤도현', rank: '대리', role: ROLE.BUY, mail: 'dohyun.yoon@demo.local' }
             ]
           },
-          { name: '원료품질섹션', dept: null, eqGroup: '하역설비군', people: [] }
+          { name: 'RM기계파트', dept: null, eqGroup: '열연 압연설비군', people: [] },
+          { name: '전기파트', dept: null, eqGroup: '열연 압연설비군', people: [] }
         ]
       },
       {
-        name: '압연정비파트',
-        sections: [
-          { name: '열연정비섹션', dept: null, eqGroup: '압연설비군', people: [] },
-          { name: '냉연정비섹션', dept: null, eqGroup: '압연설비군', people: [] }
+        name: '열연정비 2섹션',
+        parts: [
+          { name: '가열로파트', dept: null, eqGroup: '가열로설비군', people: [] },
+          { name: '권취기파트', dept: null, eqGroup: '권취설비군', people: [] }
         ]
       }
     ]
   };
 
-  function parts() { return TREE.parts.map(function (p) { return p.name; }); }
+  function sections() { return TREE.sections.map(function (s) { return s.name; }); }
 
-  function sections(partName) {
-    var p = TREE.parts.filter(function (x) { return x.name === partName; })[0];
-    return p ? p.sections : [];
+  function parts(sectionName) {
+    var s = TREE.sections.filter(function (x) { return x.name === sectionName; })[0];
+    return s ? s.parts : [];
   }
 
-  function section(sectionName) {
-    var i, j, ss;
-    for (i = 0; i < TREE.parts.length; i++) {
-      ss = TREE.parts[i].sections;
-      for (j = 0; j < ss.length; j++) {
-        if (ss[j].name === sectionName) { return ss[j]; }
+  function part(partName) {
+    var i, j, ps;
+    for (i = 0; i < TREE.sections.length; i++) {
+      ps = TREE.sections[i].parts;
+      for (j = 0; j < ps.length; j++) {
+        if (ps[j].name === partName) { return ps[j]; }
       }
     }
     return null;
   }
 
-  /* 부서코드가 있는 섹션. 이 시연 데이터로 실제 조회가 되는 것들이다 */
-  function liveSections() {
-    var out = [], i, j, ss;
-    for (i = 0; i < TREE.parts.length; i++) {
-      ss = TREE.parts[i].sections;
-      for (j = 0; j < ss.length; j++) {
-        if (ss[j].dept) { out.push({ part: TREE.parts[i].name, section: ss[j] }); }
+  /* 부서코드가 있는 파트. 이 시연 데이터로 실제 조회가 되는 것들이다 */
+  function liveParts() {
+    var out = [], i, j, ps;
+    for (i = 0; i < TREE.sections.length; i++) {
+      ps = TREE.sections[i].parts;
+      for (j = 0; j < ps.length; j++) {
+        if (ps[j].dept) { out.push({ section: TREE.sections[i].name, part: ps[j] }); }
       }
     }
     return out;
   }
 
-  function people(sectionName) {
-    var s = section(sectionName);
-    return s ? s.people : [];
+  function people(partName) {
+    var p = part(partName);
+    return p ? p.people : [];
   }
 
-  function person(sectionName, name) {
-    return people(sectionName).filter(function (p) { return p.name === name; })[0] || null;
+  function person(partName, name) {
+    return people(partName).filter(function (p) { return p.name === name; })[0] || null;
   }
 
   /* 리더는 리포트를 받는다. 담당자는 매일 화면에 들어오지만 리더는 안 들어온다.
    * 리더가 안 보면 승인이 안 나고, 승인이 안 나면 라벨이 안 쌓인다 */
-  function leaders(sectionName) {
-    return people(sectionName).filter(function (p) { return p.role === ROLE.LEAD; });
+  function leaders(partName) {
+    return people(partName).filter(function (p) { return p.role === ROLE.LEAD; });
   }
 
   var DEFAULT = {
-    part: '원료처리파트',
-    section: '원료정비섹션',
+    section: '열연정비 1섹션',
+    part: 'FM기계파트',
     name: '이예열'
   };
 
@@ -112,25 +125,28 @@
     } catch (e) {
       s = null;   // 저장소가 막힌 환경. 기본값으로 도는 것이 화면이 안 뜨는 것보다 낫다
     }
-    if (!s || !s.section || !section(s.section)) { s = fill(DEFAULT); }
+    /* 조직 이름이 바뀌면 예전 세션값은 트리에 없는 파트를 가리킨다.
+     * 그대로 두면 빵조각이 빈칸이 되므로 기본값으로 되돌린다 */
+    if (!s || !s.part || !part(s.part)) { s = fill(DEFAULT); }
     return s;
   }
 
   function fill(pick) {
-    var sec = section(pick.section) || section(DEFAULT.section);
-    var per = person(sec.name, pick.name) || sec.people[0] || null;
+    var pt = part(pick.part) || part(DEFAULT.part);
+    var per = person(pt.name, pick.name) || pt.people[0] || null;
+    var sec = pick.section || DEFAULT.section;
     return {
       division: TREE.division,
-      part: pick.part || DEFAULT.part,
-      section: sec.name,
-      dept: sec.dept,
-      eqGroup: sec.eqGroup,
-      tel: sec.tel || null,
+      section: sec,
+      part: pt.name,
+      dept: pt.dept,
+      eqGroup: pt.eqGroup,
+      tel: pt.tel || null,
       name: per ? per.name : null,
       rank: per ? per.rank : null,
       role: per ? per.role : null,
       mail: per ? per.mail : null,
-      path: TREE.division + ' · ' + (pick.part || DEFAULT.part) + ' · ' + sec.name
+      path: TREE.division + ' · ' + sec + ' · ' + pt.name
     };
   }
 
@@ -148,10 +164,10 @@
     ROLE: ROLE,
     division: TREE.division,
     tree: TREE,
-    parts: parts,
     sections: sections,
-    section: section,
-    liveSections: liveSections,
+    parts: parts,
+    part: part,
+    liveParts: liveParts,
     people: people,
     person: person,
     leaders: leaders,

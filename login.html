@@ -212,14 +212,14 @@
       <div class="divider"><span>또는 소속을 직접 선택</span></div>
 
       <div class="field">
-        <label for="f-part">소속 파트</label>
-        <select class="select" id="f-part"></select>
+        <label for="f-section">소속 섹션</label>
+        <select class="select" id="f-section"></select>
       </div>
 
       <div class="grid2" style="gap:12px">
         <div class="field">
-          <label for="f-section">섹션</label>
-          <select class="select" id="f-section"></select>
+          <label for="f-part">파트</label>
+          <select class="select" id="f-part"></select>
         </div>
         <div class="field">
           <label for="f-person">담당자</label>
@@ -277,44 +277,46 @@
     return o;
   }
 
-  function fillParts() {
-    partEl.innerHTML = '';
-    ORG.parts().forEach(function (p) { partEl.appendChild(opt(p, p)); });
-    partEl.value = me.part;
-  }
-
-  /* 부서코드가 없는 섹션은 고를 수 없다.
-     없는 코드로 조회하면 화면이 빈 채로 뜨고 불변식 4 가 잡는다.
-     그래서 「없다」 고만 적지 않고 무엇을 하면 되는지 적는다 */
   function fillSections() {
     secEl.innerHTML = '';
-    var list = ORG.sections(partEl.value);
-    list.forEach(function (s) {
-      secEl.appendChild(opt(s.name, s.name + (s.dept ? '' : ' · 시연 데이터 준비 전'), !s.dept));
+    ORG.sections().forEach(function (s) { secEl.appendChild(opt(s, s)); });
+    secEl.value = me.section;
+  }
+
+  /* 부서코드가 없는 파트는 고를 수 없다.
+     없는 코드로 조회하면 화면이 빈 채로 뜨고 불변식 4 가 잡는다.
+     그래서 「없다」 고만 적지 않고 무엇을 하면 되는지 적는다 */
+  function fillParts() {
+    partEl.innerHTML = '';
+    var list = ORG.parts(secEl.value);
+    list.forEach(function (p) {
+      partEl.appendChild(opt(p.name, p.name + (p.dept ? '' : ' · 시연 데이터 준비 전'), !p.dept));
     });
-    var live = list.filter(function (s) { return s.dept; });
+    var live = list.filter(function (p) { return p.dept; });
     if (live.length) {
-      secEl.value = live.some(function (s) { return s.name === me.section; }) ? me.section : live[0].name;
+      partEl.value = live.some(function (p) { return p.name === me.part; }) ? me.part : live[0].name;
     }
     return live.length > 0;
   }
 
   function fillPeople() {
     perEl.innerHTML = '';
-    ORG.people(secEl.value).forEach(function (p) {
+    ORG.people(partEl.value).forEach(function (p) {
       perEl.appendChild(opt(p.name, p.name + ' ' + p.rank));
     });
-    var names = ORG.people(secEl.value).map(function (p) { return p.name; });
+    var names = ORG.people(partEl.value).map(function (p) { return p.name; });
     if (names.indexOf(me.name) >= 0) { perEl.value = me.name; }
   }
 
-  var lastPart = null;
-  function fillSectionsIfNeeded() {
-    if (lastPart === partEl.value) {
-      return ORG.sections(partEl.value).some(function (s) { return s.dept; });
+  /* 섹션이 그대로면 파트 목록을 다시 만들지 않는다.
+     매번 다시 만들면 사람이 고른 파트가 첫 항목으로 되돌아간다 */
+  var lastSec = null;
+  function fillPartsIfNeeded() {
+    if (lastSec === secEl.value) {
+      return ORG.parts(secEl.value).some(function (p) { return p.dept; });
     }
-    lastPart = partEl.value;
-    return fillSections();
+    lastSec = secEl.value;
+    return fillParts();
   }
 
   function row(k, v) {
@@ -323,17 +325,17 @@
   }
 
   function paint() {
-    var hasLive = fillSectionsIfNeeded();
+    var hasLive = fillPartsIfNeeded();
     fillPeople();
 
-    var sec = ORG.section(secEl.value);
-    var per = ORG.person(secEl.value, perEl.value);
+    var pt = ORG.part(partEl.value);
+    var per = ORG.person(partEl.value, perEl.value);
 
-    if (!hasLive || !sec || !sec.dept) {
-      rowsEl.innerHTML = row('소속', UI.esc(partEl.value));
+    if (!hasLive || !pt || !pt.dept) {
+      rowsEl.innerHTML = row('소속', UI.esc(secEl.value));
       guideEl.hidden = false;
-      guideEl.textContent = '이 시연 데이터에는 원료정비섹션(SEO26FF) 자재 743종만 들어 있습니다. ' +
-        '소속 파트를 「원료처리파트」 로 두고 「원료정비섹션」 을 선택하세요.';
+      guideEl.textContent = '이 시연 데이터에는 FM기계파트(SEO26FF) 자재 743종만 들어 있습니다. ' +
+        '소속 섹션을 「열연정비 1섹션」 으로 두고 「FM기계파트」 를 선택하세요.';
       goEl.disabled = true;
       return;
     }
@@ -342,12 +344,12 @@
     goEl.disabled = false;
 
     rowsEl.innerHTML =
-      row('부문', UI.esc(ORG.division)) +
-      row('소속', UI.esc(partEl.value + ' · ' + sec.name)) +
+      row('소속 부', UI.esc(ORG.division)) +
+      row('소속', UI.esc(secEl.value + ' · ' + pt.name)) +
       row('직급', UI.esc(per ? per.rank : '미확인')) +
       row('역할', '<span class="badge plan">' + UI.esc(per ? per.role : '미확인') + '</span>') +
-      row('담당 설비군', UI.esc(sec.eqGroup || '미확인')) +
-      row('부서코드', UI.esc(sec.dept)) +
+      row('담당 설비군', UI.esc(pt.eqGroup || '미확인')) +
+      row('부서코드', UI.esc(pt.dept)) +
       '<div class="hr-foot note">' +
         (per && per.role === ORG.ROLE.LEAD
           ? '부서 자재 현황을 주간 리포트로 받습니다 · 승인 대기 건을 확인할 수 있습니다'
@@ -387,10 +389,10 @@
     ssoEl.disabled = true;
 
     /* SSO 가 준 소속으로 맞춘다. 지금은 반출 데이터에 있는 부서 하나가 그 값이다 */
-    partEl.value = ORG.DEFAULT.part;
-    lastPart = null;
     secEl.value = ORG.DEFAULT.section;
+    lastSec = null;
     me.section = ORG.DEFAULT.section;
+    me.part = ORG.DEFAULT.part;
     me.name = ORG.DEFAULT.name;
     paint();
     perEl.value = ORG.DEFAULT.name;
@@ -413,16 +415,19 @@
     box.hidden = false;
   }
 
-  fillParts();
+  fillSections();
   paint();
   stat();
 
-  partEl.addEventListener('change', paint);
-  secEl.addEventListener('change', function () { me.section = secEl.value; paint(); });
-  perEl.addEventListener('change', paint);
+  secEl.addEventListener('change', paint);
+  partEl.addEventListener('change', function () { me.part = partEl.value; paint(); });
+  /* 고른 담당자를 me 에 넣어 둔다.
+   * 안 넣으면 목록을 다시 채울 때 fillPeople 이 me.name(예전 값)으로 되돌려
+   * 사람을 바꿔도 인사 정보 칸이 안 바뀐다 */
+  perEl.addEventListener('change', function () { me.name = perEl.value; paint(); });
 
   goEl.addEventListener('click', function () {
-    ORG.save({ part: partEl.value, section: secEl.value, name: perEl.value });
+    ORG.save({ section: secEl.value, part: partEl.value, name: perEl.value });
     window.location.href = 'main.html';
   });
 })();

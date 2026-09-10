@@ -35,7 +35,17 @@
   --ok-weak: #E7F4EF;
 
   --radius: 16px;
-  --shadow: 0 1px 2px rgba(28, 29, 34, .04), 0 8px 24px rgba(28, 29, 34, .05);
+  /* 그림자는 세 겹이다. 접지(1px) · 확산(6px) · 바닥에 드리우는 그늘(28px).
+   * 한 겹으로 크게 주면 카드가 흐릿해 보이고, 세 겹으로 나누면 얇게 떠 보인다 */
+  --shadow: 0 1px 1px rgba(28, 29, 34, .04),
+            0 3px 6px -1px rgba(28, 29, 34, .05),
+            0 14px 30px -8px rgba(28, 29, 34, .11);
+  /* 누를 수 있는 것만 이걸 쓴다. 못 누르는 카드가 떠오르면 눌러도 되는 줄 안다 */
+  --shadow-lift: 0 2px 4px rgba(28, 29, 34, .05),
+                 0 10px 20px -4px rgba(28, 29, 34, .10),
+                 0 28px 52px -14px rgba(28, 29, 34, .18);
+  /* 위쪽 1px 흰 선. 빛이 위에서 온다고 알려 준다 · 이게 없으면 그냥 납작한 판이다 */
+  --edge: inset 0 1px 0 rgba(255, 255, 255, .85);
   --side-w: 230px;
 }
 
@@ -50,7 +60,11 @@ body {
   font-size: 14px;
   line-height: 1.55;
   color: var(--text);
-  background: var(--bg);
+  /* 바탕이 완전히 균일하면 카드가 떠 보이지 않는다.
+   * 위쪽을 아주 조금 밝게 두어 아래로 갈수록 그늘이 앉게 만든다.
+   * 색은 두 개뿐이고 대비는 1% 미만이라 인쇄와 저사양 화면에서도 티가 안 난다 */
+  background: var(--bg)
+    radial-gradient(1100px 520px at 22% -8%, #FFFFFF 0%, rgba(255, 255, 255, 0) 62%) fixed;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -241,7 +255,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);         /* 그림자는 카드에만 쓴다 */
+  box-shadow: var(--shadow), var(--edge);   /* 그림자는 카드에만 쓴다 */
   padding: 18px 20px;
   margin-bottom: 16px;
 }
@@ -256,27 +270,60 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid2 > .card { margin-bottom: 0; }
+/* grid 자식도 min-width:auto 다. flex 와 똑같은 함정이다.
+ * 안에 nowrap 글자가 하나 있으면 1fr 칸이 그 글자 길이까지 벌어지고,
+ * 375px 화면에서 카드가 445px 로 삐져나가 가로 스크롤이 생긴다.
+ * 실제로 「자재 Hydraulic & Pneumatics · Q2154362 · C등급」 한 줄이 그걸 냈다 */
+.grid2 > *, .kpiwrap > * { min-width: 0; }
+/* 한쪽이 접혀 있어 짧을 때 쓴다.
+ * 기본은 두 카드의 높이를 맞추는데, 한쪽 내용이 접혀 있으면
+ * 그 카드 안에 300px 짜리 빈 곳이 생긴다. 그럴 때는 각자 높이대로 둔다 */
+.grid2.fit { align-items: start; }
 
 /* ---------------------------------------------------------------- 9. KPI */
 .kpiwrap { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .kpiwrap.five { grid-template-columns: repeat(5, 1fr); }
 /* 그림이 들어가는 묶음은 폭을 더 준다.
  * 도넛과 감축 막대를 1fr 에 넣으면 범례가 한 글자씩 잘린다 */
-.kpiwrap.viz { grid-template-columns: .82fr 1.08fr 1.1fr; }
+.kpiwrap.viz { grid-template-columns: .96fr 1.04fr 1.1fr; }
 
 .kpigroup {
+  position: relative;
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); box-shadow: var(--shadow);
+  border-radius: var(--radius); box-shadow: var(--shadow), var(--edge);
   padding: 16px 18px; color: inherit; text-decoration: none;
-  display: block; transition: border-color .12s ease, transform .12s ease;
+  /* 세 묶음의 높이는 그리드가 제일 큰 것에 맞춘다.
+   * block 으로 두면 내용이 짧은 묶음 아래쪽이 통째로 빈다.
+   * 열 방향 flex 로 두고 그림 칸만 늘려서 빈 곳을 없앤다 */
+  display: flex; flex-direction: column;
+  transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease;
 }
-a.kpigroup:hover { border-color: var(--brand); transform: translateY(-1px); text-decoration: none; }
+/* 누를 수 있는 묶음만 떠오른다. 못 누르는 것이 떠오르면 눌러도 되는 줄 안다 */
+a.kpigroup:hover, a.kpigroup:focus-visible {
+  border-color: var(--brand); transform: translateY(-3px);
+  box-shadow: var(--shadow-lift), var(--edge); text-decoration: none;
+}
+
+/* 담당 현황은 이 화면의 기준값이다. 「내가 무엇을 맡고 있는가」 를 먼저 읽게
+ * 숫자를 키우고 폭도 더 준다. 나머지 두 묶음은 그 기준 위의 판단이다 */
+.kpigroup.lead .kpi .v { font-size: 26px; letter-spacing: -.9px; }
+.kpigroup.lead .kpi .v small { font-size: 13px; }
+.kpigroup.lead .kpi.big .v { font-size: 34px; letter-spacing: -1.4px; }
+.kpigroup.lead .kpi.big .v small { font-size: 15px; }
+.kpigroup.lead .kpi .k { font-size: 12px; }
+.kpigroup.lead .lead-line {
+  height: 1px; background: var(--line); margin: 14px 0 13px;
+}
+/* 보유 재고 줄을 아래에 붙인다. 위 숫자와 아래 숫자 사이가 벌어져
+ * 「담당 규모 - 그 금액」 두 덩어리로 읽힌다 */
+.kpigroup.lead .lead-line { margin-top: auto; }
 
 .gt {
   display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
   font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 10px;
 }
 .gt-link { font-size: 11px; font-weight: 700; color: var(--brand); white-space: nowrap; }
+.gt-sub { font-size: 10.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
 .gt .ai { color: var(--brand); }
 
 .row { display: flex; gap: 14px; }
@@ -353,13 +400,21 @@ td.num, th.num { text-align: right; }
 /* ---------------------------------------------------------------- 12. 아코디언 */
 .sect {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); box-shadow: var(--shadow);
+  border-radius: var(--radius); box-shadow: var(--shadow), var(--edge);
   margin-bottom: 12px; overflow: hidden;
+  transition: box-shadow .14s ease, border-color .14s ease;
 }
+.sect:hover { box-shadow: var(--shadow-lift), var(--edge); }
+.sect.open { border-color: var(--line-2); }
 .sect-head {
   display: flex; justify-content: space-between; align-items: flex-start;
   gap: 12px; padding: 16px 20px; cursor: pointer;
+  width: 100%; text-align: left; background: none; border: 0; font: inherit; color: inherit;
 }
+.sect-head:hover .sect-arrow { color: var(--brand); }
+/* 닫혀 있어도 몇 건이 들어 있는지는 보여야 한다.
+ * 안 그러면 닫힌 줄이 「빈 줄」 로 보이고 아무도 열지 않는다 */
+.sect-head .sect-n { font-size: 11.5px; font-weight: 700; color: var(--text-2); }
 .sect-head .card-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sect-title { min-width: 0; }
 .sect-title h2 { font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
@@ -387,6 +442,30 @@ td.num, th.num { text-align: right; }
 .todo-why { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 .todo-act { margin-top: 7px; display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* 지금 당장 해야 하는 줄만 키운다.
+ * 네 줄을 같은 크기로 두면 「급한 것」 과 「해도 되는 것」 이 같은 무게로 읽힌다.
+ * 나머지 세 줄은 접어 두되, 접힌 버튼에 건수를 적어 둔다 */
+.todo-row.hero {
+  background: linear-gradient(180deg, #FDF5F5, var(--insur-weak));
+  border: 1px solid #F3D9DA; border-radius: 12px; padding: 14px 15px;
+  box-shadow: 0 2px 8px -3px rgba(204, 95, 95, .25), var(--edge);
+}
+.todo-row.hero .todo-body { font-size: 14.5px; color: var(--text); }
+.todo-row.hero .todo-num { font-size: 27px; letter-spacing: -1px; }
+.todo-row.hero .tag { padding: 5px 11px; font-size: 11.5px; }
+.todo-row.hero .todo-act { margin-top: 10px; }
+
+.todo-more {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  background: none; border: 1px dashed var(--line-2); border-radius: 11px;
+  padding: 9px 12px; cursor: pointer; font: inherit;
+  font-size: 11.5px; color: var(--text-2); text-align: left;
+}
+.todo-more:hover { border-color: var(--brand); color: var(--brand); }
+.todo-more .m-arrow { margin-left: auto; flex: none; color: var(--muted); }
+.todo-more b { font-weight: 700; }
+.todo-rest { display: flex; flex-direction: column; gap: 12px; }
+
 /* ---------------------------------------------------------------- 14. 발주 마감 · 건강도 얼굴 */
 .due { display: flex; flex-direction: column; }
 .due-row {
@@ -397,7 +476,16 @@ td.num, th.num { text-align: right; }
 .face { width: 30px; height: 30px; flex: none; }
 .due-body { min-width: 0; flex: 1; }
 .due-name { font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.due-meta { font-size: 11px; color: var(--muted); }
+/* 자재명 줄은 설명이 아니라 값이다. --muted 로 두면 읽히지 않는다 */
+.due-meta { font-size: 11.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.due-meta .dim, .due-name .dim { color: var(--muted); font-weight: 400; }
+/* 「무엇의 이름인지」 를 앞에 붙인다. 설비명과 자재명은 둘 다 영문이라
+ * 라벨이 없으면 어느 줄이 설비인지 알 수 없다 */
+.ln {
+  display: inline-block; margin-right: 5px; padding: 1px 5px; border-radius: 4px;
+  background: var(--line); color: var(--muted);
+  font-size: 9.5px; font-weight: 700; white-space: nowrap; vertical-align: 1px;
+}
 .due-right { flex: none; text-align: right; }
 .due-d { font-size: 12.5px; font-weight: 700; }
 .due-date { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
@@ -854,10 +942,39 @@ td.num, th.num { text-align: right; }
  * 적정재고는 「이만큼 빼도 된다」 가 한눈에 느껴져야 한다.
  * 차트 라이브러리를 쓰지 않는다. 사내망에서 막히면 화면이 통째로 깨진다
  */
-.kpi-viz { display: flex; align-items: center; gap: 16px; }
+.kpi-viz { display: flex; align-items: center; gap: 16px; flex: 1; }
 .donut { width: 104px; height: 104px; flex: none; }
 .donut-v { font-size: 17px; font-weight: 800; letter-spacing: -.5px; fill: var(--text); }
 .donut-k { font-size: 9.5px; fill: var(--muted); }
+
+/* 도넛 오른쪽 한 칸을 두 겹으로 쓴다.
+ * 평소에는 「그래서 몇 품목을 손대야 하는가」 문장, 마우스를 올리면 6갈래 내역.
+ * 둘을 세로로 쌓지 않는 이유 · 마우스를 올릴 때 카드 높이가 바뀌면
+ * 아래 카드가 밀려 내려가고 커서가 카드를 벗어나 다시 닫힌다(깜빡임).
+ * 같은 자리에 겹쳐 두면 높이가 고정이라 안 흔들린다 */
+.viz-right { position: relative; flex: 1; min-width: 0; min-height: 104px; }
+.viz-msg, .viz-legend {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  justify-content: center; transition: opacity .14s ease;
+}
+.viz-msg { font-size: 13px; line-height: 1.62; color: var(--text-2); }
+.viz-msg b { font-size: 18px; font-weight: 800; letter-spacing: -.5px; color: var(--text); }
+.viz-msg b.ok { color: var(--ok); }
+.viz-hint {
+  margin-top: 7px; font-size: 10.5px; color: var(--muted);
+  display: flex; align-items: center; gap: 4px;
+}
+.viz-legend { opacity: 0; pointer-events: none; }
+.kpigroup:hover .viz-msg, .kpigroup:focus-within .viz-msg { opacity: 0; }
+.kpigroup:hover .viz-legend, .kpigroup:focus-within .viz-legend { opacity: 1; }
+
+/* 마우스가 없는 기계(터치 · 발표용 태블릿)에서는 hover 가 아예 안 온다.
+ * 그러면 내역을 볼 방법이 사라지므로 그쪽에서는 처음부터 펼쳐 둔다 */
+@media (hover: none) {
+  .viz-right { min-height: 0; }
+  .viz-msg { display: none; }
+  .viz-legend { position: static; opacity: 1; pointer-events: auto; }
+}
 
 .legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .legend-row { display: flex; align-items: center; gap: 7px; font-size: 11.5px; }
@@ -872,26 +989,52 @@ td.num, th.num { text-align: right; }
 .cut-hero .cv { font-size: 27px; font-weight: 800; letter-spacing: -1px; color: var(--ok); line-height: 1.1; }
 .cut-hero .ck { font-size: 11.5px; color: var(--muted); padding-bottom: 3px; }
 
-.cut-bar {
-  display: flex; height: 16px; border-radius: 999px; overflow: hidden;
-  background: var(--line); margin: 11px 0 7px;
+/* 막대 하나를 둘로 쪼개면 「무엇과 무엇을 견주는지」 가 안 보인다.
+ * 지금 보유와 목표 안에 드는 몫을 **두 줄로 나란히** 두고,
+ * 짧아진 만큼을 빗금으로 남긴다. 그 빗금이 빼도 되는 몫이다 */
+.cmp { display: flex; flex-direction: column; gap: 7px; margin: 12px 0 0; }
+.cmp-row { display: grid; grid-template-columns: 58px 1fr auto; gap: 9px; align-items: center; }
+.cmp-k { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.cmp-track {
+  position: relative; height: 22px; border-radius: 7px;
+  background: var(--line); overflow: hidden;
 }
-.cut-seg { height: 100%; }
-.cut-seg.keep { background: var(--brand); }
-.cut-seg.over { background: var(--core); }
-.cut-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
-.cut-legend b { color: var(--text-2); }
-.cut-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 3px; margin-right: 4px; }
-.cut-legend i.keep { background: var(--brand); }
-.cut-legend i.over { background: var(--core); }
+.cmp-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px;
+  box-shadow: inset 0 -1px 0 rgba(28, 29, 34, .10);
+}
+.cmp-fill.now { background: linear-gradient(180deg, #7189F4, #5570F1); }
+.cmp-fill.tgt { background: linear-gradient(180deg, #94A5F8, #7A8FF5); }
+/* 빗금 칸 · 목표를 넘는 몫. 여기가 비어야 돈이 남는다는 뜻이다 */
+.cmp-gap {
+  position: absolute; top: 0; bottom: 0; right: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 7px; border: 1px dashed var(--core);
+  background: repeating-linear-gradient(-45deg,
+    var(--core-weak) 0 6px, #FFFFFF 6px 12px);
+  font-size: 10.5px; font-weight: 800; color: var(--core); white-space: nowrap;
+  overflow: hidden;
+}
+.cmp-v { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cmp-v.over { color: var(--core); }
+.cmp-note { font-size: 10.5px; color: var(--muted); margin-top: 6px; }
 
-/* 「그래서 돈이 얼마 남는가」 한 줄. 이게 없으면 감축 금액이 그냥 숫자로 남는다 */
+/* 「그래서 돈이 얼마 남는가」 한 줄. 이게 없으면 감축 금액이 그냥 숫자로 남는다.
+ * 이 화면에서 사람이 가장 오래 보는 문장이라 제일 크게 둔다 */
 .fin-pill {
-  display: flex; align-items: center; gap: 8px; margin-top: 11px;
-  background: var(--ok-weak); border-radius: 10px; padding: 9px 12px;
-  font-size: 11.5px; line-height: 1.5; color: var(--ok);
+  display: flex; align-items: center; gap: 10px; margin-top: 12px;
+  background: linear-gradient(180deg, #EFF8F4, var(--ok-weak));
+  border: 1px solid #CFE7DD; border-radius: 12px; padding: 11px 13px;
+  box-shadow: 0 2px 6px -2px rgba(50, 147, 111, .22), var(--edge);
+  font-size: 12px; line-height: 1.5; color: var(--ok);
 }
-.fin-pill b { font-size: 13.5px; font-weight: 800; white-space: nowrap; }
+.fin-pill .fic {
+  flex: none; width: 26px; height: 26px; border-radius: 8px;
+  background: var(--ok); color: #FFFFFF; display: grid; place-items: center;
+  font-size: 13px; font-weight: 800;
+}
+.fin-pill b { display: block; font-size: 17px; font-weight: 800; letter-spacing: -.5px; white-space: nowrap; }
+.fin-pill span { display: block; }
 
 /* ---------------------------------------------------------------- 26. 대시보드 본체 */
 /* 설비별 자재 현황의 두 줄 셀 */
@@ -914,6 +1057,12 @@ td.num, th.num { text-align: right; }
 
 @media (max-width: 640px) {
   .kpi-viz { gap: 12px; }
-  .donut { width: 88px; height: 88px; }
-  .cut-hero .cv { font-size: 24px; }
+  .donut { width: 92px; height: 92px; }
+  .viz-right { min-height: 92px; }
+  /* 좁으면 라벨 칸을 줄인다. 58px 을 그대로 두면 막대가 손톱만큼 남는다 */
+  .cmp-row { grid-template-columns: 48px 1fr auto; gap: 7px; }
+  .cmp-gap { font-size: 0; }        /* 글자가 안 들어가면 빗금만 남기고 아래 줄로 옮긴다 */
+  .fin-pill b { font-size: 15.5px; }
+  .todo-row.hero .todo-num { font-size: 23px; }
+  .kpigroup.lead .kpi.big .v { font-size: 29px; }
 }

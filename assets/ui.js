@@ -176,11 +176,48 @@
     return { rows: rows.slice(0, limit), rest: Math.max(0, rows.length - limit), limit: limit };
   }
 
+  /* 접히는 영역 하나. 화면마다 따로 쓰면 「화살표만 돌고 내용은 그대로」 가 반복된다.
+   * 위임으로 붙인다 · 안의 내용을 다시 그려도 다시 붙일 필요가 없다.
+   * 머리 안의 링크와 버튼은 접기를 건드리지 않는다.
+   * 머리를 <button> 으로 만들지 않은 이유 · 안에 「열기」 링크가 들어가는데
+   * 버튼 안의 링크는 규격 위반이고 키보드로 링크에 닿지 못한다 */
+  function accordion(scope) {
+    var root = scope || document;
+
+    function toggle(head, force) {
+      var sect = head.parentNode;
+      var on = force === undefined ? !sect.classList.contains('open') : !!force;
+      sect.classList.toggle('open', on);
+      head.setAttribute('aria-expanded', on ? 'true' : 'false');
+      var ar = head.querySelector('.sect-arrow');
+      if (ar) { ar.textContent = on ? '∧' : '∨'; }
+      return on;
+    }
+
+    root.addEventListener('click', function (e) {
+      var head = e.target.closest && e.target.closest('.sect-head');
+      if (!head) { return; }
+      if (e.target.closest('a, .btn, .askbtn, .linkq, input, select')) { return; }
+      toggle(head);
+    });
+
+    /* 마우스만 되는 접기는 키보드 사용자에게 잠긴 문이다 */
+    root.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') { return; }
+      var head = e.target.closest && e.target.closest('.sect-head');
+      if (!head || head !== e.target) { return; }
+      e.preventDefault();
+      toggle(head);
+    });
+
+    return toggle;
+  }
+
   window.UI = {
     esc: esc, num: num, won: won, wonShort: wonShort, wonShortUnit: wonShortUnit,
     date: date, dateShort: dateShort, dleft: dleft, tone: tone, isNow: isNow,
     face: face, verdict: verdict, typeBadge: typeBadge, verdictBadge: verdictBadge,
     gradeBadge: gradeBadge, signalBadge: signalBadge, srcLabel: srcLabel,
-    pct: pct, pager: pager
+    pct: pct, pager: pager, accordion: accordion
   };
 })();
