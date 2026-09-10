@@ -250,13 +250,17 @@
     return '<span class="sub">' + UI.num(r.target) + ' · 대기</span>';
   }
 
+  /* 속성값 판단과 이어진 줄.
+   * 단계(raw · algo)는 그 화면 안의 것이라 여기서 보지 않는다.
+   * 이 화면이 알아야 하는 것은 「사람이 확정한 것이 있나 · 그게 목표를 바꾸나」 뿐이다 */
   function paintStageBar() {
     var bar = el('stagebar');
-    var st = S.stage(), s = DB.summary();
-    if (st === 'raw') {
+    var s = DB.summary();
+    var confirmed = window.DB ? (DB.changes().attribute_overrides || []).length : 0;
+    if (!confirmed) {
       bar.hidden = false;
-      bar.innerHTML = '<span class="ni">◇</span><span><b>속성값 판단을 아직 실행하지 않았습니다</b> · ' +
-        '이 목표재고는 정본 속성으로 계산된 값입니다. 속성을 확정하면 그 속성으로 다시 봅니다</span>' +
+      bar.innerHTML = '<span class="ni">◇</span><span><b>담당자가 확정한 속성이 아직 없습니다</b> · ' +
+        '이 목표재고는 지금 속성으로 계산된 값입니다. 속성값 판단에서 확정하면 그 속성으로 다시 봅니다</span>' +
         '<a class="nx" href="attr.html" style="color:var(--brand)">속성값 판단으로 →</a>';
       return;
     }

@@ -385,14 +385,14 @@
   /* 원본 → 실행 → 확정. 「실행」 은 알고리즘을 여기서 돌리는 것이 아니라
    * feat/algo 엔진이 이 DB 로 이미 계산해 둔 결과(2층)를 화면에 올리는 것이다.
    * 그렇게 적는다 · 돌리는 척하면 안 된다.
-   * 승인(3층)이 하나라도 있으면 실행한 뒤라는 뜻이므로 algo 로 본다 */
+   *
+   * 승인이 쌓여 있어도 algo 로 보지 않는다. 「속성값 판단」 을 누르고 들어오면
+   * 언제나 원본 속성부터 본다 · 실행은 사람이 버튼으로 한다 */
   var STAGE_KEY = (window.CFG || {}).STAGE_KEY || 'mtrl.stage.v1';
   function stage() {
     var v = null;
     try { v = window.localStorage.getItem(STAGE_KEY); } catch (e) { v = null; }
-    if (v === 'algo') { return 'algo'; }
-    if (live && (DB.changes().attribute_overrides || []).length) { return 'algo'; }
-    return 'raw';
+    return v === 'algo' ? 'algo' : 'raw';
   }
   function setStage(v) {
     try { window.localStorage.setItem(STAGE_KEY, v); } catch (e) { /* 무시 */ }

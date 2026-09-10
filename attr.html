@@ -95,8 +95,13 @@
   var listRows = [];
   var running = false;
 
+  /* 들어올 때는 원본이다.
+   * 결과 탭을 가리키는 주소(#gray 처럼 · 적정재고 화면에서 넘어오는 링크)로 들어온 것만
+   * 실행한 뒤 화면을 이어 본다. 메뉴에서 누른 attr.html 은 주소에 칸이 없으니 원본이 된다 */
   var hash = (location.hash || '').replace('#', '');
-  if (stage === 'algo' && hash && ['all', 'i2p', 'p2i', 'gray', 'done'].indexOf(hash) >= 0) { tab = hash; }
+  var deep = ['all', 'i2p', 'p2i', 'gray', 'done'].indexOf(hash) >= 0;
+  if (deep) { stage = 'algo'; S.setStage('algo'); tab = hash; }
+  else if (stage === 'algo') { stage = 'raw'; S.setStage('raw'); tab = 'all'; }
 
   /* 원본 단계의 칸 · 속성은 정본 Type 두 가지뿐이다 */
   var RAW_TABS = [
@@ -160,6 +165,8 @@
           '<div><b>' + UI.num(c.insBase) + '</b><span>보험품</span></div>' +
           '<div><b>' + UI.num(c.plnBase) + '</b><span>계획품</span></div>' +
         '</div>' +
+        (c.done ? '<p class="note" style="margin-top:12px">담당자가 이미 확정한 ' +
+          UI.num(c.done) + '품목이 있습니다 · 실행하면 확정 내용과 함께 보입니다</p>' : '') +
       '</div>' +
       '<div class="rh-right">' +
         '<button class="btn" type="button" id="run" style="min-height:52px;padding:0 26px">' +

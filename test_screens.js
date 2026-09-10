@@ -56,7 +56,7 @@ function makeDoc() {
   return doc;
 }
 
-function run(page, preset) {
+function run(page, preset, loc) {
   const html = fs.readFileSync(path.join(ROOT, page + '.html'), 'utf8');
   const srcs = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
   const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
@@ -71,7 +71,7 @@ function run(page, preset) {
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   sandbox.document = makeDoc();
-  sandbox.location = { hash: '', href: '', replace() {} };
+  sandbox.location = { hash: (loc && loc.hash) || '', href: '', replace() {} };
   Object.assign(box, preset || {});   // 화면이 읽을 저장소 값을 미리 넣는다 (단계 등)
   sandbox.localStorage = {
     getItem: (k) => (Object.prototype.hasOwnProperty.call(box, k) ? box[k] : null),
@@ -99,7 +99,10 @@ console.log('=== 화면별 · 스크립트가 끝까지 도는가 ===');
 const seen = {};
 PAGES.forEach((p) => {
   let s = null, err = null;
-  try { s = run(p, p === 'attr' ? { 'mtrl.stage.v1': 'algo' } : null); } catch (e) { err = e; }
+  try {
+    s = run(p, p === 'attr' ? { 'mtrl.stage.v1': 'algo' } : null,
+            p === 'attr' ? { hash: '#gray' } : null);
+  } catch (e) { err = e; }
   ok(!err, p + '.html 오류 없이 실행' + (err ? ' · ' + err.message : ''));
   if (!s) { return; }
 
