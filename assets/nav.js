@@ -37,7 +37,6 @@
         /* 적정구매시점은 「언제 사야 하는가」 라서 분석이 아니라 업무다 ·
          * 구매신청 바로 위에 둔다 */
         { key: 'plan', name: '적정구매시점', href: 'plan.html', ico: '⚙', count: 'over' },
-        { key: 'pool', name: '공용 전환', href: 'pool.html', ico: '⇄' },
         { key: 'purchase', name: '구매신청 (PR)', href: 'purchase.html', ico: '🛒', count: 'pr' },
         { key: 'return', name: '자재반납 (QR)', href: 'return.html', ico: '↩', count: 'ret' }
       ]

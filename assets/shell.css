@@ -678,6 +678,24 @@ td.num, th.num { text-align: right; }
 }
 .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
 .modal-head h3 { font-size: 15px; font-weight: 700; }
+
+/* 둘러보기 · 여섯 화면 중 어디인지. 눌러서 그 화면으로 건너뛴다 ·
+ * 진행 표시만 있으면 「몇 개 더 남았나」 는 알지만 「무엇을 볼 것인가」 는 모른다 */
+.tsteps { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 10px; }
+.tchip {
+  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line);
+  background: transparent; color: var(--muted); font-size: 10.5px; line-height: 1.4;
+  white-space: nowrap; cursor: pointer;
+}
+.tchip:hover { border-color: var(--line-2); color: var(--text-2); }
+.tchip.done { color: var(--text-2); border-color: var(--line-2); }
+.tchip.done::before { content: '✓ '; color: var(--ok); }
+.tchip.on {
+  background: var(--brand-weak); border-color: transparent;
+  color: var(--b1); font-weight: 600;
+}
+.tacts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+.modal-head h3 { margin-top: 2px; }
 .modal-x { background: none; border: 0; font-size: 19px; color: var(--muted); line-height: 1; padding: 0 2px; }
 
 /* AI 가 정한 값 옆의 ? 버튼. 근거를 숨기지 않는 것이 이 서비스의 핵심이다 */
@@ -2258,6 +2276,12 @@ a.duerow:hover { background: var(--slate-2); text-decoration: none; }
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .duerow .dr-bar { height: 6px; border-radius: 999px; background: var(--bg); overflow: hidden; }
+/* 막대 아래 한 줄 · 언제 휴지인지, 자재가 준비됐는지 */
+.duerow .dr-sub {
+  font-size: 10.5px; line-height: 1.5; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.duerow .dr-sub b { color: var(--insur); font-weight: 600; }
 .duerow .dr-bar i { display: block; height: 100%; border-radius: 999px; }
 
 /* 마감 카드 안의 한 줄 알림 · 지금 신청할 것이 있으면 코랄, 없으면 조용한 판 */

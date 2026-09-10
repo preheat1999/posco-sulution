@@ -317,7 +317,7 @@ window.ASK = (function () {
     var rows = ANALYSIS.todo().filter(function (r) { return (Number(r.n) || 0) > 0; });
     if (!rows.length) {
       return { kind: 'data', text: '지금 손대야 하는 일이 없습니다 · 대기 0품목입니다.',
-               evidence: base([['센 방법', 'ANALYSIS.todo() · 대시보드와 같은 셈']]),
+               evidence: base([['센 방법', 'ANALYSIS.todo() · 발주 신호 · 조치 · 판정 보류를 한 번에 센다']]),
                link: { href: 'main.html', label: '대시보드 열기' } };
     }
     var total = rows.reduce(function (a2, r) { return a2 + (Number(r.n) || 0); }, 0);
@@ -334,11 +334,11 @@ window.ASK = (function () {
         })
       },
       evidence: base([
-        ['센 방법', 'ANALYSIS.todo() · 대시보드 「오늘 할 일」 과 같은 값'],
+        ['센 방법', 'ANALYSIS.todo() · 발주 신호 · 조치 · 판정 보류를 한 번에 센다'],
         ['「지금」 기준', '재고가 목표의 절반에 못 미치는 자재다 (정비 마감이 아니다)'],
         ['「검토」 기준', '점수 차이가 작아 알고리즘이 보류한 건 · 담당자 판단이 첫 라벨이 된다']
       ]),
-      link: { href: 'main.html', label: '대시보드에서 보기' }
+      link: { href: 'stock.html#order', label: '가장 급한 칸 열기' }
     };
   };
 

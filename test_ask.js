@@ -193,15 +193,15 @@ ok(ASK.fast('감축 금액 얼마야').tool === 'money_summary', '순위 규칙�
 });
 ok(ASK.run('explain_screen', { screen: '없는화면' }).unknown, '없는 화면은 모른다고 한다');
 
-// 오늘 할 일은 대시보드와 같은 값이어야 한다 (여기서 새로 세면 두 화면이 어긋난다)
+// 오늘 할 일은 어댑터가 센 값이어야 한다 (챗봇이 따로 세면 화면과 어긋난다)
 const td = ASK.run('today_tasks', {});
 const tdRows = ANALYSIS.todo().filter((r) => r.n > 0);
 ok(td && !td.unknown && td.table.rows.length === tdRows.length,
-  '오늘 할 일 줄 수가 대시보드와 같다 (' + tdRows.length + '줄)');
+  '오늘 할 일 줄 수가 어댑터와 같다 (' + tdRows.length + '줄)');
 ok(td.text.indexOf(String(tdRows.reduce((x, r) => x + r.n, 0))) >= 0 ||
   td.text.indexOf(String(tdRows.reduce((x, r) => x + r.n, 0)).replace(
     /\B(?=(\d{3})+(?!\d))/g, ',')) >= 0,
-  '오늘 할 일 합계가 대시보드 합계와 같다');
+  '오늘 할 일 합계가 어댑터 합계와 같다');
 
 say('');
 say('=== [6] 값이 바뀌면 답도 바뀌는가 ===');

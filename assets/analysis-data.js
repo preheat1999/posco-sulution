@@ -25,20 +25,7 @@
     signal: { red: 67, yellow: 59, green: 129, gray: 488 },
     money: { nowAmt: 4974493448, tgtAmt: 5788775890, cutAmt: 2970514193,
              poolAmt: 946739938, poolItems: 262, finance: 36038738,
-             financeRate: 0.2, financeInterest: 0.046 },
-    needRows: [
-      { q: 'Q4604630', name: 'General Pump (Ready)', eq: null, type: '보험품', grade: 'S',
-        stock: 0, target: 1, needNow: 1, price: 1503362000, csp: true, signal: 'red' },
-      { q: 'Q4521625', name: 'Drive Coupling', eq: null, type: '보험품', grade: 'S',
-        stock: 0, target: 1, needNow: 1, price: 1040000000, csp: true, signal: 'red' },
-      { q: 'Q1074772', name: 'WEDGE SEGMENT MANDREL', eq: null, type: '보험품', grade: 'S',
-        stock: 0, target: 4, needNow: 4, price: 52155000, csp: true, signal: 'red' }
-    ],
-    dueRows: [
-      { q: 'Q4439266', name: 'Hydraulic Cylinder(Critical)', sigEq: 'QOC Servo',
-        sigKind: '대수리', grade: 'S', dDays: -332, dueDate: '2025-10-06',
-        signal: 'red', status: '즉시발주', expect: 1, stock: 0 }
-    ]
+             financeRate: 0.2, financeInterest: 0.046 }
   };
 
   function esc(s) { return window.UI ? UI.esc(s) : String(s === null ? '' : s); }
@@ -199,93 +186,6 @@
 
   function won(v) { return window.UI ? UI.won(v) : String(v); }
 
-  // ---------------------------------------------------------------- 발주 마감일
-  /* 정비 일정에 묶인 자재. dDays 오름차순.
-   * 얼굴은 남은 일수로 정한다. 신호(red/gray)는 재고 기준이라 따로 배지로 낸다.
-   * 둘을 한 아이콘에 섞으면 무엇을 보고 급한지 알 수 없다 */
-  function dueList(limit) {
-    if (!live) { return { rows: FALLBACK.dueRows.slice(0, limit || 5), total: 56, now: 6 }; }
-    var rows = DB.list({ dueDate: function (v) { return !!v; } });
-    rows.sort(function (a, b) { return Number(a.dDays) - Number(b.dDays); });
-    var nowN = rows.filter(function (r) { return (r.signalNow || r.signal) === 'red'; }).length;
-    return { rows: limit ? rows.slice(0, limit) : rows, total: rows.length, now: nowN };
-  }
-
-  // ---------------------------------------------------------------- 진행 파이프라인
-  /* 선형 진행이 아니라 단계마다 건이 쌓이는 모양이다.
-   *
-   * 원천에 EAM · ERP 상태 코드가 없다. 그래서 지어내지 않고
-   * **우리 시스템이 실제로 하는 일**을 단계로 둔다.
-   * 마지막 단계는 사내 시스템 연동이라 「연동 예정」 으로 적는다.
-   * 되는 척하면 심사에서 한 번에 들킨다 */
-  function pipelines() {
-    var BIZ = window.DB_BIZ;
-    var ch = live ? DB.changes() : { pr_drafts: [], stock_transactions: [] };
-    var pr = (BIZ && BIZ.purchase) || [];
-    var rt = (BIZ && BIZ.returns) || [];
-
-    var prDraft = (ch.pr_drafts || []).length;
-    var prBlock = pr.filter(function (p) { return !p.active; }).length;
-    var prReady = pr.filter(function (p) { return p.active; }).length;
-
-    var txnReturn = (ch.stock_transactions || []).filter(function (t) {
-      return t.txnType === '반납';
-    }).length;
-
-    return [
-      {
-        title: '구매신청 (PR)', ico: '🛒', href: 'purchase.html',
-        total: pr.length, unit: '건',
-        steps: [
-          { name: '대상 확인', sub: '작업주문에 걸린 자재', n: pr.length, state: 'done' },
-          { name: '자재 정보 보완', sub: '구매 불가 상태', n: prBlock, state: prBlock ? 'doing' : 'done' },
-          { name: '초안 작성', sub: 'AI 가 두 시스템 항목을 채운다', n: prDraft, state: 'doing' },
-          { name: 'PR 발행', sub: 'EAM · ERP 연동 예정', n: 0, state: 'wait' }
-        ],
-        note: prReady + '건은 바로 신청할 수 있고 ' + prBlock +
-              '건은 자재 정보를 보완해야 합니다. 발행은 사내 시스템 연동 예정 구간입니다.'
-      },
-      {
-        title: '자재반납 (QR)', ico: '↩', href: 'return.html',
-        total: rt.length, unit: '건',
-        steps: [
-          { name: 'QR 스캔 대기', sub: '불출 잔여가 있는 자재', n: rt.length, state: 'done' },
-          { name: '유형 판정', sub: '규칙으로 7갈래 즉시 판정', n: rt.length, state: 'done' },
-          { name: '반납 실행', sub: '재고 트랜잭션으로 기록', n: txnReturn, state: 'doing' },
-          { name: '입고 완료', sub: '창고 시스템 연동 예정', n: 0, state: 'wait' }
-        ],
-        note: '반납을 실행하면 재고가 바로 다시 계산되고 적정재고 조치도 같이 바뀝니다.'
-      }
-    ];
-  }
-
-  // ---------------------------------------------------------------- 설비별 자재
-  /* 발주가 필요한 자재를 금액 큰 순으로. 위에서부터 처리하면 금액 큰 것을 먼저 본다.
-   * 설비 연결이 비어 있는 건이 많다. 「미확인」 이라고 적고 지어내지 않는다 */
-  function needRows(limit) {
-    if (!live) {
-      return { rows: FALLBACK.needRows.slice(0, limit || 5), total: 120, linked: 9, unlinked: 111 };
-    }
-    var rows = DB.list({ needNow: function (v) { return Number(v) > 0; } });
-    var linked = rows.filter(function (r) { return !!r.eq; });
-    var free = rows.filter(function (r) { return !r.eq; });
-    /* 설비가 연결된 것을 위로 올린다.
-     * 금액만으로 줄 세우면 설비 연결이 있는 9품목이 전부 아래로 밀려
-     * 「설비별 자재 현황」 카드에 설비명이 하나도 안 뜬다.
-     * 743품목 중 설비 연결이 있는 것은 131품목뿐이다. 원천의 한계이므로
-     * 숨기지 않고 카드에 몇 품목이 미연결인지 적는다 */
-    var byAmt = function (a, b) {
-      return (Number(b.needNow) * Number(b.price)) - (Number(a.needNow) * Number(a.price));
-    };
-    linked.sort(byAmt);
-    free.sort(byAmt);
-    var all = linked.concat(free);
-    return {
-      rows: limit ? all.slice(0, limit) : all,
-      total: rows.length, linked: linked.length, unlinked: free.length
-    };
-  }
-
   // ---------------------------------------------------------------- 재고 금액 트렌드
   /* 「우리 부서 자재 금액이 오르고 있나」 를 선 하나로 보여 준다.
    *
@@ -385,12 +285,6 @@
     return finishTrend(ms, dept, all, 'derived', missing, Math.round(missingAmt));
   }
 
-  /* 타부서 보유가 있으면 사는 대신 이관받을 수 있다. 사는 것보다 싸다 */
-  function transferable(r) {
-    var all = Number(r.stockAll) || 0, mine = Number(r.stock) || 0;
-    return Math.max(0, all - mine);
-  }
-
   window.ANALYSIS = {
     live: live,
     bucketOf: bucketOf,
@@ -399,11 +293,7 @@
     donut: donut,
     money: money,
     todo: todo,
-    dueList: dueList,
-    pipelines: pipelines,
-    needRows: needRows,
     trend: trend,
-    transferable: transferable,
     DONUT_ORDER: DONUT_ORDER,
     /* 승인 · 반납이 일어나면 화면이 다시 그려져야 한다.
      * 어댑터가 구독을 대신 걸어 주면 화면마다 DB 존재 여부를 확인하지 않아도 된다 */

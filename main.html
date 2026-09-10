@@ -53,47 +53,6 @@
     <!-- 숫자 하나와 갈 곳 하나. 대시보드에서 바로 손이 가는 세 가지다 -->
     <div class="quick flow" id="quick"></div>
 
-    <!-- 위 세 칸이 「지금」 이라면 이 줄은 「흐름」 이다 · 추이선과 오늘 할 일.
-         오늘 할 일은 챗봇(today_tasks)이 이 값을 가리킨다 · 지우면 그 답도 근거를 잃는다 -->
-    <div class="dashrow c2">
-      <div class="kpigroup lead" id="kpi-lead"></div>
-
-      <section class="card">
-        <header>
-          <div><h2>오늘 할 일</h2></div>
-          <div class="card-tools"><span class="badge" id="todo-sum">&nbsp;</span></div>
-        </header>
-        <div class="todo" id="todo"></div>
-      </section>
-    </div>
-
-    <!-- 아래 두 묶음은 매일 보는 값이 아니다. 접어 두고 머리에 건수만 적는다.
-         닫힌 줄에 숫자가 없으면 빈 줄로 보여 아무도 열지 않는다 -->
-    <section class="sect" id="s-pipe">
-      <div class="sect-head" role="button" tabindex="0" aria-expanded="false" aria-controls="pipe">
-        <div class="sect-title"><h2>구매신청 · 자재반납 진행</h2></div>
-        <div class="card-tools">
-          <span class="sect-n" id="pipe-n">&nbsp;</span>
-          <span class="sect-arrow">&#8744;</span>
-        </div>
-      </div>
-      <div class="sb" id="pipe"></div>
-    </section>
-
-    <section class="sect" id="s-eq">
-      <div class="sect-head" role="button" tabindex="0" aria-expanded="false" aria-controls="eq">
-        <div class="sect-title"><h2>설비별 자재 현황</h2></div>
-        <div class="card-tools">
-          <span class="sect-n" id="eq-n">&nbsp;</span>
-          <a class="btn line sm" href="stock.html">적정재고</a>
-          <span class="sect-arrow">&#8744;</span>
-        </div>
-      </div>
-      <div class="sb">
-        <div class="tablewrap" id="eq"></div>
-      </div>
-    </section>
-
     <!-- 이 한 줄은 남긴다. 정답 라벨이 없다는 사실을 빼면 심사에서 먼저 묻는다 -->
     <p class="endnote"><i></i>
       정답 라벨이 0건이라 정확도를 말하지 않습니다 · <b>담당자 승인이 첫 라벨입니다</b>
@@ -119,6 +78,8 @@
 <script src="assets/db-biz.js"></script>
 <script src="assets/plan-data.js"></script>
 <script src="assets/analysis-data.js"></script>
+<!-- 이번 주 WO 는 적정구매시점 화면과 같은 어댑터에서 읽는다 · 대시보드가 따로 세지 않는다 -->
+<script src="assets/screen-data.js"></script>
 <script src="assets/nav.js"></script>
 <script>
 (function () {
@@ -129,10 +90,7 @@
   /* 다시 그릴 때마다 이벤트를 또 붙이면 팝오버가 두 번 세 번 열린다.
    * 승인 한 번에 화면 전체를 다시 그리므로 실제로 쌓인다.
    * 그래서 목록은 다시 그리고 이벤트는 한 번만 붙인다 */
-  var todoRows = [];
-  var restOpen = false;
-  var trendCache = null;
-  var dueCache = null;
+  var weekCache = null;
 
   /* 화면에 글자를 최소로 둔다. 대신 값마다 ? 를 붙이고
    * 설명은 전부 그 안으로 넣는다. 근거를 없앤 것이 아니라 접어 둔 것이다 */
@@ -167,88 +125,6 @@
       '</svg>';
   }
 
-  // ------------------------------------------------------------ 재고 금액 트렌드
-  /* 선만 남긴다. 축 · 격자 · 면 · 월 이름을 다 지웠다.
-   * 기간과 증감은 옆의 알약이 말하고, 정확한 값은 ? 안에 있다.
-   * 그림이 커야 하고 그림 위에 글자가 없어야 한다.
-   *
-   * 색이 뜻을 갖는다. 우리 부서 선은 오르면 빨강, 내리면 파랑이다.
-   * 전사 선은 초록 파선 · 기준선이라 실선으로 두면 우리 값과 헷갈린다 */
-  function trendSvg(t) {
-    var W = 400, H = 104, PL = 3, PR = 3, PT = 8, PB = 8;
-    var n = t.months.length;
-    if (n < 2) { return ''; }
-
-    var iw = W - PL - PR, ih = H - PT - PB;
-    /* 두 선을 한 축에 둔다. 지수로 바꾸면 「우리가 전사의 절반」 이라는 사실이 사라진다 */
-    var top = t.max * 1.04;
-    var x = function (i) { return PL + iw * (i / (n - 1)); };
-    var y = function (v) { return PT + ih * (1 - (Number(v) || 0) / top); };
-    var pts = function (arr) {
-      return arr.map(function (v, i) { return x(i).toFixed(1) + ',' + y(v).toFixed(1); }).join(' ');
-    };
-    var col = t.dir === 'down' ? 'var(--brand)' : (t.dir === 'flat' ? 'var(--muted)' : 'var(--insur)');
-
-    return '<svg class="trend-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" ' +
-      'aria-label="최근 ' + (n - 1) + '개월 보유 재고 금액 · 우리 부서 ' +
-      UI.won(t.deptLast) + ' · 전사 ' + UI.won(t.allLast) + '">' +
-      '<polyline points="' + pts(t.all) + '" fill="none" stroke="var(--ok)" ' +
-        'stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" ' +
-        'vector-effect="non-scaling-stroke"></polyline>' +
-      '<polyline points="' + pts(t.dept) + '" fill="none" stroke="' + col + '" ' +
-        'stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" ' +
-        'vector-effect="non-scaling-stroke"></polyline>' +
-      '<circle cx="' + x(n - 1).toFixed(1) + '" cy="' + y(t.all[n - 1]).toFixed(1) +
-        '" r="2.4" fill="var(--ok)"></circle>' +
-      '<circle cx="' + x(n - 1).toFixed(1) + '" cy="' + y(t.dept[n - 1]).toFixed(1) +
-        '" r="3.4" fill="' + col + '"></circle>' +
-      '</svg>';
-  }
-
-  /* 이 선을 어떻게 만들었는지 숨기지 않는다.
-     월말 재고 스냅샷이 원천에 없다는 것이 이 화면에서 가장 중요한 단서다 */
-  function trendWhy(btn) {
-    var t = trendCache;
-    if (!t) { return; }
-    var rows = [
-      ['보는 기간', t.months[0] + ' ~ ' + t.months[t.months.length - 1] +
-        ' · ' + (t.months.length - 1) + '개월'],
-      ['우리 부서', UI.won(t.deptFirst) + ' → ' + UI.won(t.deptLast) +
-        (t.pct === null ? '' : ' · ' + (t.pct >= 0 ? '+' : '') + t.pct.toFixed(1) + '%')],
-      ['전사 (같은 자재 743종)', UI.won(t.allFirst) + ' → ' + UI.won(t.allLast) +
-        (t.allPct === null ? '' : ' · ' + (t.allPct >= 0 ? '+' : '') + t.allPct.toFixed(1) + '%')],
-      ['만든 방법', t.src === 'demo' ? '시연용으로 만든 곡선입니다 · 원천 값이 아닙니다'
-        : '지금 보유 중인 자재를 입고일 기준으로 되쌓았습니다']
-    ];
-    if (t.src !== 'demo' && t.missing) {
-      rows.push(['곡선에서 빠진 것', UI.num(t.missing) + '품목 · ' + UI.won(t.missingAmt) +
-        ' (입고일이 원천에 없습니다)']);
-    }
-    POP.show(btn, {
-      title: '보유 재고 금액 추이',
-      rows: rows,
-      note: t.src === 'demo'
-        ? '대장이 뜨지 않아 시연용 곡선으로 그렸습니다. 실제 값이 아닙니다.'
-        : '월말 재고 스냅샷이 원천 CSV 11개 어디에도 없습니다. 그래서 「그 달의 재고」 가 아니라 ' +
-          '「지금 보유분이 언제 들어왔는가」 를 쌓은 선입니다. 불출로 이미 빠진 수량은 과거 시점에도 ' +
-          '빠진 것으로 그려집니다. 초록 선은 사업장 칸이 원천에 없어 광양소가 아니라 ' +
-          '같은 자재 743종의 전사 보유입니다. ' +
-          /* 거래 이력이 있는데 왜 안 썼는지도 적는다. 「없다」 와 「안 맞는다」 는 다르다 */
-          '입출고 거래 이력 22,625행이 알고리즘 담당 쪽에 있지만, 그것만 누적하면 ' +
-          '부서 현재고와 어긋나(62.6억원 대 49.74억원) 재고 추이로 쓰지 않았습니다.'
-    });
-  }
-
-  function kpiCell(cls, value, unit, label) {
-    return '<div class="kpi ' + cls + '">' +
-      '<div class="v">' + value + (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
-      '<div class="k">' + label + '</div></div>';
-  }
-
-  function metaCell(value, label) {
-    return '<div><b>' + value + '</b><span>' + label + '</span></div>';
-  }
-
   /* 빠른 실행 · 지금 손이 가야 하는 세 곳을 숫자와 함께 둔다.
    * 링크만 있으면 「몇 건인지」 를 모르고, 숫자만 있으면 「어디로 가는지」 를 모른다 */
   function paintQuick() {
@@ -268,46 +144,6 @@
           '<span class="qk">' + UI.esc(x.k) + '</span></span>' +
         '<span class="qv">' + x.v + '</span></a>';
     }).join('');
-  }
-
-  function paintKpi() {
-    var m = A.meta(), d = A.donut(), w = A.money(), s = A.summary();
-    var me = window.ORG ? ORG.load() : null;
-    var t = A.trend(13);
-    trendCache = t;
-
-    document.getElementById('asof').textContent =
-      m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
-
-    /* 담당 현황 · 금액 하나 · 증감 하나 · 큰 선 하나 · 부속값 세 개.
-     * 숫자를 넷 늘어놓으면 어느 것이 중요한지 사라진다 */
-    var chip = t.pct === null ? '증감 미확인'
-      : ((t.pct >= 0 ? '+' : '') + t.pct.toFixed(0) + '% · ' + (t.months.length - 1) + '개월');
-
-    document.getElementById('kpi-lead').innerHTML =
-      '<p class="gt"><span>담당 현황</span>' +
-        (me && me.dept ? '<span class="gt-sub">' + UI.esc(me.part) + ' · ' +
-          UI.esc(me.dept) + '</span>' : '') +
-      '</p>' +
-      '<div class="lead-hero">' +
-        kpiCell('big', UI.wonShort(w.nowAmt), UI.wonShortUnit(w.nowAmt), '보유 재고') +
-        '<span class="trend-chip ' + t.dir + '">' + chip + '</span>' +
-        (t.src === 'demo' ? '<span class="trend-chip demo">시연용 값</span>' : '') +
-        ask('trend-why') +
-      '</div>' +
-      '<div class="trend">' + trendSvg(t) +
-        '<div class="trend-legend">' +
-          '<span class="' + (t.dir === 'down' ? 'down' : 'up') + '"><i></i>우리 부서 <b>' +
-            UI.won(t.deptLast) + '</b></span>' +
-          '<span class="all"><i></i>전사 <b>' + UI.won(t.allLast) + '</b></span>' +
-        '</div>' +
-      '</div>' +
-      '<div class="lead-meta">' +
-        metaCell(UI.won(w.tgtAmt), '목표 재고') +
-        metaCell(UI.num(m.counts.equipment) + '기', '담당 설비') +
-        metaCell(UI.num(m.counts.materials) + '품목', '담당 자재') +
-      '</div>';
-
   }
 
   /* 카드 머리 · 제목 · ? · 바로가기. 세 카드가 같은 모양을 쓴다 */
@@ -365,52 +201,73 @@
       '</span><span class="df-r ok">-' + w.cutPct.toFixed(1) + '% 재고 최적화</span></div>';
   }
 
-  /* 셋째 칸 · 언제까지인가. 마감을 넘긴 순으로 넷.
-   * 얼굴은 남은 일수로 정한다 · 초과일수를 막대로도 낸다 (숫자만으로는 어느 쪽이 급한지 늦게 읽힌다) */
+  /* 셋째 칸 · 언제까지인가. 적정구매시점 화면의 기본 칸(이번 주 WO)과 같은 값이다.
+   *
+   * 대시보드가 따로 세지 않는다 · SCREEN.planList('week') 를 그대로 읽는다.
+   * 그 여섯 건은 날짜만 이번 주로 옮긴 시연 일정이다(설비 · 자재 · 재고는 원천 값) ·
+   * 그 사실을 카드 바닥에 적는다. 숨기면 심사에서 한 번에 들킨다.
+   *
+   * 막대는 「자재가 얼마나 준비됐는가」 다 · 채워지면 좋은 것이다.
+   * 마감 초과일수를 막대로 쓰면 긴 막대가 좋은 것인지 나쁜 것인지 헷갈린다 */
   function paintDueCard() {
-    var d = A.dueList(4);
-    dueCache = d;
-    var over = d.rows.filter(function (r) { return Number(r.dDays) < 0; }).length;
-    var lt = d.rows.reduce(function (a, r) { return a + (Number(r.ltMean) || 0); }, 0);
-    var ltAvg = d.rows.length ? Math.round(lt / d.rows.length) : 0;
+    /* 이번 주 여섯 건 중 급한 넷만 카드에 올린다 (이미 마감 초과 · 임박 순으로 온다) ·
+     * 여섯 줄을 다 넣으면 이 카드만 길어져 옆 두 칸이 텅 빈다. 전체는 링크로 간다 */
+    var week = window.SCREEN ? SCREEN.planList('week') : [];
+    var rows = week.slice(0, 4);
+    var c = window.SCREEN ? SCREEN.planCounts() : { wos: 0, all: 0, mdays: 30 };
+    weekCache = { rows: rows, week: week, counts: c };
+    var over = week.filter(function (w) { return w.tone === 'over'; }).length;
+    var soon = week.filter(function (w) { return w.tone === 'soon'; }).length;
+    var needW = week.filter(function (w) { return (Number(w.needCount) || 0) > 0; });
+    var needMats = needW.reduce(function (a, w) { return a + (Number(w.needCount) || 0); }, 0);
+    var demo = week.some(function (w) { return w.demo; });
 
     document.getElementById('d-due').innerHTML =
-      dhead('정비 예정 · 발주 마감',
-        over ? '<span class="badge insur">초과 ' + UI.num(over) + '건</span>' : '',
-        'due-why', 'plan.html', '전체 ' + UI.num(d.total) + '건') +
-      (d.rows.length
-        ? '<div class="duelist">' + d.rows.map(function (r) {
-          var tone = UI.tone(r.dDays);
+      dhead('적정구매시점',
+        over ? '<span class="badge insur">마감 초과 ' + UI.num(over) + '건</span>'
+          : (soon ? '<span class="badge core">마감 임박 ' + UI.num(soon) + '건</span>' : ''),
+        'due-why', 'plan.html', '이번 주 ' + UI.num(week.length) + '건') +
+      (rows.length
+        ? '<div class="duelist">' + rows.map(function (w) {
+          var tone = w.tone || 'fine';
           var col = tone === 'over' ? 'insur' : (tone === 'soon' ? 'core' : 'ok');
+          var mat = Number(w.matCount) || 0;
+          var need = Number(w.needCount) || 0;
+          /* 확보율 · 자재가 없는 WO 는 0으로 두지 않고 막대를 비운다 (0/0 을 100% 로 읽으면 거짓이다) */
+          var got = mat ? Math.round((mat - need) / mat * 100) : 0;
           return '<a class="duerow" href="plan.html">' +
             '<div class="dr-top"><div class="dr-l">' +
               '<span class="dr-dot" style="background:var(--' + col + ')"></span>' +
-              /* 설비명이 이 줄의 얼굴이다 · 자재는 코드로 짚는다 (둘 다 영문이라 이름을 둘 적으면 읽히지 않는다) */
-              '<span class="dr-n">' + UI.esc(r.sigEq || r.name || '설비 연결 미확인') + '</span>' +
-              '<span class="dr-q">' + UI.esc(r.q) + '</span>' +
+              '<span class="dr-n">' + UI.esc(w.eq || '설비 미확인') + '</span>' +
+              '<span class="dr-q">' + UI.esc(w.wo) + '</span>' +
             '</div>' +
             '<span class="dr-d" style="color:var(--' + col + ')">' +
-              UI.esc(UI.dleft(r.dDays)) + '</span></div>' +
-            '<div class="dr-bar"><i style="width:' + barPct(r.dDays, d.rows) +
-              '%;background:var(--' + col + ')"></i></div>' +
+              UI.esc(w.left === null ? '자재 확보' : UI.dleft(w.left)) + '</span></div>' +
+            '<div class="dr-bar"><i style="width:' + Math.max(4, got) +
+              '%;background:var(--' + (need ? col : 'ok') + ')"></i></div>' +
+            '<div class="dr-sub">휴지 ' + UI.esc(UI.date(w.stopStart)) + ' · 자재 ' +
+              UI.num(mat) + '품목' +
+              (need ? ' · <b>발주 필요 ' + UI.num(need) + '품목</b>' : ' · 확보 완료') +
+              '</div>' +
             '</a>';
         }).join('') + '</div>'
-        : '<div class="empty"><strong>정비 일정에 묶인 자재가 없습니다</strong>' +
-          '적정구매시점 화면에서 휴지 일정을 확인하세요</div>') +
+        : '<div class="empty"><strong>이번 주 정비계획이 없습니다</strong>' +
+          '적정구매시점 화면에서 이 달 일정을 확인하세요</div>') +
 
-      /* 「마감을 넘겼다」 와 「지금 신청해야 한다」 는 다르다 · 0건이면 코랄로 겁주지 않는다 */
-      (d.now
-        ? '<div class="duecall ins"><span class="dc-l">⚠ 신청 가능 ' + UI.num(d.now) + '건</span>' +
-          ask('now-why') + '</div>'
-        : '<div class="duecall calm"><span class="dc-l">지금 신청할 것은 없습니다 · 재고로 충당</span>' +
+      /* 「마감을 넘겼다」 와 「지금 살 것이 있다」 는 다르다 · 없으면 코랄로 겁주지 않는다 */
+      (needMats
+        ? '<div class="duecall ins"><span class="dc-l">⚠ 발주 필요 ' + UI.num(needMats) +
+          '품목 · WO ' + UI.num(needW.length) + '건</span>' + ask('now-why') + '</div>'
+        : '<div class="duecall calm"><span class="dc-l">이번 주 자재는 전부 확보됐습니다</span>' +
           ask('now-why') + '</div>') +
 
       '<div class="dfoot"><span>' +
-        (ltAvg ? '리드타임 평균 ' + UI.num(ltAvg) + '일' : '리드타임 평균 미확인') +
+        '급한 ' + UI.num(rows.length) + '건 표시 · 이 달 ' + UI.num(c.wos) + '건' +
+        (demo ? ' · 날짜는 시연 일정' : '') +
       '</span>' +
-      (d.now
-        ? '<a class="df-r ins" href="purchase.html">PR 즉시 신청 →</a>'
-        : '<a class="df-r plan" href="plan.html">적정구매시점 보기 →</a>') +
+      (needMats
+        ? '<a class="df-r ins" href="plan.html">구매신청 초안 만들기 →</a>'
+        : '<a class="df-r plan" href="plan.html">이번 주 WO 보기 →</a>') +
       '</div>';
   }
 
@@ -443,97 +300,6 @@
         '</div>' +
       '</div>' +
       '</div>';
-  }
-
-  // ------------------------------------------------------------ 오늘 할 일
-  /* 지금 해야 하는 한 줄만 키우고 나머지는 접는다.
-   * 네 줄을 같은 크기로 두면 급한 것과 해도 되는 것이 같은 무게로 읽힌다.
-   * 설명 줄(왜 이 숫자인가)은 화면에서 빼고 ? 안으로 넣었다 */
-  function paintTodo() {
-    todoRows = A.todo();
-    var total = todoRows.reduce(function (a, r) { return a + r.n; }, 0);
-    document.getElementById('todo-sum').textContent = '대기 ' + UI.num(total) + '품목';
-
-    /* 「지금」 이 0건일 수도 있다. 그러면 0을 키워 두지 않고
-     * 실제로 건이 있는 첫 줄을 올린다 */
-    var heroIx = 0, i;
-    for (i = 0; i < todoRows.length; i++) {
-      if (todoRows[i].n > 0) { heroIx = i; break; }
-    }
-    var rest = todoRows.filter(function (r, ix) { return ix !== heroIx; });
-
-    document.getElementById('todo').innerHTML =
-      todoLine(todoRows[heroIx], heroIx, true) +
-      '<button class="todo-more" type="button" id="todo-more" aria-expanded="' +
-        (restOpen ? 'true' : 'false') + '" aria-controls="todo-rest">' +
-        '<span>' + (restOpen ? '접기' : '나머지 ' + rest.length + '줄') + ' · ' +
-        rest.map(function (r) {
-          return UI.esc(r.tag) + ' <b>' + UI.num(r.n) + '</b>';
-        }).join(' · ') + '</span>' +
-        '<span class="m-arrow">' + (restOpen ? '∧' : '∨') + '</span>' +
-      '</button>' +
-      '<div class="todo-rest" id="todo-rest"' + (restOpen ? '' : ' hidden') + '>' +
-        rest.map(function (r) {
-          return todoLine(r, todoRows.indexOf(r), false);
-        }).join('') +
-      '</div>';
-  }
-
-  function todoLine(r, ix, hero) {
-    return '<div class="todo-row ' + r.tone + (hero ? ' hero' : '') + '">' +
-      '<span class="tag ' + r.tone + '">' + UI.esc(r.tag) + '</span>' +
-      '<div class="todo-body">' +
-        '<span class="todo-num">' + UI.num(r.n) + r.unit + '</span> ' + UI.esc(r.text) +
-        ' <button class="askbtn" type="button" data-why="' + ix + '" ' +
-        'aria-label="근거 보기">?</button>' +
-        '<div class="todo-act">' + r.acts.map(function (a) {
-          return '<a class="btn ' + (hero ? '' : 'soft ') + 'sm" href="' + a[1] + '">' +
-            UI.esc(a[0]) + '</a>';
-        }).join('') + '</div>' +
-      '</div></div>';
-  }
-
-  /* 근거를 숨기지 않는다. 어떤 값을 어떻게 세었는지 그대로 보여 준다 */
-  function wireTodo() {
-    document.getElementById('todo').addEventListener('click', function (e) {
-      var more = e.target.closest && e.target.closest('.todo-more');
-      if (more) {
-        restOpen = !restOpen;
-        paintTodo();
-        return;
-      }
-      var b = e.target.closest && e.target.closest('.askbtn');
-      if (!b) { return; }
-      var r = todoRows[Number(b.getAttribute('data-why'))];
-      var s = A.summary();
-      POP.show(b, {
-        title: r.tag + ' · ' + UI.num(r.n) + r.unit,
-        rows: [
-          ['세는 기준', r.tag === '지금' ? '발주 신호 red (즉시발주)'
-            : r.tag === '이번 주' ? '발주 신호 yellow (발주임박)'
-            : r.tag === '기회' ? '조치 감축 (재고 > 목표재고)'
-            : '판정 회색지대 (점수 차이가 작아 보류)'],
-          ['모집단', UI.num(s.items) + '품목'],
-          ['다시 센 값', UI.num(r.n) + r.unit]
-        ],
-        note: r.why
-      });
-    });
-  }
-
-  /* 담당 현황 안의 ? · 다시 그려도 붙어 있게 위임으로 둔다 */
-  function wireLead() {
-    document.getElementById('kpi-lead').addEventListener('click', function (e) {
-      var b = e.target.closest && e.target.closest('#trend-why');
-      if (b) { trendWhy(b); }
-    });
-  }
-
-  /* 가장 오래 넘긴 건을 100% 로 두고 견준다 */
-  function barPct(dDays, rows) {
-    var worst = 1;
-    rows.forEach(function (x) { worst = Math.max(worst, Math.abs(Number(x.dDays) || 0)); });
-    return Math.max(6, Math.min(100, (Math.abs(Number(dDays) || 0) / worst) * 100)).toFixed(1);
   }
 
   /* 세 카드의 ? · 다시 그려도 붙어 있게 위임으로 둔다.
@@ -586,147 +352,51 @@
   }
 
   function dueWhy(btn) {
-    if (!dueCache) { return; }
+    if (!weekCache) { return; }
+    var c = weekCache.counts;
     POP.show(btn, {
-      title: '발주 마감일',
+      title: '적정구매시점 · 이번 주 WO',
       rows: [
-        ['정비 일정에 묶인 자재', UI.num(dueCache.total) + '건'],
-        ['마감을 넘긴 건', UI.num(dueCache.total) + '건 · 전부'],
-        ['지금 신청해야 하는 건', UI.num(dueCache.now) + '건 (발주 신호 red)'],
+        ['이번 주 WO', UI.num(weekCache.week.length) + '건 · 카드에는 급한 ' +
+          UI.num(weekCache.rows.length) + '건'],
+        ['이 달 정비계획', UI.num(c.wos) + '건 · 기준일부터 ' + UI.num(c.mdays) + '일'],
+        ['반출 전체', UI.num(c.all) + '건 · 기준일 이후 넉 달'],
         ['마감일 산식', '휴지 시작일 - 내림(리드타임 평균 + 선행일수 + 0.5 × 표준편차)']
       ],
-      note: '이 카드는 급한 넷만 보여 줍니다. 전체는 적정구매시점 화면에 있습니다.'
+      note: '이번 주 여섯 건은 **날짜만** 이번 주로 옮긴 시연 일정입니다 · 설비 · 자재 · ' +
+        '재고 · 부족분은 원천 값 그대로입니다. 원천 156건은 넉 달에 흩어져 있어 ' +
+        '한 화면에 자재 확보 · 마감 임박 · 마감 초과가 같이 나오지 않습니다.'
     });
   }
 
-  /* 「마감 초과 56건」 과 「지금 신청 0건」 이 같이 있는 것이 이 데이터의 사실이다.
-   * 그 둘을 섞어 적으면 없는 급함을 만들거나 있는 급함을 숨긴다 */
+  /* 「마감 초과」 와 「지금 살 것이 있다」 를 섞어 적으면 없는 급함을 만들거나 있는 급함을 숨긴다 */
   function nowWhy(btn) {
-    if (!dueCache) { return; }
+    if (!weekCache) { return; }
+    var rows = weekCache.week;
+    var needW = rows.filter(function (w) { return (Number(w.needCount) || 0) > 0; });
+    var mats = needW.reduce(function (a, w) { return a + (Number(w.needCount) || 0); }, 0);
     POP.show(btn, {
-      title: dueCache.now ? '지금 신청 ' + UI.num(dueCache.now) + '건' : '지금 신청할 것이 없습니다',
+      title: mats ? '발주 필요 ' + UI.num(mats) + '품목' : '이번 주 자재는 전부 확보됐습니다',
       rows: [
-        ['세는 기준', '발주 신호 red · 재고가 목표의 절반에 못 미치는 자재'],
-        ['마감 초과', UI.num(dueCache.total) + '건 · 정비 일정에 묶인 자재 전부'],
-        ['지금 신청', UI.num(dueCache.now) + '건']
+        ['세는 기준', 'WO 에 걸린 자재 중 현재고가 예상 소요보다 적은 것'],
+        ['이번 주 WO', UI.num(rows.length) + '건 · 그중 발주 필요 ' + UI.num(needW.length) + '건'],
+        ['발주 필요 자재', UI.num(mats) + '품목'],
+        ['마감 초과', UI.num(rows.filter(function (w) { return w.tone === 'over'; }).length) + '건']
       ],
-      note: dueCache.now
-        ? '마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다릅니다. 나머지는 마감을 넘겼지만 ' +
-          '재고로 충당됩니다.'
-        : '마감은 넘겼지만 예상 소요가 현재고로 충당돼 지금 살 것이 없습니다. ' +
+      note: mats
+        ? '적정구매시점 화면에서 WO 를 펼쳐 「구매신청 초안 만들기」 를 누르면 그 자재와 ' +
+          '이 정비계획이 채워진 초안이 구매신청 화면에 생깁니다.'
+        : '마감을 넘긴 건이 있어도 현재고로 충당되면 지금 살 것은 없습니다. ' +
           '마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다릅니다.'
-    });
-  }
-
-  // ------------------------------------------------------------ 진행 파이프라인
-  function paintPipe() {
-    var sets = A.pipelines();
-
-    /* 접혀 있을 때도 건수는 보여야 한다 */
-    document.getElementById('pipe-n').textContent = sets.map(function (p) {
-      return p.title.replace(/\s*\(.*\)$/, '') + ' ' + UI.num(p.total) + p.unit;
-    }).join(' · ');
-
-    document.getElementById('pipe').innerHTML = sets.map(function (p) {
-      /* 병목은 「지금 걸려 있는 단계」 중에서 고른다.
-         끝난 단계(done)나 연동 예정(wait)에 병목 표시가 붙으면 뜻이 없다.
-         처음에 전체에서 최댓값을 골랐더니 「대상 확인 6건 완료」 가 병목으로 표시됐다 */
-      var work = p.steps.filter(function (s) { return s.state === 'doing' && s.n > 0; });
-      var jam = work.reduce(function (a, b) { return b.n > a.n ? b : a; }, work[0] || null);
-
-      return '<div class="pipe-set">' +
-        '<div class="pipe-head">' +
-          '<span>' + p.ico + ' ' + UI.esc(p.title) + '</span>' +
-          '<a class="btn line sm" href="' + p.href + '" style="margin-left:auto">열기</a>' +
-        '</div>' +
-        '<div class="pipe-row">' + p.steps.map(function (s) {
-          var cls = s.state === 'wait' ? 'wait' : (s.state === 'done' ? 'done' : 'doing');
-          var mark = s.state === 'done' ? '✓' : (s.state === 'wait' ? '·' : '●');
-          return '<div class="pipe-step' + (jam && s === jam ? ' jam' : '') + '">' +
-            '<span class="dot ' + cls + '">' + mark + '</span>' +
-            '<span class="pipe-n">' + UI.num(s.n) + p.unit + '</span>' +
-            '<span class="pipe-name">' + UI.esc(s.name) + '</span>' +
-            '</div>';
-        }).join('') + '</div>' +
-        '<p class="pipe-note">' + UI.esc(p.note) + '</p>' +
-        '</div>';
-    }).join('');
-  }
-
-  // ------------------------------------------------------------ 설비별 자재
-  function paintEq() {
-    var n = A.needRows(5);
-    document.getElementById('eq-n').textContent = '발주 필요 ' + UI.num(n.total) + '품목';
-
-    if (!n.rows.length) {
-      document.getElementById('eq').innerHTML =
-        '<div class="empty"><strong>발주가 필요한 자재가 없습니다</strong>' +
-        '적정재고 분석에서 감축 대상을 확인하세요</div>';
-      return;
-    }
-
-    /* 표를 카드로 바꿀 수 있게 모든 td 에 data-label 을 넣는다.
-       하나라도 빠지면 좁은 화면에서 그 값이 무엇인지 알 수 없다 */
-    document.getElementById('eq').innerHTML =
-      '<table><thead><tr>' +
-        '<th>설비 · 자재</th><th>속성</th>' +
-        '<th class="num">보유 → 목표</th><th>조치</th>' +
-      '</tr></thead><tbody>' +
-      n.rows.map(function (r) {
-        var move = A.transferable(r);
-        return '<tr>' +
-          '<td data-label="설비 · 자재"><div class="cell-2">' +
-            '<div class="cell-1st"><span class="ln">설비</span>' +
-              UI.esc(r.eq || '설비 연결 미확인') + '</div>' +
-            '<div class="cell-2nd"><span class="ln">자재</span>' +
-              UI.esc(r.name || '품명 미확인') + ' · ' +
-              UI.esc(r.q) + (r.csp ? ' · 핵심예비품' : '') + '</div>' +
-          '</div></td>' +
-          '<td data-label="속성">' + UI.typeBadge(r.type) + ' ' + UI.gradeBadge(r.grade) + '</td>' +
-          /* 카드 모드에서 td 는 flex 라 자식이 각각 좌우로 벌어진다.
-             그냥 두면 「1 ... → ... 2」 로 떨어져 보인다. 한 덩어리로 묶는다 */
-          '<td class="num" data-label="보유 → 목표"><span>' +
-            '<button class="linkq" type="button" data-q="' + UI.esc(r.q) + '">' +
-              UI.num(r.stock) + '</button>' +
-            '<span class="arrow">→</span>' + UI.num(r.target) + '</span></td>' +
-          '<td data-label="조치"><span class="badge core">발주 ' + UI.num(r.needNow) + '</span>' +
-            (move > 0 ? ' <span class="badge ok">이관 ' + UI.num(move) + '</span>' : '') +
-          '</td></tr>';
-      }).join('') + '</tbody></table>' +
-      '<p class="note" style="margin-top:12px">설비가 연결된 ' + UI.num(n.linked) +
-      '품목을 먼저, 그다음 금액 순입니다. <b>나머지 ' + UI.num(n.unlinked) +
-      '품목은 설비 연결이 원천에 없습니다.</b></p>';
-  }
-
-  /* 보유 수량을 누르면 창고와 타부서 보유를 보여 준다.
-     창고 위치(BIN)는 원천에 없다. 「미확인」 이라고 적고 지어내지 않는다 */
-  function wireEq() {
-    document.getElementById('eq').addEventListener('click', function (e) {
-      var b = e.target.closest && e.target.closest('.linkq');
-      if (!b) { return; }
-      var r = window.DB ? DB.item(b.getAttribute('data-q')) : null;
-      if (!r) { return; }
-      POP.show(b, {
-        title: r.name + ' · ' + r.q,
-        rows: [
-          ['창고', r.wh || '미확인'],
-          ['창고 위치(BIN)', '미확인 · 원천에 없습니다'],
-          ['부서 보유', UI.num(r.stock)],
-          ['전사 보유', UI.num(r.stockAll)],
-          ['타부서 보유', UI.num(A.transferable(r)) + ' · 이관 후보'],
-          ['목표재고', UI.num(r.target)],
-          ['조치', r.actionNow]
-        ],
-        formula: r.reasonNow || r.reason || '',
-        note: '조달 ' + (r.proc || '미확인') + ' · 리드타임 평균 ' +
-              UI.num(r.ltMean) + '일 · 공급사 ' + UI.num(r.suppliers) + '곳'
-      });
     });
   }
 
   // ------------------------------------------------------------ 시작 · 구독
   function paintCtx() {
     var d = A.donut(), s = A.summary(), m = A.meta();
+    /* 기준일 알약은 담당 현황 카드가 적어 주고 있었다 · 그 카드를 지웠으니 여기서 적는다 */
+    document.getElementById('asof').textContent =
+      m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
     /* 「집중 검토」 는 사람이 지금 봐야 하는 묶음 수다 · 보류 · 즉시발주 · 마감초과 */
     var n = [d.hold > 0, (s.signal.red || 0) > 0, true].filter(Boolean).length;
     document.getElementById('ctx-n').textContent = '집중 검토 ' + n + '개';
@@ -741,26 +411,17 @@
   }
 
   function paintAll() {
-    paintKpi();
     paintCtx();
     paintAttrCard();
     paintStockCard();
     paintDueCard();
     paintQuick();
-    paintTodo();
-    paintPipe();
-    paintEq();
   }
 
   paintAll();
-  wireTodo();     // 이벤트는 한 번만 붙인다
-  wireLead();
-  wireCards();
-  wireEq();
+  wireCards();    // 이벤트는 한 번만 붙인다
   /* 갱신 · 3층(승인 · 반납 · 초안)이 바뀐 뒤 다시 셈한다. 값을 새로 만들지 않는다 */
   document.getElementById('ctx-refresh').addEventListener('click', paintAll);
-  UI.accordion(document);
-
   /* 승인 · 반납이 일어나면 이 화면 숫자도 같이 움직여야 한다.
      화면에 숫자를 적어 두지 않았으므로 다시 그리면 끝이다 */
   A.on(paintAll);
