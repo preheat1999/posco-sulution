@@ -51,7 +51,11 @@ def rule_intent(question):
         return {"template": "order_urgent", "args": {}}
     if any(w in q for w in ("공용화", "정체 자재", "정체금액")):
         return {"template": "pooling_candidates", "args": {}}
-    if any(w in q for w in ("전체 재고", "총 재고", "전체 총계", "총액", "전사 재고")):
+    # ★ "총액" 단독을 트리거로 두면 "2030년 예산 총액" 같은 질문이 재고 총계로 새어나간다.
+    #   (실측: no_answer 평가문항 NA-03 이 현재 재고금액을 답했다)
+    #   재고를 명시한 표현일 때만 확정하고, 나머지는 LLM 판단(none 선택 가능)으로 넘긴다.
+    if any(w in q for w in ("전체 재고", "총 재고", "전사 재고", "재고 총액",
+                            "재고 총계", "전체 재고금액")):
         return {"template": "portfolio_totals", "args": {}}
     for word, dim in (("속성별", "type"), ("창고별", "warehouse"),
                       ("소싱그룹별", "sourcing_group"), ("조달구분별", "procurement_type")):

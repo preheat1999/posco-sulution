@@ -72,6 +72,47 @@ def ui():
     return FileResponse(WEB)
 
 
+WEBDIR = Path(__file__).resolve().parent.parent / "web"
+DATADIR = Path(__file__).resolve().parent.parent / "data"
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    """데이터 분석 대시보드 — 외부 CDN 없이 인라인 SVG 로 그린다."""
+    f = WEBDIR / "dashboard.html"
+    if not f.exists():
+        return HTMLResponse("<h1>web/dashboard.html 이 없습니다</h1>", status_code=404)
+    return FileResponse(f)
+
+
+@app.get("/web/{name}")
+def web_asset(name: str):
+    """대시보드가 쓰는 정적 파일. 경로 이탈을 막기 위해 파일명만 받는다."""
+    f = (WEBDIR / name).resolve()
+    if f.parent != WEBDIR.resolve() or not f.exists():
+        raise HTTPException(status_code=404, detail="not found")
+    return FileResponse(f)
+
+
+@app.get("/api/viz")
+def viz():
+    """집계 수치만 담긴 JSON (문서 원문·개인정보 없음). 없으면 만들라고 알린다."""
+    f = DATADIR / "viz.json"
+    if not f.exists():
+        raise HTTPException(status_code=404,
+                            detail="data/viz.json 없음 — python scripts/build_viz.py 실행")
+    return FileResponse(f, media_type="application/json")
+
+
+@app.get("/api/eval")
+def eval_result():
+    f = DATADIR / "eval_result.json"
+    if not f.exists():
+        raise HTTPException(status_code=404,
+                            detail="data/eval_result.json 없음 — python scripts/run_eval.py 실행")
+    return FileResponse(f, media_type="application/json")
+
+
 @app.get("/api/health")
 def health(request: Request):
     vs = STATE["vs"]

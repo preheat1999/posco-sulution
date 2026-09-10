@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>포스코 자재관리 데이터 분석</title>
+<link rel="icon" href="data:,">
+<style>
+  /* 팔레트: dataviz 참조 인스턴스 (검증기 통과: 인접 4계열 light/dark, all-pairs 3계열) */
+  :root{
+    color-scheme: light;
+    --page:#f9f9f7; --surface-1:#fcfcfb; --surface-2:#f0efec;
+    --text-primary:#0b0b0b; --text-secondary:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+    --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a; --series-4:#eda100;
+    --series-5:#e87ba4; --series-6:#008300;
+    --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --page:#0d0d0d; --surface-1:#1a1a19; --surface-2:#2c2c2a;
+      --text-primary:#fff; --text-secondary:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+      --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70; --series-4:#c98500;
+      --series-5:#d55181; --series-6:#008300;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --page:#0d0d0d; --surface-1:#1a1a19; --surface-2:#2c2c2a;
+    --text-primary:#fff; --text-secondary:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70; --series-4:#c98500;
+    --series-5:#d55181; --series-6:#008300;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--text-primary);
+       font:14px/1.6 system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif}
+  header{position:sticky;top:0;z-index:5;background:var(--surface-1);
+         border-bottom:1px solid var(--border);padding:12px 22px;
+         display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0}
+  header .sp{margin-left:auto;display:flex;gap:8px}
+  button{font:inherit;font-size:12px;border:1px solid var(--border);border-radius:7px;
+         background:var(--surface-1);color:var(--text-secondary);padding:6px 12px;cursor:pointer}
+  button:hover{color:var(--series-1)}
+  button[aria-pressed="true"]{background:var(--series-1);color:#fff;border-color:transparent}
+  main{max-width:1180px;margin:0 auto;padding:22px}
+  .notice{background:var(--surface-2);border-left:3px solid var(--warning);
+          border-radius:6px;padding:10px 14px;font-size:13px;color:var(--text-secondary);
+          margin-bottom:22px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:8px}
+  .tile{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .tile .k{font-size:12px;color:var(--muted)}
+  .tile .v{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-top:2px}
+  .tile .s{font-size:12px;color:var(--text-secondary);margin-top:2px}
+  .hero{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
+        padding:18px 20px;margin:12px 0 24px}
+  .hero .v{font-size:52px;font-weight:700;letter-spacing:-1.5px;line-height:1.05}
+  .hero .k{font-size:13px;color:var(--muted)}
+  .hero .s{font-size:13px;color:var(--text-secondary);margin-top:6px;max-width:70ch}
+  section{margin:34px 0;scroll-margin-top:64px}
+  section > h2{font-size:19px;margin:0 0 4px;letter-spacing:-.3px}
+  section > .lead{color:var(--text-secondary);font-size:13.5px;margin:0 0 16px;max-width:88ch}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+  .grid.wide{grid-template-columns:1fr}
+  .card{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow:hidden}
+  .card h3{font-size:13.5px;margin:0 0 2px}
+  .card .sub{font-size:12px;color:var(--muted);margin:0 0 10px}
+  .card .finding{font-size:12.5px;color:var(--text-secondary);margin-top:8px;
+                 border-top:1px dashed var(--grid);padding-top:8px}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);margin:2px 0 8px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  svg.chart{width:100%;height:auto;display:block;overflow:visible}
+  .grid line, line.grid{stroke:var(--grid);stroke-width:1}
+  .refline{stroke:var(--axis);stroke-width:1;stroke-dasharray:3 3}
+  .plotbg{fill:var(--surface-2);fill-opacity:.45}
+  text{font:11px system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif}
+  text.lbl{fill:var(--text-secondary)}
+  text.ax{fill:var(--muted);font-size:10.5px}
+  text.val{fill:var(--text-primary);font-weight:600;font-size:11px}
+  text.inbar{fill:#fff;font-weight:700;font-size:10.5px}
+  text.incell{fill:var(--text-primary);font-size:10px}
+  text.note{fill:var(--text-secondary);font-size:10.5px;font-weight:600}
+  text.quad{fill:var(--muted);font-size:11px;font-weight:600}
+  path.lineMark{fill:none;stroke:var(--series-1);stroke-width:2;stroke-linejoin:round}
+  path.areafill{fill:var(--series-1);fill-opacity:.12}
+  path.areaseg{fill-opacity:.85;stroke:var(--surface-1);stroke-width:2}
+  circle.dot{fill:var(--series-1);stroke:var(--surface-1);stroke-width:2}
+  circle.pt{stroke:var(--surface-1);stroke-width:1}
+  line.stem{stroke:var(--axis);stroke-width:2}
+  rect.mark{stroke:var(--surface-1);stroke-width:0}
+  .viz-tip{position:fixed;z-index:99;pointer-events:none;display:none;max-width:280px;
+           background:var(--text-primary);color:var(--page);font-size:12px;line-height:1.5;
+           padding:7px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+  .dtable{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+  .dtable th,.dtable td{border:1px solid var(--grid);padding:4px 8px;text-align:left}
+  .dtable th{background:var(--surface-2);font-weight:600}
+  .dtable td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+  body:not(.show-tables) .tablewrap{display:none}
+  .flow{overflow-x:auto}
+  .flow svg{min-width:560px}
+  .fbox{fill:var(--surface-2);stroke:var(--axis);stroke-width:1}
+  .fbox.accent{fill:var(--series-1);stroke:none}
+  .fbox.warn{fill:var(--warning);stroke:none;fill-opacity:.28}
+  .ftext{fill:var(--text-primary);font-size:11.5px}
+  .ftext.on{fill:#fff;font-weight:600}
+  .farrow{stroke:var(--axis);stroke-width:1.6;fill:none;marker-end:url(#ah)}
+  .fnote{fill:var(--muted);font-size:10.5px}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:30px 0 40px}
+  @media (max-width:700px){ .hero .v{font-size:38px} main{padding:14px} }
+</style>
+</head>
+<body>
+<header>
+  <h1>포스코 자재관리 데이터 분석</h1>
+  <span id="built" style="font-size:12px;color:var(--muted)"></span>
+  <span class="sp">
+    <button id="btnTable" aria-pressed="false">표로 보기</button>
+    <button id="btnTheme">테마</button>
+    <button onclick="location.href='/'">챗봇으로</button>
+  </span>
+</header>
+<main id="app">불러오는 중…</main>
+<footer>집계 수치만 사용 · 문서 원문과 개인정보는 포함하지 않음</footer>
+
+<script src="/web/viz.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const { hbar, vbar, gbar, stackbar, line, curve, stackarea, heatmap, scatter,
+        lollipop, dumbbell, meter, table, fmt, pct, CAT } = window.VIZ;
+
+/* 카드 조립 */
+function card(title, sub, node, finding, tableSpec) {
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.innerHTML = `<h3>${title}</h3>` + (sub ? `<p class="sub">${sub}</p>` : '');
+  if (node) c.appendChild(node);
+  if (finding) {
+    const f = document.createElement('div'); f.className = 'finding'; f.innerHTML = finding;
+    c.appendChild(f);
+  }
+  if (tableSpec) {
+    const w = document.createElement('div'); w.className = 'tablewrap';
+    w.appendChild(table(tableSpec.cols, tableSpec.rows));
+    c.appendChild(w);
+  }
+  return c;
+}
+function legend(items) {
+  const d = document.createElement('div'); d.className = 'legend';
+  d.innerHTML = items.map((t, i) => `<span><i style="background:${CAT[i % CAT.length]}"></i>${t}</span>`).join('');
+  return d;
+}
+function section(title, lead, cards, wide) {
+  const s = document.createElement('section');
+  s.innerHTML = `<h2>${title}</h2><p class="lead">${lead}</p>`;
+  const g = document.createElement('div');
+  g.className = 'grid' + (wide ? ' wide' : '');
+  cards.forEach(c => c && g.appendChild(c));
+  s.appendChild(g);
+  return s;
+}
+const rowsOf = d => d.map(x => [x.label, fmt(x.value)]);
+
+/* ---------------- 흐름도 (인라인 SVG) ---------------- */
+function flowSvg(nodes, edges, w, h, notes) {
+  const NSU = 'http://www.w3.org/2000/svg';
+  const s = document.createElementNS(NSU, 'svg');
+  s.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  s.innerHTML = `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--axis)"/></marker></defs>`;
+  edges.forEach(e => {
+    const p = document.createElementNS(NSU, 'path');
+    p.setAttribute('d', e.d); p.setAttribute('class', 'farrow');
+    if (e.dash) p.setAttribute('stroke-dasharray', '4 3');
+    s.appendChild(p);
+    if (e.label) {
+      const t = document.createElementNS(NSU, 'text');
+      t.setAttribute('x', e.lx); t.setAttribute('y', e.ly);
+      t.setAttribute('class', 'fnote'); t.setAttribute('text-anchor', 'middle');
+      t.textContent = e.label; s.appendChild(t);
+    }
+  });
+  nodes.forEach(n => {
+    const r = document.createElementNS(NSU, 'rect');
+    r.setAttribute('x', n.x); r.setAttribute('y', n.y);
+    r.setAttribute('width', n.w || 132); r.setAttribute('height', n.h || 40);
+    r.setAttribute('rx', 8);
+    r.setAttribute('class', 'fbox' + (n.k ? ' ' + n.k : ''));
+    s.appendChild(r);
+    (n.t.split('\n')).forEach((ln, i, arr) => {
+      const t = document.createElementNS(NSU, 'text');
+      t.setAttribute('x', n.x + (n.w || 132) / 2);
+      t.setAttribute('y', n.y + (n.h || 40) / 2 + 4 + (i - (arr.length - 1) / 2) * 13);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('class', 'ftext' + (n.k === 'accent' ? ' on' : ''));
+      t.textContent = ln; s.appendChild(t);
+    });
+  });
+  (notes || []).forEach(n => {
+    const t = document.createElementNS(NSU, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'fnote'); t.textContent = n.t; s.appendChild(t);
+  });
+  const wrap = document.createElement('div'); wrap.className = 'flow'; wrap.appendChild(s);
+  return wrap;
+}
+const H = (x1, x2, y) => `M${x1},${y} L${x2},${y}`;
+const Vt = (x, y1, y2) => `M${x},${y1} L${x},${y2}`;
+
+/* ---------------- 메인 ---------------- */
+(async function () {
+  const V = await (await fetch('/api/viz')).json();
+  let E = null;
+  try { E = await (await fetch('/api/eval')).json(); } catch (e) { E = null; }
+  const app = $('#app'); app.innerHTML = '';
+  $('#built').textContent = `집계 ${V.meta.built_at} · 기준일 ${V.meta.asof}`;
+
+  const nt = document.createElement('div');
+  nt.className = 'notice';
+  nt.innerHTML = `⚠️ ${V.meta.note} 질문 로그는 실제 사내 데이터이며 <b>개인정보(작성자·등록일)는 집계에서 제외</b>했습니다.`;
+  app.appendChild(nt);
+
+  /* KPI */
+  const k = document.createElement('div'); k.className = 'kpis';
+  [['사내 문서', V.corpus.n_docs + '건', `검색 청크 ${fmt(V.corpus.n_chunks)}개`],
+   ['실무 질문 로그', fmt(V.faq.n_rows) + '행', `질문 ${fmt(V.faq.qa.questions)} · 답변 ${fmt(V.faq.qa.answers)}`],
+   ['자재', V.material.n_items + '종', `재고금액 ${fmt(V.material.total_value)}원`],
+   ['설비 정비 이력', fmt(V.maint.n) + '건', `총 정지 ${fmt(V.maint.hours_stats.total)}시간`],
+   ['불출 이력', fmt(V.demand.monthly.reduce((a, b) => a + b.value, 0)) + '개', `창고 ${V.flow.n_warehouses}곳`],
+  ].forEach(([a, b, c]) => {
+    const t = document.createElement('div'); t.className = 'tile';
+    t.innerHTML = `<div class="k">${a}</div><div class="v">${b}</div><div class="s">${c}</div>`;
+    k.appendChild(t);
+  });
+  app.appendChild(k);
+
+  /* 히어로 */
+  const hero = document.createElement('div'); hero.className = 'hero';
+  hero.innerHTML = `<div class="k">실무 답변의 집중도</div>
+    <div class="v">${pct(V.faq.answer_concentration.top1)}</div>
+    <div class="s">답변 ${fmt(V.faq.answer_concentration.n_answers)}건 중 <b>한 사람</b>이 낸 비중입니다.
+    답변자 ${V.faq.answer_concentration.n_answerers}명 중 ${V.faq.answer_concentration.single_answer_people}명
+    (${pct(V.faq.answer_concentration.single_answer_people / V.faq.answer_concentration.n_answerers)})은 딱 한 번만 답했습니다.
+    답변은 빠릅니다(당일 ${pct(V.faq.answer_lag.bands[0].value / V.faq.answer_lag.n)}) — 문제는 그 속도가 소수에게 의존한다는 것입니다.</div>`;
+  app.appendChild(hero);
+
+  /* ===================== 스토리 1 ===================== */
+  const lagRows = V.faq.answer_lag.bands;
+  app.appendChild(section('1 · 실무자는 무엇을 몰라서 묻는가',
+    `사내 질문 로그 ${fmt(V.faq.n_rows)}행(3개 시스템)을 집계했습니다. 무엇을 묻는지, 답이 언제 돌아오는지, 누가 답하는지를 봅니다.`,
+    [
+      card('질문 주제', '무엇을 묻는가 (질문분류 시스템)',
+        hbar(V.faq.topics, { labelW: 118 }), null,
+        { cols: ['주제', '건수'], rows: rowsOf(V.faq.topics) }),
+      card('기술 분야', '분야별 질문 수',
+        hbar(V.faq.fields, { labelW: 138 }), null,
+        { cols: ['분야', '건수'], rows: rowsOf(V.faq.fields) }),
+      card('질문 → 답변 소요일 ★신규', `측정 스레드 ${fmt(V.faq.answer_lag.n)}건`,
+        vbar(lagRows, { height: 190 }),
+        `중앙 <b>${V.faq.answer_lag.median}일</b> · 90분위 ${V.faq.answer_lag.p90}일 · 95분위 ${V.faq.answer_lag.p95}일 · 최대 ${V.faq.answer_lag.max}일.
+         대부분 당일에 답이 오지만 <b>${pct(1 - lagRows[0].value / V.faq.answer_lag.n)}는 하루를 넘깁니다.</b>`,
+        { cols: ['구간', '건수'], rows: rowsOf(lagRows) }),
+      card('답변 집중도 (로렌츠 곡선) ★신규', '가로: 답변자 누적 비율 · 세로: 답변 누적 비율',
+        curve(V.faq.answer_concentration.lorenz, { marks: [0.034], xlabel: '답변자 누적 비율' })  /* 마커가 왼쪽에 몰려 겹치므로 하나만 찍고 나머지 수치는 아래 설명에 둔다 */,
+        `상위 1명 <b>${pct(V.faq.answer_concentration.top1)}</b> · 5명 ${pct(V.faq.answer_concentration.top5)}
+         · 10명 ${pct(V.faq.answer_concentration.top10)} · 20명 ${pct(V.faq.answer_concentration.top20)}.
+         점선(대각선)은 완전 균등일 때의 모습입니다. ※ 이름은 쓰지 않고 순위별 비중만 집계했습니다.`),
+      card('주제 구성의 변화', '연도별 상위 5개 주제 (누적 영역)',
+        (() => { const d = document.createElement('div');
+          d.appendChild(legend(V.faq.topic_by_year.series.map(s => s.label)));
+          d.appendChild(stackarea(V.faq.topic_by_year.years, V.faq.topic_by_year.series));
+          return d; })()),
+      card('연도별 질문 수', '3개 시스템 합계',
+        line(V.faq.by_year, { area: true, suffix: '건' }), null,
+        { cols: ['연도', '건수'], rows: rowsOf(V.faq.by_year) }),
+      card('전문가가 답한 비율', '질문분류·생산관리 시스템',
+        meter(V.faq.expert_ratio.expert / (V.faq.expert_ratio.expert + V.faq.expert_ratio.normal),
+          { label: '전문가 답변' }),
+        `전문가 ${fmt(V.faq.expert_ratio.expert)}건 / 일반 ${fmt(V.faq.expert_ratio.normal)}건.
+         답변의 대부분이 전문가 인증 없이 이뤄집니다 — 근거 문서로 검증할 필요가 여기서 나옵니다.`),
+      card('설비별 질문', `상위 12종 (미분류 ${fmt(V.faq.equipment.unclassified)}건 제외)`,
+        hbar(V.faq.equipment.items, { labelW: 96 }),
+        `전체의 ${pct(V.faq.equipment.unclassified / (V.faq.equipment.unclassified + V.faq.equipment.items.reduce((a, b) => a + b.value, 0)))}가
+         설비 미분류입니다. 분류된 건만 표시했습니다.`),
+      card('기술 주제 분포', '질문분류 시스템 기준',
+        hbar(V.faq.themes, { labelW: 96 })),
+      card('구매 질문 유형', '구매지원 시스템',
+        (() => { const d = document.createElement('div');
+          d.appendChild(legend(V.faq.buy_kinds.map(x => x.label)));
+          d.appendChild(stackbar(V.faq.buy_kinds)); return d; })(),
+        'Q코드(자재 식별) 문의가 절반을 넘습니다 — 챗봇의 자재코드 원형 보존 규칙이 여기서 중요해집니다.'),
+    ]));
+
+  /* ===================== 스토리 2 ===================== */
+  const mq = V.material;
+  app.appendChild(section('2 · 돈이 어디에 잠겨 있는가',
+    `자재 ${mq.n_items}종의 재고금액 ${fmt(mq.total_value)}원을 불출 이력과 결합했습니다. 적정재고 산출 없이도 과잉·결품을 판정할 수 있습니다.`,
+    [
+      card('보유량 × 실제 불출 사분면 ★신규',
+        '가로: 5년 누적 불출량 · 세로: 부서 재고 (둘 다 로그 축) · 주황 = 핵심예비품',
+        scatter(mq.scatter.map(p => ({ ...p, hl: p.c === 'O' })), {
+          log: true, vline: 0.5, hline: 0.5, height: 320,
+          xlabel: '누적 불출량 (로그)', ylabel: '재고 수량 (로그)',
+          quads: [{ label: '재고만 있음 (정체)', fx: .22, fy: .12 },
+                  { label: '정상 회전', fx: .78, fy: .12 },
+                  { label: '둘 다 없음', fx: .22, fy: .93 },
+                  { label: '재고 없음 · 수요 있음', fx: .78, fy: .93 }],
+          tipFn: p => `<b>${p.item}</b><br>재고 ${fmt(p.y)} · 누적불출 ${fmt(p.x)}<br>재고금액 ${fmt(p.v)}원${p.c === 'O' ? '<br>핵심예비품' : ''}`
+        }),
+        `<b>재고는 있는데 5년간 불출이 없는 자재 ${mq.dead_stock.n}종</b>이 ${fmt(mq.dead_stock.value)}원
+         (전체 재고금액의 ${pct(mq.dead_stock.share)})을 차지합니다.`,
+        { cols: ['구간', '자재 수'], rows: rowsOf(mq.quadrant_counts) }),
+      card('잠긴 재고', '불출 이력이 없는 재고의 금액',
+        (() => { const d = document.createElement('div');
+          d.innerHTML = `<div style="font-size:42px;font-weight:700;letter-spacing:-1px">${fmt(mq.dead_stock.value)}원</div>
+            <div style="color:var(--text-secondary);font-size:13px">${mq.dead_stock.n}종 · 전체 재고금액의 ${pct(mq.dead_stock.share)}</div>`;
+          return d; })(),
+        '적정재고 산출 결과가 없어도, 불출 이력만으로 감축 후보를 지목할 수 있습니다.'),
+      card('재고금액 집중도 (ABC)', '가로: 자재 순위 비율 · 세로: 누적 금액 비율',
+        curve(mq.pareto.map(p => ({ x: p.i / mq.pareto.length, y: p.cum })),
+          { marks: [0.1, 0.2, 0.5], xlabel: '자재 순위 (금액 내림차순)' }),
+        '소수 품목이 금액의 대부분을 차지합니다. 관리 우선순위를 여기서 정합니다.'),
+      card('정체 재고의 나이', '최근 입고 연도별 잠긴 금액',
+        vbar(mq.stale_by_year, { height: 190, suffix: '원' }), null,
+        { cols: ['최근입고', '금액'], rows: rowsOf(mq.stale_by_year) }),
+      card('결품 노출 ★신규', '재고 0 · 불출 이력 있음',
+        (() => { const d = document.createElement('div');
+          d.innerHTML = `<div style="font-size:34px;font-weight:700">${mq.shortage.n}종</div>
+            <div style="color:var(--critical);font-weight:600;font-size:13px">그중 핵심예비품 ${mq.shortage.critical}종</div>`;
+          return d; })(),
+        `수요가 확인된 자재인데 재고가 0입니다. <b>${mq.shortage.n}종 중 ${mq.shortage.critical}종이 핵심예비품</b>이라
+         리스크가 가장 위험한 곳에 몰려 있습니다.`,
+        { cols: ['자재', '누적불출', '리드타임', '핵심'],
+          rows: mq.shortage_list.map(r => [r.item, fmt(r.out), r.lt ? fmt(r.lt) + '일' : '-', r.csp]) }),
+      card('속성 · 조달 · 창고 구성', '부분-전체는 누적 막대로 표시 (원그래프보다 정확)',
+        (() => { const d = document.createElement('div');
+          [['속성', mq.by_type], ['조달구분', mq.by_proc]].forEach(([nm, dd]) => {
+            const h = document.createElement('div');
+            h.style.cssText = 'font-size:12px;color:var(--muted);margin-top:6px';
+            h.textContent = nm; d.appendChild(h);
+            d.appendChild(legend(dd.map(x => x.label)));
+            d.appendChild(stackbar(dd));
+          });
+          d.appendChild(hbar(mq.by_wh, { labelW: 76, barH: 18 }));
+          return d; })()),
+    ]));
+
+  /* ===================== 스토리 3 ===================== */
+  const ri = mq.risk_index;
+  app.appendChild(section('3 · 무엇이 조달을 위험하게 하는가',
+    '리드타임·공급사 수·금액·핵심도를 하나의 점수로 합성했습니다. 단일 지표로는 보이지 않는 위험을 랭킹으로 만듭니다.',
+    [
+      card('조달 리스크 지수 상위 15 ★신규', ri.formula,
+        lollipop(ri.top.map(r => ({
+          label: r.item, value: r.score,
+          tip: `<b>${r.item}</b><br>점수 ${r.score}<br>리드타임 ${fmt(r.lt)}일 · 공급사 ${r.sup || '?'}곳<br>재고금액 ${fmt(r.value)}원${r.csp === 'O' ? '<br>핵심예비품' : ''}${r.proc === '수입' ? ' · 수입' : ''}`
+        })), { suffix: '점', labelW: 88 }),
+        `70점 이상 <b>${ri.over70}종</b> · 50점 이상 ${ri.over50}종 · 중앙값 ${ri.median}점.`,
+        { cols: ['자재', '점수', '리드타임', '공급사', '핵심'],
+          rows: ri.top.map(r => [r.item, r.score, fmt(r.lt) + '일', r.sup || '-', r.csp]) }),
+      card('리드타임 × 단가', '버블 크기 = 재고금액 · 주황 = 핵심예비품',
+        scatter(mq.lt_cost.map(p => ({ ...p, hl: p.c === 'O' })), {
+          size: 900, height: 300, xlabel: '리드타임 (일)', ylabel: '단가 (원, 로그)',
+          log: false,
+          tipFn: p => `<b>${p.item}</b><br>리드타임 ${fmt(p.x)}일<br>단가 ${fmt(p.y)}원<br>재고금액 ${fmt(p.v)}원`
+        }),
+        `리드타임 최대 <b>${fmt(mq.lt_stats.max)}일</b>(중앙 ${mq.lt_stats.median}일). 오른쪽 위로 갈수록 위험합니다.`),
+      card('소싱그룹 단일공급사 비율 ★신규', '10종 이상 보유 카테고리 · 금액 순',
+        hbar(mq.sourcing_single.map(r => ({ label: r.label, value: r.ratio })),
+          { unit: 'pct', labelW: 152 }),
+        '한 곳에서만 사는 카테고리가 많습니다. 이중화 우선순위를 여기서 뽑습니다.',
+        { cols: ['소싱그룹', '자재수', '단일공급사', '비율', '재고금액'],
+          rows: mq.sourcing_single.map(r => [r.label, r.n, r.single, pct(r.ratio), fmt(r.value)]) }),
+      card('공급사 수 분포', '자재당 실납품 공급사',
+        vbar(mq.by_sup, { height: 180 }),
+        '단일 공급사 의존이 절반을 넘습니다.'),
+      card('리드타임 분포', '30일 구간',
+        vbar(mq.lt_hist, { height: 190 }), null,
+        { cols: ['구간', '자재수'], rows: rowsOf(mq.lt_hist) }),
+    ]));
+
+  /* ===================== 스토리 4 ===================== */
+  const dl = V.maint.deadline;
+  app.appendChild(section('4 · 설비는 언제 멈추고, 그때 부품은 있는가',
+    `정비 이력 ${fmt(V.maint.n)}건을 자재 마스터와 연결했습니다. "정지 예정일까지 남은 일수 < 리드타임"이면 지금 발주해도 늦습니다.`,
+    [
+      card('발주 데드라인 위반 ★신규', `기준일 이후 정비 일정 × 연결자재 ${fmt(dl.n_pairs)}건`,
+        (() => { const d = document.createElement('div');
+          d.innerHTML = `<div style="font-size:40px;font-weight:700;color:var(--critical)">${fmt(dl.n_late)}건</div>
+            <div style="color:var(--text-secondary);font-size:13px">전체 조합의 ${pct(dl.share)} — 리드타임이 남은 일수보다 깁니다</div>`;
+          d.appendChild(legend(['정지 일정 전체', '데드라인 위반']));
+          d.appendChild(gbar(dl.by_month.months,
+            [{ label: '전체', values: dl.by_month.total },
+             { label: '위반', values: dl.by_month.late }], { height: 200 }));
+          return d; })(),
+        `기준일(${V.meta.asof}) 이후 남은 정비 일정은 ${dl.by_month.months.length}개월치입니다. 
+         파란 막대가 그 달의 정지 일정, 주황이 리드타임을 못 맞추는 건수입니다.`,
+        { cols: ['정지일', '설비', '수리', '자재', '리드타임', '남은일수', '부족'],
+          rows: dl.list.map(r => [r.date, r.eq.slice(0, 24), r.kind, r.item,
+            fmt(r.lt) + '일', r.days_left + '일', r.gap + '일']) }),
+      card('공장 × 수리구분', '정비 건수 (진할수록 많음)',
+        heatmap(V.maint.heatmap.rows, V.maint.heatmap.cols, V.maint.heatmap.values,
+          { cw: 62, labelW: 54 })),
+      card('수리구분 구성', '',
+        (() => { const d = document.createElement('div');
+          d.appendChild(legend(V.maint.by_kind.map(x => x.label)));
+          d.appendChild(stackbar(V.maint.by_kind)); return d; })(),
+        null, { cols: ['수리구분', '건수'], rows: rowsOf(V.maint.by_kind) }),
+      card('정지시간 집중도 ★신규', '가로: 정비 건 순위 비율 · 세로: 누적 정지시간 비율',
+        curve(V.maint.hours_pareto.map((p, i) => ({
+          x: [0.01, 0.05, 0.1, 0.2, 0.5, 1][i], y: p.value
+        })), { marks: [0.1, 0.2], xlabel: '정비 건 순위 (정지시간 내림차순)' }),
+        `총 ${fmt(V.maint.hours_stats.total)}시간 · 중앙 ${V.maint.hours_stats.median}시간 · 최대 ${fmt(V.maint.hours_stats.max)}시간.
+         소수의 장기 정지가 전체 시간을 지배합니다.`),
+      card('연 × 월 정비 계절성', '월별 정비 건수',
+        heatmap(V.maint.season.rows, V.maint.season.cols, V.maint.season.values,
+          { cw: 34, ch: 20, labelW: 42 })),
+      card('연도별 정비 추이', '',
+        line(V.maint.by_year, { area: true, suffix: '건' })),
+      card('정지시간 분포', '48시간 구간',
+        vbar(V.maint.hours_hist, { height: 180 })),
+      card('라인별 정비', '상위 12',
+        hbar(V.maint.by_line, { labelW: 128 })),
+    ]));
+
+  /* ===================== 스토리 5 ===================== */
+  const dm = V.demand;
+  app.appendChild(section('5 · 수요는 예측 가능한가',
+    '불출 이력을 평균수요간격(ADI)과 변동계수²(CV²)로 나눠 Syntetos–Boylan 4분류를 적용했습니다. 예측 가능한 자재와 그렇지 않은 자재를 가릅니다.',
+    [
+      card('ADI × CV² 사분면 ★신규',
+        `점선이 분류 경계 (ADI ${dm.cut_adi} / CV² ${dm.cut_cv2}). 위치가 분류를 나타내므로 색은 단일 색조입니다.`,
+        scatter(dm.scatter, {
+          vline: dm.cut_adi, hline: dm.cut_cv2, height: 320,
+          xlabel: '평균 수요 간격 ADI (클수록 드물게 나감)', ylabel: '변동계수² CV²',
+          quads: [{ label: 'Smooth', fx: .18, fy: .93 }, { label: 'Intermittent', fx: .8, fy: .93 },
+                  { label: 'Erratic', fx: .18, fy: .1 }, { label: 'Lumpy', fx: .8, fy: .1 }],
+          tipFn: p => `<b>${p.item}</b><br>${p.k}<br>ADI ${p.x} · CV² ${p.y}`
+        }),
+        `불출 이력이 있는 ${dm.n_with_history}종 기준. <b>간헐 수요가 가장 많아</b> 통계 예측이 원리적으로 어렵습니다 —
+         그래서 규정·경험(문서)이 실무의 근거가 되고, 챗봇이 그것을 꺼내주는 역할을 합니다.`),
+      card('수요 패턴 구성', '',
+        (() => { const d = document.createElement('div');
+          d.appendChild(legend(dm.classes.map(x => x.label)));
+          d.appendChild(stackbar(dm.classes)); return d; })(),
+        null, { cols: ['패턴', '자재수'], rows: rowsOf(dm.classes) }),
+      card('월별 불출 추이', '부서창고 6곳 기준',
+        line(dm.monthly, { area: true, suffix: '개' })),
+      card('불출 상위 자재', '누적 불출량 top 20',
+        hbar(dm.top_items, { labelW: 92, barH: 18 })),
+    ]));
+
+  /* ===================== 스토리 6 ===================== */
+  app.appendChild(section('6 · 자재는 어디로 흐르는가',
+    `거래 이력에 등장하는 창고는 ${V.flow.n_warehouses}곳입니다. 그중 부서 수요로 인정되는 부서창고는 6곳뿐입니다.`,
+    [
+      card('창고군별 입고 ↔ 불출', '부서창고 6곳 vs 나머지',
+        (() => { const d = document.createElement('div');
+          d.appendChild(legend(['입고', '불출']));
+          d.appendChild(dumbbell(V.flow.groups.map(g => ({ label: g.label, a: g.qin, b: g.qout })),
+            { aLabel: '입고', bLabel: '불출', labelW: 108 }));
+          return d; })(),
+        '부서창고 밖에서 일어나는 거래가 상당합니다 — 수요 집계 범위를 정할 때 이 경계가 중요합니다.'),
+      card('창고별 입고 ↔ 불출', '거래량 상위 12곳',
+        (() => { const d = document.createElement('div');
+          d.appendChild(legend(['입고', '불출']));
+          d.appendChild(dumbbell(V.flow.top.map(g => ({
+            label: g.label + (g.dept ? ' ●' : ''), a: g.qin, b: g.qout })),
+            { aLabel: '입고', bLabel: '불출', labelW: 82 }));
+          return d; })(),
+        '● 표시가 부서창고입니다.',
+        { cols: ['창고', '입고', '불출', '거래건수'],
+          rows: V.flow.top.map(g => [g.label + (g.dept ? ' (부서)' : ''), fmt(g.qin), fmt(g.qout), fmt(g.n)]) }),
+    ]));
+
+  /* ===================== 스토리 7 ===================== */
+  const cards7 = [];
+  if (E && E.length) {
+    const scored = E.filter(r => !r.excluded && r.expected &&
+      ['faq_paraphrased', 'synthetic_doc'].includes(r.type) && r.hit != null);
+    // 업무 시나리오는 평가셋 문서가 '올바른 거절도 0점으로 채점된다' 고 밝힌 유형이라
+    // 성공률 차트에서 뺀다. 0% 로 그리면 실패한 것처럼 오해된다.
+    const byType = {};
+    E.forEach(r => {
+      if (r.type === 'biz_scenario') return;
+      if (r.hit == null && r.type !== 'no_answer') return;
+      if (r.type !== 'no_answer' && r.excluded) return;
+      byType[r.type] = byType[r.type] || { n: 0, hit: 0 };
+      byType[r.type].n++;
+      if (r.type === 'no_answer') { if (r.refused) byType[r.type].hit++; }
+      else if (r.hit) byType[r.type].hit++;
+    });
+    const TYPE_KO = { faq_paraphrased: '실제 사내 질문', synthetic_doc: '문서 기반 생성',
+                      biz_scenario: '업무 시나리오', no_answer: '답할 수 없는 질문' };
+    cards7.push(card('유형별 성공률', '문서 단위 판정 (기대 정답 문서가 인용에 포함)',
+      hbar(Object.entries(byType).map(([t, v]) => ({
+        label: TYPE_KO[t] || t, value: v.hit / v.n })), { unit: 'pct', labelW: 116 }),
+      `채점 대상 ${scored.length}문항 정답문서 포함률 <b>${pct(scored.filter(r => r.hit).length / Math.max(scored.length, 1))}</b>.
+       [제외문서] 표기 ${E.filter(r => r.excluded).length}문항과 업무 시나리오
+       ${E.filter(r => r.type === 'biz_scenario').length}문항은 평가셋 문서의 안내대로 채점에서 제외했습니다
+       (업무 시나리오는 '올바른 거절도 0점'으로 채점되는 유형입니다).`,
+      { cols: ['유형', '문항', '성공', '비율'],
+        rows: Object.entries(byType).map(([t, v]) => [TYPE_KO[t] || t, v.n, v.hit, pct(v.hit / v.n)]) }));
+
+    const docCnt = {};
+    E.forEach(r => (r.cited_files || []).forEach(f => docCnt[f] = (docCnt[f] || 0) + 1));
+    const docRank = Object.entries(docCnt).map(([f, n]) => ({ label: f.replace(/\.(pptx?|docx?|pdf|xlsx?|xlsb)$/, ''), value: n }))
+      .sort((a, b) => b.value - a.value);
+    const unused = V.corpus.by_doc.filter(d => !docCnt[d.label]);
+    cards7.push(card('문서별 인용 기여도 ★신규', `평가 ${E.length}문항에서 실제로 근거로 쓰인 횟수`,
+      hbar(docRank.slice(0, 14), { labelW: 210 }),
+      `문서 ${V.corpus.n_docs}건 중 <b>${docRank.length}건</b>이 실제 답변에 인용됐고
+       <b>${unused.length}건</b>은 한 번도 쓰이지 않았습니다. 어떤 문서가 일하고 있는지 보여줍니다.`,
+      { cols: ['문서', '인용 횟수'], rows: docRank.map(d => [d.label, d.value]) }));
+
+    const st = ['embed_ms', 'retrieve_ms', 'rerank_ms', 'generate_ms'];
+    const stKo = { embed_ms: '질의 임베딩', retrieve_ms: '문서 검색', rerank_ms: '근거 선별', generate_ms: '답변 작성' };
+    const avg = st.map(kk => {
+      const v = E.map(r => r[kk]).filter(x => x != null);
+      return { label: stKo[kk], value: v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : 0 };
+    });
+    const tot = E.map(r => r.total_ms).filter(Boolean);
+    cards7.push(card('단계별 소요시간', `평균 총 ${(tot.reduce((a, b) => a + b, 0) / tot.length / 1000).toFixed(1)}초`,
+      hbar(avg, { labelW: 92, suffix: 'ms' }),
+      `가장 오래 걸리는 단계는 <b>${avg.slice().sort((a, b) => b.value - a.value)[0].label}</b>입니다.
+       응답시간을 줄이려면 여기를 봐야 합니다.`,
+      { cols: ['단계', '평균 ms'], rows: rowsOf(avg) }));
+
+    const routeCnt = {}, srcCnt = {};
+    E.forEach(r => { if (r.route) routeCnt[r.route] = (routeCnt[r.route] || 0) + 1;
+                     if (r.route_source) srcCnt[r.route_source] = (srcCnt[r.route_source] || 0) + 1; });
+    cards7.push(card('경로 분포 · 판정 주체', 'sql / rag / hybrid · 규칙 vs LLM',
+      (() => { const d = document.createElement('div');
+        const rd = Object.entries(routeCnt).map(([k2, v]) => ({ label: k2, value: v }));
+        const sd = Object.entries(srcCnt).map(([k2, v]) => ({ label: k2 === 'rule' ? '규칙 확정' : k2 === 'llm' ? 'LLM 분류' : k2, value: v }));
+        d.appendChild(legend(rd.map(x => x.label))); d.appendChild(stackbar(rd));
+        d.appendChild(legend(sd.map(x => x.label))); d.appendChild(stackbar(sd));
+        return d; })(),
+      `규칙으로 확정된 질문은 LLM 을 부르지 않습니다 — 그만큼 비용과 지연이 0 이고 결과가 항상 같습니다.`));
+
+    const cov = E.map(r => r.citation_coverage).filter(x => x != null);
+    const cb = {};
+    cov.forEach(x => { const b = Math.min(4, Math.floor(x * 5)); cb[b] = (cb[b] || 0) + 1; });
+    cards7.push(card('인용률 분포', '답변 문장 중 근거 번호가 붙은 비율',
+      vbar([0, 1, 2, 3, 4].map(b => ({ label: `${b * 20}~${b * 20 + 20}%`, value: cb[b] || 0 })),
+        { height: 180 }),
+      `평균 ${pct(cov.reduce((a, b) => a + b, 0) / cov.length)}. 0.5 미만이면 인용 보강 프롬프트로 1회 재작성합니다.`));
+
+    const nCit = E.map(r => r.n_citations).filter(x => x != null);
+    cards7.push(card('질의당 근거 수', '',
+      vbar([0, 1, 2, 3, 4, 5].map(n => ({ label: n + '건', value: nCit.filter(x => x === n).length })),
+        { height: 170 }),
+      `평균 ${(nCit.reduce((a, b) => a + b, 0) / nCit.length).toFixed(1)}건.`));
+  } else {
+    cards7.push(card('평가 결과 없음', '',
+      (() => { const d = document.createElement('div');
+        d.innerHTML = `<p style="color:var(--text-secondary)">평가를 실행하면 이 절이 채워집니다:<br>
+          <code>python scripts/run_eval.py</code></p>`; return d; })()));
+  }
+  cards7.push(card('문서 ↔ 정형 데이터의 교집합', 'FAQ 본문에 언급된 자재코드 vs 자재 마스터',
+    (() => {
+      const d = document.createElement('div');
+      const w = 560, h = 150;
+      d.innerHTML = `<svg viewBox="0 0 ${w} ${h}" class="chart">
+        <circle cx="200" cy="72" r="62" fill="var(--series-1)" fill-opacity=".22" stroke="var(--series-1)"/>
+        <circle cx="330" cy="72" r="52" fill="var(--series-2)" fill-opacity=".22" stroke="var(--series-2)"/>
+        <text x="200" y="66" text-anchor="middle" class="val">${fmt(V.coverage.faq_codes)}종</text>
+        <text x="200" y="82" text-anchor="middle" class="ax">FAQ 언급 자재코드</text>
+        <text x="330" y="66" text-anchor="middle" class="val">${fmt(V.coverage.master_codes)}종</text>
+        <text x="330" y="82" text-anchor="middle" class="ax">자재 마스터</text>
+        <text x="265" y="140" text-anchor="middle" class="note">교집합 ${V.coverage.intersect}종</text>
+      </svg>`;
+      return d;
+    })(),
+    `FAQ 본문에서 자재코드 ${fmt(V.coverage.faq_codes)}종(언급 ${fmt(V.coverage.faq_mentions)}회)을 추출했지만
+     연습용 자재 마스터 ${V.coverage.master_codes}종과 <b>겹치는 것이 ${V.coverage.intersect}종</b>입니다.
+     그래서 hybrid 경로는 자재↔문서를 조인하지 않고 <b>두 경로를 독립 실행해 답변에서 합칩니다.</b>
+     설계 판단의 근거가 데이터로 확인되는 지점입니다.`));
+  cards7.push(card('검색 코퍼스 구성', `문서 ${V.corpus.n_docs}건 · 청크 ${fmt(V.corpus.n_chunks)}개`,
+    (() => { const d = document.createElement('div');
+      d.appendChild(legend(V.corpus.by_category.map(x => x.label)));
+      d.appendChild(stackbar(V.corpus.by_category));
+      d.appendChild(hbar(V.corpus.by_doc.slice(0, 10), { labelW: 210, barH: 17 }));
+      return d; })(),
+    `청크의 대부분이 FAQ 입니다. 그래서 검색 후보에 <b>비-FAQ 최소 보장</b>을 넣어 지침·계약이 밀리지 않게 했습니다.`));
+
+  app.appendChild(section('7 · 우리 챗봇은 무엇을 답할 수 있는가',
+    '평가셋 문항을 실제로 실행해 만든 지표입니다. 시스템 자체를 측정 대상으로 삼았습니다.', cards7));
+
+  /* ===================== 흐름도 ===================== */
+  const flows = document.createElement('section');
+  flows.innerHTML = `<h2>8 · 업무 흐름</h2>
+    <p class="lead">문서에서 추출한 절차입니다. 각 단계의 근거 문서는 챗봇에 물어보면 출처와 함께 답합니다.</p>`;
+  const fg = document.createElement('div'); fg.className = 'grid wide';
+
+  fg.appendChild(card('자재 입하 · 검수 프로세스', '근거: 자재입하 및 저장관리 지침(V45) · 기자재반입센터 검사작업 지침',
+    flowSvg(
+      [{ x: 10, y: 20, t: '납품 도착', k: 'accent' },
+       { x: 175, y: 20, t: '기자재반입센터\n경유' },
+       { x: 340, y: 20, t: '신분 확인 · CCTV\n납품명세서 대조' },
+       { x: 520, y: 20, t: '수량 · 사양\n일치?' },
+       { x: 700, y: 0, t: '입하 확정', k: 'accent' },
+       { x: 700, y: 62, t: '불합격 조치', k: 'warn' },
+       { x: 175, y: 108, t: '사용부서\n직접 납품' },
+       { x: 340, y: 108, t: '사용부서장\n납품 확인' },
+       { x: 700, y: 124, t: 'ERP 입고 처리' }],
+      [{ d: H(142, 175, 40) }, { d: H(307, 340, 40) }, { d: H(472, 520, 40) },
+       { d: 'M652,40 L676,40 L676,20 L700,20', label: '일치', lx: 676, ly: 14 },
+       { d: 'M652,40 L676,40 L676,82 L700,82', label: '불일치', lx: 676, ly: 100 },
+       { d: 'M76,60 L76,128 L175,128', label: '미경유', lx: 120, ly: 122 },
+       { d: H(307, 340, 128) }, { d: 'M472,128 L700,128' },
+       { d: Vt(766, 40, 124), dash: true }],
+      880, 180,
+      [{ x: 10, y: 172, t: '근무시간 외(평일 17:00~익일 08:00·휴일) 납품은 사전 협의 후 익일 근무일에 입하 처리' }]),
+    null),
+  );
+
+  fg.appendChild(card('POS-Appia 물품등록 → 회송 → 재신청', '근거: 물품등록 오류설명·재신청 가이드 · POS-Appia 매뉴얼',
+    flowSvg(
+      [{ x: 10, y: 50, t: '물품등록 신청', k: 'accent' },
+       { x: 180, y: 50, t: '검토' },
+       { x: 330, y: 50, t: '오류 유형 판정' },
+       { x: 520, y: 8, t: '등록 완료', k: 'accent' },
+       { x: 520, y: 92, t: '회송(반려)', k: 'warn' },
+       { x: 700, y: 92, t: '기존 신청 삭제\n→ 신규 신청' }],
+      [{ d: H(142, 180, 70) }, { d: H(312, 330, 70) },
+       { d: 'M462,70 L490,70 L490,28 L520,28', label: '정상', lx: 492, ly: 22 },
+       { d: 'M462,70 L490,70 L490,112 L520,112', label: '오류', lx: 492, ly: 132 },
+       { d: H(652, 700, 112) },
+       { d: 'M766,92 L766,150 L76,150 L76,90', label: '재신청 루프', lx: 420, ly: 164, dash: true }],
+      880, 180,
+      [{ x: 10, y: 20, t: '오류 유형: 품명선정 · 중복등록 · 조달구분 지정 · 항목값 입력위치 · 등록대상 아님' }]),
+    '진행 현황은 POS-Appia 앱의 [조회 → 신청이력 조회 → 검토자 현황보기]에서 확인합니다.'),
+  );
+
+  fg.appendChild(card('자재공급사 평가 프로세스', '근거: 자재공급사 평가관리지침 M10089(V53)',
+    flowSvg(
+      [{ x: 10, y: 40, t: '신규 등록 심사', k: 'accent' },
+       { x: 190, y: 40, t: '기본 자격 확인\n신용등급 · ISO' },
+       { x: 380, y: 40, t: '등록' },
+       { x: 530, y: 40, t: '성과 분석\n(기존 공급사)' },
+       { x: 720, y: 10, t: '등급 부여\nS / A / B / C', k: 'accent' },
+       { x: 720, y: 76, t: '거래 제한 · 제재', k: 'warn' }],
+      [{ d: H(142, 190, 60) }, { d: H(322, 380, 60) }, { d: H(512, 530, 60) },
+       { d: 'M662,60 L692,60 L692,30 L720,30' },
+       { d: 'M662,60 L692,60 L692,96 L720,96' }],
+      880, 140),
+    null),
+  );
+
+  fg.appendChild(card('챗봇 처리 흐름', '질문 하나가 지나가는 경로',
+    flowSvg(
+      [{ x: 10, y: 62, t: '질문', k: 'accent', w: 84 },
+       { x: 120, y: 62, t: '후속질문\n재작성' },
+       { x: 280, y: 62, t: '경로 판정\n(규칙 → LLM)' },
+       { x: 460, y: 6, t: 'SQL 조회\n고정 템플릿' },
+       { x: 460, y: 62, t: 'dense 문서게이트\n+ 로컬 BM25' },
+       { x: 460, y: 122, t: '두 경로 병합' },
+       { x: 640, y: 62, t: '리랭킹\nCross-Encoder' },
+       { x: 800, y: 62, t: 'LLM 답변\n+ [n] 인용', k: 'accent', w: 112 }],
+      [{ d: H(94, 120, 82) }, { d: H(252, 280, 82) },
+       { d: 'M412,82 L436,82 L436,26 L460,26', label: 'sql', lx: 436, ly: 20 },
+       { d: H(412, 460, 82), label: 'rag', lx: 436, ly: 76 },
+       { d: 'M412,82 L436,82 L436,142 L460,142', label: 'hybrid', lx: 434, ly: 160 },
+       { d: H(592, 640, 82) }, { d: H(772, 800, 82) },
+       { d: 'M592,26 L616,26 L616,60 L800,60', dash: true }],
+      930, 175,
+      [{ x: 10, y: 170, t: '정형(sql) 경로는 검색·리랭킹을 건너뛰므로 RAG 보다 빠릅니다 — 실측 2~3초' }]),
+    null),
+  );
+  flows.appendChild(fg);
+  app.appendChild(flows);
+
+  /* 컨트롤 */
+  $('#btnTable').onclick = e => {
+    const on = document.body.classList.toggle('show-tables');
+    e.target.setAttribute('aria-pressed', on);
+  };
+  $('#btnTheme').onclick = () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+  };
+})();
+</script>
+</body>
+</html>
