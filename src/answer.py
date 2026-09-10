@@ -11,6 +11,39 @@ PII_PATTERNS = [
 ]
 CITE_RE = re.compile(r"\[(\d{1,2})\]")
 
+# 후속 질문 재작성은 **이력이 있고 지시어가 감지될 때만** 호출한다(프롬프트 원문 4절).
+# 항상 부르면 LLM 호출이 1회 늘어 응답시간만 길어진다.
+DEICTIC_RE = re.compile(
+    r"(그건|그거|그것|그럼|그러면|거기|여기|이건|이거|이것|저건|저거|"
+    r"아까|방금|위에서|앞에서|그때|그 절차|그 서류|그 방법|그 시스템|해당)")
+
+
+def needs_rewrite(question, history):
+    """지시어가 섞였거나 너무 짧아 그것만으로 검색할 수 없는 질문인가."""
+    if not history:
+        return False
+    q = question.strip()
+    return bool(DEICTIC_RE.search(q)) or len(q) <= 12
+
+
+def rewrite_followup(question, history):
+    """앞 대화를 몰라도 이해되는 독립 질문으로 바꾼다. 실패하면 원문을 그대로 쓴다."""
+    turns = []
+    for t in (history or [])[-4:]:
+        turns.append(f"사용자: {(t.get('question') or '')[:400]}\n"
+                     f"어시스턴트: {(t.get('answer') or '')[:400]}")
+    try:
+        text, _usage, _m = call_llm(
+            "너는 질문을 독립적으로 재작성하는 도구다. 다른 말을 덧붙이지 마라.",
+            prompts.FOLLOWUP_REWRITE.format(history="\n".join(turns), question=question))
+        out = (text or "").strip().split("\n")[0].strip()
+        # 모델이 장황하게 답하면 신뢰하지 않고 원문을 쓴다
+        if out and 4 <= len(out) <= 200:
+            return out
+    except Exception:
+        pass
+    return question
+
 
 def mask_pii(text):
     """LLM 호출 직전에만 적용한다 — 검색·랭킹은 원문으로 해야 품질이 유지된다."""

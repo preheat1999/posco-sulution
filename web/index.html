@@ -74,6 +74,12 @@
   @keyframes p{50%{opacity:.25}}
   .cursor{display:inline-block;width:7px;height:15px;background:var(--accent);
           vertical-align:-2px;animation:p .9s steps(2) infinite}
+  .rw{font-size:12px;color:var(--muted);background:#f7f8fa;border:1px solid var(--line);
+      border-radius:7px;padding:6px 10px;margin-bottom:10px}
+  .rw b{color:var(--ink);font-weight:600}
+  #new{background:none;color:var(--muted);border:1px solid var(--line);
+       padding:5px 12px;font-size:12px;font-weight:400}
+  #new:hover{color:var(--accent);border-color:#bcd6ea}
 </style>
 </head>
 <body>
@@ -83,6 +89,7 @@
   <span class="badge" id="b-chunks"></span>
   <span class="badge" id="b-llm"></span>
   <!-- 시연 화면·스크린샷에 토큰이 그대로 찍히지 않도록 가린다 -->
+  <button id="new" title="대화 이력을 지웁니다">새 대화</button>
   <input id="tok" type="password" placeholder="X-API-Token"
          title="서버 토큰 (.env 의 RAG_API_TOKEN)">
 </header>
@@ -194,6 +201,13 @@ function bubble(cls, html){
   return d.firstChild;
 }
 
+/* 대화 이력 — 서버에도 최근 4턴만 보낸다(프롬프트가 근거 문서를 밀어내지 않도록) */
+let history = [];
+$('#new').onclick = () => {
+  history = [];
+  [...chat.children].slice(1).forEach(el => el.remove());
+};
+
 const STAGES = ['질의 분석', '사내 문서 검색', '근거 정밀 선별', '답변 작성'];
 
 function renderSteps(cur){
@@ -215,7 +229,7 @@ async function send(){
     const r = await fetch('/api/chat/stream', {
       method:'POST',
       headers:{'Content-Type':'application/json', 'X-API-Token': tok.value.trim()},
-      body: JSON.stringify({question:q, history:[]}),
+      body: JSON.stringify({question:q, history: history.slice(-4)}),
     });
     if (r.status === 401){
       box.className = 'a noans';
@@ -225,7 +239,10 @@ async function send(){
     if (!r.ok) throw new Error('HTTP ' + r.status);
 
     const reader = r.body.getReader(), dec = new TextDecoder();
-    let buf = '', text = '', d = null, stage = 0;
+    let buf = '', text = '', d = null, stage = 0, rw = '';
+    const head = () => rw
+      ? '<div class="rw">앞 대화를 반영해 <b>' + esc(rw) + '</b> 로 이해하고 검색했습니다.</div>'
+      : '';
     while (true){
       const {value, done} = await reader.read();
       if (done) break;
@@ -235,16 +252,19 @@ async function send(){
       for (const line of lines){
         if (!line.trim()) continue;
         let ev; try { ev = JSON.parse(line); } catch(_) { continue; }
-        if (ev.type === 'stage'){
+        if (ev.type === 'rewrite'){
+          rw = ev.question;
+          box.innerHTML = head() + renderSteps(stage);
+        } else if (ev.type === 'stage'){
           if (ev.index < 4) stage = ev.index + 1;
-          if (!text) box.innerHTML = renderSteps(stage);
+          if (!text) box.innerHTML = head() + renderSteps(stage);
         } else if (ev.type === 'delta'){
           text += ev.text;
-          box.innerHTML = renderSteps(4) + md(text) + '<span class="cursor"></span>';
+          box.innerHTML = head() + renderSteps(4) + md(text) + '<span class="cursor"></span>';
           box.scrollIntoView({behavior:'smooth', block:'end'});
         } else if (ev.type === 'replace'){
           text = ev.answer;
-          box.innerHTML = renderSteps(4) + md(text);
+          box.innerHTML = head() + renderSteps(4) + md(text);
         } else if (ev.type === 'error'){
           throw new Error(ev.message);
         } else if (ev.type === 'result'){
@@ -254,7 +274,8 @@ async function send(){
     }
     if (!d) throw new Error('결과 이벤트를 받지 못했습니다');
 
-    let html = md(d.answer);
+    if (d.rewritten_question) rw = d.rewritten_question;
+    let html = head() + md(d.answer);
     if (d.no_answer) box.className = 'a noans';
     if (d.citations.length){
       html += '<div class="sources">' + d.citations.map(c =>
@@ -273,6 +294,8 @@ async function send(){
       '<span>인용률 ' + ((m.citation_coverage || 0)*100).toFixed(0) + '%</span>' +
       '<span>근거 ' + d.citations.length + '건</span></div>';
     box.innerHTML = html;
+    // 근거를 못 찾은 답변은 이력에 남기지 않는다 — 뒤 질문의 맥락을 오염시킨다
+    if (!d.no_answer) history.push({question: q, answer: d.answer});
     box.querySelectorAll('.cite').forEach(el => el.onclick = () => {
       const t = box.querySelector('#src-' + el.dataset.n);
       if (!t) return;

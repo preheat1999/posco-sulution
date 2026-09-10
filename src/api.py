@@ -112,13 +112,22 @@ def chat(req: ChatRequest, x_api_token: str | None = Header(default=None)):
     t0 = time.time()
     trace, metrics = [], {}
 
+    # 후속 질문 재작성 — 이력이 있고 지시어가 감지될 때만 (8-3)
+    search_q = q
+    if answer_mod.needs_rewrite(q, req.history):
+        t = time.time()
+        search_q = answer_mod.rewrite_followup(q, req.history)
+        metrics["rewrite_ms"] = int((time.time() - t) * 1000)
+        if search_q != q:
+            trace.append("rewrite")
+
     qv = None
     if STATE["searcher"].mode == "hybrid" and STATE["embedder"]:
-        t = time.time(); qv = STATE["embedder"].encode(q)
+        t = time.time(); qv = STATE["embedder"].encode(search_q)
         metrics["embed_ms"] = int((time.time() - t) * 1000); trace.append("embed")
 
     t = time.time()
-    candidates, dropped = STATE["searcher"].retrieve(q, qv)
+    candidates, dropped = STATE["searcher"].retrieve(search_q, qv)
     metrics["retrieve_ms"] = int((time.time() - t) * 1000)
     metrics["dropped_candidates"] = dropped
     trace.append("retrieve")
@@ -130,12 +139,12 @@ def chat(req: ChatRequest, x_api_token: str | None = Header(default=None)):
                 "route": "rag", "trace": trace}
 
     t = time.time()
-    top = (STATE["reranker"].rerank(q, candidates) if STATE["reranker"]
+    top = (STATE["reranker"].rerank(search_q, candidates) if STATE["reranker"]
            else candidates[:cfg.get("retrieval.top_k")])
     metrics["rerank_ms"] = int((time.time() - t) * 1000); trace.append("rerank")
 
     t = time.time()
-    res = answer_mod.generate(q, top, req.history)
+    res = answer_mod.generate(search_q, top, req.history)
     metrics["generate_ms"] = int((time.time() - t) * 1000); trace.append("generate")
 
     usage = res["usage"] or {}
@@ -145,6 +154,8 @@ def chat(req: ChatRequest, x_api_token: str | None = Header(default=None)):
                     "output_tokens": usage.get("completion_tokens")})
     if not cfg.get("security.log_raw_query"):
         log.info("chat 완료 %sms 인용 %d건", metrics["total_ms"], len(res["citations"]))
-    return {"question": q, "answer": res["answer"], "no_answer": res["no_answer"],
+    return {"question": q,
+            "rewritten_question": (search_q if search_q != q else None),
+            "answer": res["answer"], "no_answer": res["no_answer"],
             "citations": res["citations"], "metrics": metrics,
             "route": "rag", "trace": trace}
