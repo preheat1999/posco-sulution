@@ -28,13 +28,15 @@
       items: [
         { key: 'attr', name: '속성값 판단', href: 'attr.html', ico: '◐', count: 'gray' },
         { key: 'stock', name: '적정재고 분석', href: 'stock.html', ico: '▦', count: 'order' },
-        { key: 'plan', name: '적정구매시점', href: 'plan.html', ico: '⚙', count: 'over' },
         { key: 'report', name: '주간 리포트', href: 'report.html', ico: '✉', soon: true }
       ]
     },
     {
       label: '업무',
       items: [
+        /* 적정구매시점은 「언제 사야 하는가」 라서 분석이 아니라 업무다 ·
+         * 구매신청 바로 위에 둔다 */
+        { key: 'plan', name: '적정구매시점', href: 'plan.html', ico: '⚙', count: 'over' },
         { key: 'pool', name: '공용 전환', href: 'pool.html', ico: '⇄' },
         { key: 'purchase', name: '구매신청 (PR)', href: 'purchase.html', ico: '🛒', count: 'pr' },
         { key: 'return', name: '자재반납 (QR)', href: 'return.html', ico: '↩', count: 'ret' }
@@ -53,7 +55,12 @@
        * bucket['현행유지'] 는 판정 기준이라 승인해도 안 줄고, 배지만 옛 값으로 남는다 */
       out.gray = s.holdOpen === undefined ? (s.bucket['현행유지'] || 0) : s.holdOpen;
       out.order = s.action['발주'] || 0;             // 발주 필요
-      if (window.PLAN && window.PLAN.meta) {
+      /* 적정구매시점 화면이 보는 것과 같은 수를 쓴다 · 화면은 한 달치(기준일+30일)만
+       * 본다. 반출 전체 156건의 마감 초과(55)를 배지에 쓰면 화면과 어긋난다 */
+      if (window.SCREEN && window.SCREEN.planCounts) {
+        var pc = window.SCREEN.planCounts();
+        out.over = (pc.over || 0) + (pc.soon || 0);
+      } else if (window.PLAN && window.PLAN.meta) {
         out.over = window.PLAN.meta.counts.tone.over || 0;
       }
       if (window.DB_BIZ) {

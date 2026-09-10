@@ -1760,7 +1760,7 @@ td.num, th.num { text-align: right; }
  * 한 카드 안에 칸을 나누던 것을 카드 다섯 장으로 떼어 놓았다 ·
  * 값의 성격이 서로 달라서(건수 · 종수 · 금액) 한 상자에 묶으면 같은 축처럼 읽힌다 */
 .statrow.cards {
-  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
   background: none; border: 0; box-shadow: none; padding: 0; margin-bottom: 18px;
 }
 .statrow.cards > .scard {
@@ -1776,7 +1776,7 @@ td.num, th.num { text-align: right; }
 .statrow.cards .sv { font-size: 28px; }
 .statrow.cards .sx { margin-top: 7px; }
 
-@media (max-width: 1180px) { .statrow.cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1180px) { .statrow.cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .statrow.cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 420px) { .statrow.cards { grid-template-columns: 1fr; } }
 

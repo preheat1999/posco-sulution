@@ -81,6 +81,11 @@
     var m = String(location.hash || '').match(/q=([^&]+)/);
     return m ? decodeURIComponent(m[1]) : null;
   })();
+  /* 어느 정비계획 때문에 왔는지도 같이 온다 · 초안의 근거로 적는다 */
+  var fromWo = (function () {
+    var m = String(location.hash || '').match(/wo=([^&]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  })();
   if (fromQ) { picked = fromQ; }
 
   function el(id) { return document.getElementById(id); }
@@ -97,7 +102,7 @@
   }
 
   function paintList() {
-    rows = S.prList(fromQ);
+    rows = S.prList(fromQ, fromWo);
     if (!picked || !rows.filter(function (r) { return r.q === picked; }).length) {
       picked = rows.length ? rows[0].q : null;
     }

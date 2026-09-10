@@ -27,7 +27,10 @@
       </div>
     </div>
 
-    <!-- 머리 카드 다섯 장. 마감일 산식은 WO 머리의 수리계획 배지에서 본다 -->
+    <!-- 어느 날짜 기준의 데이터인가. 제목 밑에 먼저 적는다 -->
+    <div class="stampbar" id="stamp"></div>
+
+    <!-- 머리 카드 네 장. 마감일 산식은 WO 머리의 수리계획 배지에서 본다 -->
     <div class="statrow cards" id="stat"></div>
 
     <div class="phead">
@@ -91,17 +94,27 @@
 
   function paintStat() {
     var c = S.planCounts();
-    var asofTxt = UI.date(asof());
     el('stat').innerHTML =
-      cell(UI.num(c.wos), '건', '내 담당 WO 정비계획', asofTxt + ' 기준 향후 계획') +
-      cell(UI.num(c.mats), '종', '예상 소요 자재', '정비계획의 자재계획에 걸린 자재', '', true) +
+      cell(UI.num(c.wos), '건', '내 담당 WO 정비계획',
+           '기준일부터 ' + UI.num(c.mdays) + '일 이내') +
+      cell(UI.num(c.mats), '종', '예상 소요 자재', '이 달 정비계획에 걸린 자재', '', true) +
       cell(UI.num(c.over + c.soon), '건', '발주 마감 초과 및 임박',
            '지금 신청해야 하는 정비계획', 'ins') +
-      /* 이관은 사지 않고 가져오는 것이다. 0 이면 0 이라고 적는다 */
-      cell(UI.num(c.moveN), '건', '타부서 이관 가능',
-           '공용자재 활용 · ' + UI.wonM(c.moveAmt) + ' 절감') +
       cell(UI.wonMNum(c.orderAmt), '백만원', '예상 발주금액',
-           '이관분 ' + UI.wonM(c.moveAmt) + ' 제외');
+           '부족분 기준 · 이관 가능분 제외');
+  }
+
+  /* 기준일 줄 · 데이터의 날짜와 지금 보는 시각은 다른 값이다 */
+  function paintStamp() {
+    var c = S.planCounts();
+    var now = window.SCREEN && SCREEN.nowStamp ? SCREEN.nowStamp() : '';
+    el('stamp').innerHTML =
+      '<span class="st-k">데이터 기준일</span>' +
+      '<b class="st-v">' + UI.esc(UI.date(asof())) + '</b>' +
+      '<span class="st-x">이 달 정비계획 ' + UI.num(c.wos) + '건 · ' +
+        '반출 전체 ' + UI.num(c.all) + '건 중 기준일부터 ' + UI.num(c.mdays) + '일 이내</span>' +
+      (now ? '<span class="st-k" style="margin-left:auto">조회 시각</span>' +
+        '<b class="st-v">' + UI.esc(now) + '</b>' : '');
   }
 
   function cell(v, unit, k, x, cls, ai) {
@@ -185,6 +198,13 @@
     el('next').disabled = page >= max;
 
     var c = S.planCounts();
+    if (sort !== 'week' && rows.length) {
+      el('foot').innerHTML = '이 목록은 <b>기준일부터 ' + UI.num(c.mdays) + '일 이내 ' +
+        UI.num(c.wos) + '건</b>입니다. 반출된 ' + UI.num(c.all) + '건은 넉 달에 걸쳐 있어 ' +
+        '한 화면에 늘어놓으면 이번에 손댈 일이 보이지 않습니다 · 나머지는 다음 달에 ' +
+        '이 화면에서 다시 봅니다. 마감을 넘긴 것이 ' + UI.num(c.over) + '건입니다.';
+      return;
+    }
     if (sort === 'week') {
       /* 이번 주 목록은 날짜를 시연용으로 옮긴 값이다. 그 사실을 목록 아래에 적는다 */
       el('foot').innerHTML = '<b>이번 주 WO ' + UI.num(rows.length) + '건</b>은 ' +
@@ -344,21 +364,32 @@
 
     el('list').addEventListener('click', function (e) {
       /* 초안 버튼은 접기를 건드리지 않는다 */
+      /* 초안을 만들고 구매신청 화면까지 데려간다.
+       * 여기서 끝내면 「그래서 어디서 신청하나」 가 끊긴다 · 물음은 짧게 한 줄이다 */
       var d = e.target.closest && e.target.closest('[data-draft]');
       if (d) {
         var q = d.getAttribute('data-draft'), wo = d.getAttribute('data-wo');
         var m = DB.item(q);
-        try {
-          DB.draft('PR', { q: q, data: { wo: wo, why: '정비계획 ' + wo + ' 소요 부족' } });
-          POP.show(d, {
-            title: '구매신청 초안을 만들었습니다',
-            rows: [['자재', (m ? m.name : '') + ' · ' + q], ['근거 정비계획', wo],
-                   ['다음', '구매신청 (PR) 화면에서 확인']],
-            note: '초안은 3층에 쌓입니다. 정본과 판정값은 그대로입니다.'
-          });
-        } catch (err) {
-          POP.show(d, { title: '초안을 만들지 못했습니다', rows: [['이유', String(err.message)]] });
-        }
+        if (!m) { return; }
+        var qty = Number(m.needNow) || 0;
+        UI.confirm({
+          title: '구매신청 화면으로 넘어갈까요?',
+          body: '<b>' + UI.esc(m.name) + '</b> · ' + UI.esc(q) + ' · ' + UI.num(qty) + '개',
+          rows: [['근거 정비계획', wo]],
+          ok: '초안 만들고 이동',
+          cancel: '여기 머무르기',
+          onOk: function () {
+            try {
+              DB.draft('PR', { q: q, data: { qty: qty, wo: wo,
+                why: '정비계획 ' + wo + ' 소요 부족' } });
+              window.location.href = 'purchase.html#q=' + encodeURIComponent(q) +
+                '&wo=' + encodeURIComponent(wo);
+            } catch (err) {
+              POP.show(d, { title: '초안을 만들지 못했습니다',
+                rows: [['이유', String(err.message)]] });
+            }
+          }
+        });
         return;
       }
       var h = e.target.closest && e.target.closest('.wo-head');
@@ -372,7 +403,7 @@
   function paintAll() {
     var m = window.DB ? DB.meta() : null;
     el('asof').textContent = m && m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
-    paintStat(); paintTabs(); paintList();
+    paintStat(); paintStamp(); paintTabs(); paintList();
   }
 
   paintAll();

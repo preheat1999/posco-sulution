@@ -270,11 +270,30 @@
    *
    * 「마감 급한 순」 은 156건 중 55건이 이미 마감을 넘겨서 목록이 붉은 것만 나온다.
    * 실제로 담당자가 아침에 보는 것은 이번 주에 손이 가는 WO 다 */
+  /* 한 달치만 본다.
+   *
+   * 원천에서 반출된 156건은 기준일 이후 넉 달(9월 36 · 11월 72 · 12월 48)에 걸쳐 있다.
+   * 한 부서가 한 달에 세우는 정비계획은 많아도 서른 건 남짓이라, 156건을 한 화면에
+   * 늘어놓으면 「이번에 손댈 일」 이 사라진다. 기준일부터 30일 안의 건만 본다 ·
+   * 나머지는 다음 달에 이 화면에서 다시 보게 된다 */
+  var MONTH_DAYS = 30;
+  function inMonth(w) {
+    var P = window.PLAN;
+    if (!P) { return false; }
+    var d = String(w.planDate || w.stopStart || '');
+    if (!d) { return false; }
+    return d >= P.meta.asof && d <= shift(P.meta.asof, MONTH_DAYS);
+  }
+  function planMonth() {
+    var P = window.PLAN;
+    return P ? P.wos.filter(inMonth) : [];
+  }
+
   function planList(sort) {
     var P = window.PLAN;
     if (!P) { return []; }
     if (sort === 'week') { return planWeek(); }
-    var out = P.wos.slice();
+    var out = planMonth();
     out.sort(sort === 'stop'
       ? function (a, b) { return String(a.stopStart).localeCompare(String(b.stopStart)); }
       : function (a, b) {
@@ -358,18 +377,19 @@
   function planCounts() {
     var P = window.PLAN;
     if (!P) { return { wos: 0, over: 0, soon: 0, now: 0, mats: 0,
-                       moveN: 0, moveAmt: 0, orderAmt: 0, week: 0 }; }
-    var c = P.meta.counts;
+                       moveN: 0, moveAmt: 0, orderAmt: 0, week: 0, all: 0, mdays: 30 }; }
+    var month = planMonth();
     /* 「지금 신청」 은 마감 초과가 아니라 재고가 예상 소요보다 적은 건이다.
      * 마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다르다 */
     var nowN = live ? DB.list({ dueDate: function (v) { return !!v; } })
       .filter(function (r) { return (r.signalNow || r.signal) === 'red'; }).length : 0;
 
     var moveN = 0, moveAmt = 0, orderAmt = 0;
+    var mats = {};
+    month.forEach(function (w) { (w.mats || []).forEach(function (q) { mats[q] = true; }); });
     if (live) {
-      /* 정비계획에 걸린 자재만 본다. 전체 743 을 세면 이 화면의 값이 아니다 */
-      var linked = {};
-      P.wos.forEach(function (w) { (w.mats || []).forEach(function (q) { linked[q] = true; }); });
+      /* 이 달 정비계획에 걸린 자재만 본다. 전체 743 을 세면 이 화면의 값이 아니다 */
+      var linked = mats;
       DB.list().forEach(function (r) {
         if (!linked[r.q]) { return; }
         var need = Number(r.needNow) || 0;
@@ -381,9 +401,16 @@
         orderAmt += price * (need - move);     // 사야 하는 몫
       });
     }
-    return { wos: c.wos, over: c.tone.over, soon: c.tone.soon, now: nowN, mats: c.mats,
-             moveN: moveN, moveAmt: moveAmt, orderAmt: orderAmt,
-             week: planWeek().length };
+    return {
+      wos: month.length,                     // 이 달 정비계획
+      all: P.meta.counts.wos,                // 반출 전체 (기준일 이후 넉 달)
+      mdays: MONTH_DAYS,
+      over: month.filter(function (w) { return w.tone === 'over'; }).length,
+      soon: month.filter(function (w) { return w.tone === 'soon'; }).length,
+      now: nowN, mats: Object.keys(mats).length,
+      moveN: moveN, moveAmt: moveAmt, orderAmt: orderAmt,
+      week: planWeek().length
+    };
   }
 
   /* 수리계획이 쓰이는 자리 · 마감일 산식의 선행일수다.
@@ -525,7 +552,7 @@
   /* 다른 화면에서 넘어온 자재 한 건을 후보 목록 모양으로 만든다.
    * 적정재고 분석의 「PR 초안」 이 이 화면으로 데려올 때 쓴다 ·
    * 후보 목록(DB_BIZ.purchase)에 없는 자재도 신청할 수 있어야 한다 */
-  function prRow(q) {
+  function prRow(q, wo) {
     if (!live || !q) { return null; }
     var r = DB.item(q);
     if (!r) { return null; }
@@ -545,14 +572,14 @@
       q: r.q, name: r.name || '품명 미확인', qty: qty,
       active: (r.signalNow || r.signal) === 'red',
       warn: (r.signalNow || r.signal) === 'red' ? '즉시 발주' : '',
-      wo: null, kind: null, eq: r.eq, planDate: r.dueDate,
+      wo: wo || null, kind: null, eq: r.eq, planDate: r.dueDate,
       price: r.price, amount: Math.round((Number(r.price) || 0) * qty),
       ltMean: r.ltMean, grade: r.grade, type: r.type, csp: r.csp, unit: unitOf(r.q),
       fromStock: true
     };
   }
 
-  function prList(extraQ) {
+  function prList(extraQ, extraWo) {
     var B = window.DB_BIZ;
     if (!B || !live) { return []; }
     var out = (B.purchase || []).map(function (p) {
@@ -566,7 +593,7 @@
     });
     /* 넘어온 자재가 후보에 없으면 맨 앞에 올린다 */
     if (extraQ && !out.filter(function (x) { return x.q === extraQ; }).length) {
-      var ex = prRow(extraQ);
+      var ex = prRow(extraQ, extraWo);
       if (ex) { out.unshift(ex); }
     }
     return out;
