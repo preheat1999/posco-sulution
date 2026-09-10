@@ -51,7 +51,7 @@
           <div class="qrbox" id="qr"></div>
           <p class="qr-title">자재식별표 QR 을 찍으면 자재 확인 화면이 열립니다</p>
           <p class="qr-sub">QR 에는 자재코드가 주소로 들어 있습니다 ·
-            <code>material-view.html?code=Q0000000</code><br>
+            <code id="qrurl">material-view.html?code=Q0000000</code><br>
             식별표 값을 확인하고 <b>반납</b> 을 누르면 모바일 반납 2단계로 이어집니다 ·
             <b>위 그림은 자리표시입니다</b> (인코더 연동 예정)</p>
           <a class="btn line" href="material-view.html?code=Q4046777"
@@ -80,6 +80,7 @@
 <script src="assets/plan-data.js"></script>
 <script src="assets/analysis-data.js"></script>
 <script src="assets/screen-data.js"></script>
+<script src="assets/qr-items.js"></script>
 <script src="assets/nav.js"></script>
 <script>
 (function () {
@@ -272,6 +273,13 @@
   }
 
   el('qr').innerHTML = qrPlaceholder();
+
+  /* QR 이 여는 주소는 배포된 곳에 따라 달라진다. 지금 실행 중인 주소를 그대로 적는다 ·
+   * 도메인을 화면에 박아 두면 사내 서버로 옮겼을 때 거짓이 된다 */
+  if (el('qrurl') && window.QRDB) {
+    el('qrurl').textContent = QRDB.url('Q0000000', true);
+  }
+
   paintAll();
   wire();
   S.on(function () { paintTable(); paintEffect(); });
