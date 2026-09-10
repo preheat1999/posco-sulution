@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>AI 자재 솔루션 · 기술 스택과 차별점</title>
+<style>
+  /* 인쇄용 문서 · A4 · 종이에서 읽는 것이라 화면(다크)과 반대로 흰 바탕에 검은 글씨다.
+     한글은 기기에 있는 맑은 고딕을 쓴다 (PDF 로 만들 때 크롬이 글꼴을 넣어 준다) */
+  @page { size: A4; margin: 15mm 14mm 14mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Malgun Gothic', -apple-system, 'Segoe UI', sans-serif;
+    font-size: 9.6pt; line-height: 1.62; color: #14171F; background: #fff;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  h1, h2, h3, h4 { margin: 0; letter-spacing: -.4px; }
+  p { margin: 0 0 6px; }
+  code, .mono { font-family: Consolas, 'Courier New', monospace; font-size: 8.6pt; }
+
+  /* 표지 */
+  .cover { padding: 8mm 0 6mm; border-bottom: 2.5px solid #14171F; margin-bottom: 7mm; }
+  .cover .kicker { font-size: 8.4pt; letter-spacing: .18em; color: #5B6478; font-weight: 700; }
+  .cover h1 { font-size: 24pt; line-height: 1.2; margin: 4mm 0 3mm; }
+  .cover .sub { font-size: 11pt; color: #3A4152; font-weight: 500; }
+  .cover .meta {
+    display: flex; gap: 5mm; flex-wrap: wrap; margin-top: 5mm;
+    font-size: 8.4pt; color: #5B6478;
+  }
+  .cover .meta b { color: #14171F; }
+
+  h2 {
+    font-size: 13pt; margin: 7mm 0 3mm; padding-bottom: 1.6mm;
+    border-bottom: 1.4px solid #14171F;
+  }
+  h2 .no {
+    display: inline-block; min-width: 6.4mm; margin-right: 2mm;
+    color: #2D5BD7; font-size: 11pt;
+  }
+  h3 { font-size: 10.4pt; margin: 4.5mm 0 1.6mm; color: #14171F; }
+  h3::before { content: '▸ '; color: #2D5BD7; }
+  h4 { font-size: 9.6pt; margin: 3mm 0 1mm; }
+
+  .lead {
+    background: #F3F6FC; border-left: 3px solid #2D5BD7;
+    padding: 3mm 4mm; margin: 0 0 4mm; font-size: 9.4pt;
+  }
+  ul { margin: 0 0 6px; padding-left: 4.6mm; }
+  li { margin-bottom: 2.2px; }
+  li > b { color: #14171F; }
+  .note { font-size: 8.4pt; color: #5B6478; line-height: 1.6; }
+
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 8.8pt; }
+  th, td { border: .6px solid #C9CFDC; padding: 1.8mm 2.2mm; vertical-align: top; text-align: left; }
+  th { background: #EEF2F9; font-weight: 700; font-size: 8.6pt; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td .mono { color: #2B3345; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .box { border: .8px solid #C9CFDC; border-radius: 2.4mm; padding: 3mm 3.4mm; }
+  .box h4 { margin-top: 0; }
+  .box.hi { border-color: #2D5BD7; background: #F7F9FE; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 3mm 0 5mm; }
+  .kpi { border: .8px solid #C9CFDC; border-radius: 2.4mm; padding: 2.6mm 3mm; }
+  .kpi b { display: block; font-size: 15pt; letter-spacing: -.6px; line-height: 1.15; }
+  .kpi span { display: block; font-size: 8pt; color: #5B6478; margin-top: .6mm; }
+
+  .tag {
+    display: inline-block; padding: .4mm 1.6mm; border-radius: 1mm;
+    background: #EEF2F9; border: .6px solid #C9CFDC; font-size: 7.8pt; margin-right: 1mm;
+  }
+  .flow { font-size: 8.6pt; line-height: 1.9; }
+  .flow .step { white-space: nowrap; }
+  .ok { color: #12734A; font-weight: 700; }
+  .warn { color: #A8471E; font-weight: 700; }
+  .avoid { color: #8A2323; }
+
+  .pagebreak { break-before: page; }
+  .keep { break-inside: avoid; }
+  footer {
+    margin-top: 7mm; padding-top: 2.5mm; border-top: .8px solid #C9CFDC;
+    font-size: 8pt; color: #5B6478; display: flex; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="kicker">2026 POSCO 스마트 자재관리 해커톤 · 본선</div>
+  <h1>스스로 수량을 자제하는<br>AI 자재 솔루션</h1>
+  <div class="sub">기술 스택 · 주요 기술 · 차별점 정리</div>
+  <div class="meta">
+    <span>대상 · <b>열연정비 1섹션 FM기계파트 자재 743품목</b></span>
+    <span>데이터 기준일 · <b>2026-09-03</b></span>
+    <span>저장소 · <b>preheat1999/posco-sulution (dev)</b></span>
+  </div>
+</div>
+
+<p class="lead">
+  <b>한 줄 요약 ·</b> 자재의 <b>보유 목적</b>(보험품 · 계획품)을 규칙 점수로 다시 판단하고,
+  담당자가 <b>확정한 속성</b>으로 목표재고를 계산해 <b>살 것과 줄일 것</b>을 정하는
+  단일 페이지 웹 애플리케이션입니다. 빌드 도구 · 프레임워크 · 서버 DB 없이 동작하며,
+  화면에 뜬 모든 숫자는 <b>어느 파일 · 어느 산식에서 나왔는지</b> 화면 안에서 되짚을 수 있습니다.
+</p>
+
+<div class="kpis">
+  <div class="kpi"><b>11</b><span>화면 (PC 9 · 현장 폰 2)</span></div>
+  <div class="kpi"><b>12,760줄</b><span>직접 작성 JS·CSS·HTML</span></div>
+  <div class="kpi"><b>395항목</b><span>자동 검사 (7개 검사기)</span></div>
+  <div class="kpi"><b>0개</b><span>프런트엔드 의존 패키지</span></div>
+</div>
+
+<h2><span class="no">1</span>기술 스택</h2>
+
+<h3>선택의 기준</h3>
+<p>
+  사내망 · 시연 환경 · 심사 검증을 모두 통과해야 하는 조건에서
+  <b>「의존성이 하나 늘면 깨질 곳이 하나 늘어난다」</b>를 기준으로 골랐습니다.
+  그 결과 프런트엔드는 <b>의존 패키지 0개</b>, 실행에 필요한 것은 브라우저 하나입니다.
+</p>
+
+<table class="keep">
+  <thead><tr><th style="width:24%">층</th><th style="width:32%">쓴 것</th><th>왜 이것인가</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>화면</td>
+      <td>순수 HTML + CSS + ES5 급 JavaScript<br><span class="note">빌드 없음 · 트랜스파일 없음</span></td>
+      <td>파일을 열면 그대로 돈다. 번들러가 없으니 「빌드가 안 돼서 시연을 못 한다」가 불가능하다. 옛 브라우저(사내 PC)에서도 문법 오류가 나지 않게 <code>var</code> · 함수 표현식만 쓴다.</td>
+    </tr>
+    <tr>
+      <td>디자인 시스템</td>
+      <td><code>assets/shell.css</code> 한 파일 (2,552줄) · CSS 변수 토큰</td>
+      <td>색 · 반지름 · 간격을 토큰 30여 개로 묶어 11화면이 같이 쓴다. 화면마다 스타일을 복사하면 메뉴 하나 바꾸는 데 11곳을 고쳐야 한다.</td>
+    </tr>
+    <tr>
+      <td>데이터</td>
+      <td>정본·파생 JSON을 <code>window.*</code> 로 싣는 3층 구조 (약 1MB)<br>+ <code>localStorage</code> 이벤트 로그</td>
+      <td>서버 DB 없이 실데이터 743품목 전수를 다룬다. 사람이 한 일은 <b>추가만 되는 이벤트</b>로 쌓아 되돌릴 수 있게 한다.</td>
+    </tr>
+    <tr>
+      <td>차트 · QR</td>
+      <td>직접 그린 SVG (도넛 · 트리맵 · 타임라인 · 월별 불출량) · QR 은 <code>segno</code>(Python)</td>
+      <td>차트 라이브러리를 넣으면 그 라이브러리의 기본 색·글꼴이 화면 규칙을 이긴다. 넓이·색·글자 등급을 우리 규칙대로 정하려면 직접 그리는 편이 짧다.</td>
+    </tr>
+    <tr>
+      <td>아이콘</td>
+      <td>Material Symbols Outlined (Google Fonts) + <b>글꼴 미도착 시 글리프 폴백</b></td>
+      <td>판사봉 · 양팔저울은 유니코드에 없다. 대신 <code>document.fonts.check()</code> 로 글꼴이 실제로 왔는지 보고, 막히면 직접 그린 SVG·문자 글리프로 되돌린다.</td>
+    </tr>
+    <tr>
+      <td>시연 서버</td>
+      <td><code>serve.py</code> (438줄 · 표준 라이브러리만)</td>
+      <td>정적 파일 + <b>동일 출처 프록시</b>. 캐시 없음(no-store) · LAN 공개(0.0.0.0)로 폰 테스트 · <code>.env</code> 를 읽어 토큰을 서버에서 주입한다.</td>
+    </tr>
+    <tr>
+      <td>외부 지능</td>
+      <td>사내 RAG 서버(문서 30건 · 6,901조각) · Anthropic <code>claude-haiku-4-5</code>(질의 라우팅) · OpenAI Whisper(음성, 선택)</td>
+      <td>라우팅·문서 이해에만 쓴다. <b>자재 값·금액·부서는 외부로 보내지 않는다</b>(2절 참고).</td>
+    </tr>
+    <tr>
+      <td>데이터 파이프라인</td>
+      <td>Python 2,185줄 · <code>build_master_db.py</code> · <code>validate_algorithm_csv.py</code> · <code>make_qr.py</code></td>
+      <td>반출 CSV 11개 → 정본 JSON · SQLite · 스키마 · ERD 를 한 번에 만들고, 알고리즘 팀 결과 CSV를 <b>넣기 전에 검문</b>한다.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>코드 규모 (직접 작성)</h3>
+<table class="keep">
+  <thead><tr><th>구분</th><th class="n">줄</th><th>주요 파일</th></tr></thead>
+  <tbody>
+    <tr><td>화면 (HTML + 화면 스크립트)</td><td class="n">4,479</td><td>attr 855 · stock 824 · login 439 · plan 424 · main 421 · return 345 · mobile-return 337 · purchase 286 · pool 270 · material-view 255</td></tr>
+    <tr><td>공용 모듈 (JS)</td><td class="n">5,729</td><td>chat 974 · screen-data 801 · db 609 · ask 484 · actions 410 · nav 342 · tour 332 · analysis-data 302 · ui 282 · catalog 207 · voice 144</td></tr>
+    <tr><td>디자인 시스템 (CSS)</td><td class="n">2,552</td><td>shell.css 한 파일</td></tr>
+    <tr><td>파이프라인 · 서버 (Python)</td><td class="n">2,185</td><td>build_master_db 880 · serve 438 · validate_algorithm_csv 363 · make_qr 269</td></tr>
+    <tr><td>자동 검사기 (Node)</td><td class="n">1,267</td><td>db_api 270 · ask 249 · screens 231 · actions 190 · flow 188 · chat 72 · trend 67</td></tr>
+  </tbody>
+</table>
+
+<h2 class="pagebreak"><span class="no">2</span>주요 기술 여덟 가지</h2>
+
+<h3>① 3층 데이터베이스 · 정본은 읽기 전용</h3>
+<p>
+  원천을 고치지 않고도 사람이 한 일을 반영해야 합니다. 그래서 데이터를 세 층으로 갈랐고,
+  화면은 <b><code>db.js</code> 하나</b>만 부릅니다(단일 창구).
+</p>
+<table class="keep">
+  <thead><tr><th style="width:16%">층</th><th style="width:26%">무엇</th><th class="n" style="width:14%">규모</th><th>성질</th></tr></thead>
+  <tbody>
+    <tr><td>1층 정본</td><td><code>db-master.js</code> · 반출 CSV 11개에서 만든 사실</td><td class="n">743품목<br>설비 14 · 정비계획 156</td><td><b>읽기 전용</b> · 화면이 절대 쓰지 않는다</td></tr>
+    <tr><td>2층 파생</td><td><code>db-derived.js</code> · 알고리즘이 낸 판정·목표재고</td><td class="n">판정 743<br>적정재고 743 · 정체 262</td><td>재계산으로 다시 만들 수 있는 값</td></tr>
+    <tr><td>3층 사람</td><td><code>db-changes.js</code> · localStorage <code>mtrl.db.v1</code></td><td class="n">표 6개</td><td><b>추가만</b>(append-only) · 되돌릴 수 있다</td></tr>
+  </tbody>
+</table>
+<p class="note">
+  3층 표 · <code>attribute_overrides</code>(속성 판단) · <code>stock_transactions</code>(반납 · 불출 · 공용전환) ·
+  <code>pooling_overrides</code>(공용 전환 의사) · <code>pr_drafts</code>(구매신청 초안) ·
+  <code>qr_returns</code>(현장 QR 반납) · <code>commit</code>(확정 지점).
+  <b>현재고를 저장하지 않습니다</b> · 스냅샷 + Σ 거래로 계산하므로 반납 한 건이 적정재고 · 발주 필요 숫자까지 즉시 흐릅니다.
+</p>
+
+<h3>② 확정 게이트 · 「판단」과 「확정」을 분리한 시퀀스 커밋</h3>
+<p>
+  담당자가 자재를 판단하는 동안 다른 화면의 숫자가 흔들리면 회의를 할 수 없습니다.
+  그래서 판단은 3층에 쌓되, <b>확정 지점(seq)</b> 이하만 계산에 반영합니다.
+</p>
+<div class="box keep">
+  <div class="flow mono">
+    판단 <span class="step">→ attribute_overrides.seq = 149</span> ·
+    확정 <span class="step">→ commit.seq = 149</span> ·
+    <b>merge()</b> 는 <span class="step">seq ≤ commit.seq</span> 인 행만 <code>type</code> 에 반영
+  </div>
+  <p class="note" style="margin:2mm 0 0">
+    행마다 <code>judged</code>(판단함) · <code>pending</code>(확정 대기) · <code>committed</code>(확정됨) 를 노출하므로
+    「지금 이 숫자가 알고리즘 판정으로 계산된 것인지, 사람이 확정한 속성으로 계산된 것인지」를 화면이 직접 말합니다.
+  </p>
+</div>
+
+<h3>③ 양속성 목표재고 미리 굽기 · 확정 즉시 재계산</h3>
+<p>
+  속성이 바뀌면 목표재고 산식이 바뀝니다(보험품 = 리드타임 안전재고 / 계획품 = 무재고 원칙).
+  브라우저에서 엔진을 다시 돌릴 수는 없으므로, 파이프라인에서 <b>전 품목을 보험품·계획품 두 경우로 각각 계산</b>해
+  <code>targetIns · targetPln</code> 으로 굽고, 확정 순간 그 값으로 갈아탑니다.
+</p>
+<ul>
+  <li><b>재현성</b> · 문자열 해시 무작위화 때문에 실행마다 값이 달라지던 문제를 <code>PYTHONHASHSEED=0</code> 고정으로 잡았습니다 → 기준 대조 <b class="ok">743 / 743 일치 · type 불일치 0</b>.</li>
+  <li><b>실측 효과</b> · 담당자가 149건을 「현행유지」로 확정하면 보험품 382→531품목, 감축 대상 481→397품목, 감축액 29.71→24.71억원, 즉시발주 61→82건으로 <b>여섯 화면의 숫자가 함께</b> 움직입니다.</li>
+</ul>
+
+<h3>④ 과부족 트리맵 · 743품목을 한 판에 (라이브러리 없이)</h3>
+<ul>
+  <li><b>squarified treemap</b>(Bruls et al.) 을 직접 구현 · 한 칸이 한 품목, 넓이가 과부족 금액입니다.</li>
+  <li><b>넓이 눈금</b> · 금액 차이가 수백 배라 그대로 그리면 두 칸이 판을 다 먹습니다 → <code>금액^0.7</code>(모바일 0.5)로 눌러 그리고 <b>그 눈금을 화면 아래에 적습니다</b>.</li>
+  <li><b>글자 등급</b>(fitCells) · %가 아니라 <b>그린 뒤 실제 픽셀</b>을 재서 품명·수량·금액 중 무엇까지 넣을지 칸마다 정합니다.</li>
+  <li>색은 방향(부족 파랑 · 초과 빨강), 농도는 목표 대비 어긋난 배수 4단계입니다.</li>
+</ul>
+
+<h3>⑤ 사내 RAG + 이 서비스의 숫자까지 답하는 3갈래 챗봇</h3>
+<p>문서만 뒤지는 챗봇은 「지금 발주 몇 품목이야」에 답할 수 없습니다. 질문을 세 갈래로 나눴습니다.</p>
+<table class="keep">
+  <thead><tr><th style="width:20%">갈래</th><th style="width:30%">길</th><th class="n" style="width:14%">응답</th><th>예</th></tr></thead>
+  <tbody>
+    <tr><td>이 서비스 숫자</td><td>규칙 매치(<code>ASK.fast</code>) → 로컬 실행기 <b>조회 도구 13개</b></td><td class="n">0초</td><td>「지금 발주 필요 몇 품목이야」 · 「감축 금액 큰 자재 5개」</td></tr>
+    <tr><td>화면 · 용어 설명</td><td>자기 설명 사전(<code>catalog.js</code> · 화면 8 · 용어 27 · 출처 8)</td><td class="n">1~2초</td><td>「stale 이 무슨 뜻이야」 · 「대시보드 설명해줘」</td></tr>
+    <tr><td>사내 규정 · 절차</td><td>RAG 서버 스트리밍(NDJSON) · 인용 [n] ↔ 출처 카드 연결</td><td class="n">6~12초</td><td>「자재 반납 절차 알려줘」 (출처 5건 · 인용률 75%)</td></tr>
+  </tbody>
+</table>
+<div class="box hi keep">
+  <h4>어느 갈래인지 고르는 방법 · Tool calling 라우터</h4>
+  <p style="margin-bottom:2mm">
+    LLM(<code>claude-haiku-4-5</code>)에는 <b>질문 문장 · 도구 스키마 · 화면 문맥(화면 키 · 자재코드 1개)만</b> 보내고
+    <code>tool_use</code> 로 <b>「어느 도구를 어떤 값으로」</b>만 받습니다. 실행과 계산은 브라우저가 우리 데이터로 합니다.
+  </p>
+  <ul style="margin-bottom:0">
+    <li><b>숫자가 LLM을 거치지 않습니다</b> · 자재 행 · 금액 · 부서 · 실명은 외부로 나가지 않습니다(설계 제약).</li>
+    <li>키는 <code>.env</code> → 서버 보관 · 브라우저로 내려가지 않습니다. RAG 토큰도 서버가 주입합니다.</li>
+    <li>답마다 <b>「어느 함수 · 어느 필드 · 기준일」</b> 근거 줄과 화면 링크를 붙입니다. 못 찾으면 <b>「근거 없음」</b>이라고 적습니다.</li>
+    <li>실측 · 라우터 1.0~2.1초 · 9개 질문 의도대로 라우팅 · 추천 질문 21개 전수 실제 응답 확인.</li>
+  </ul>
+</div>
+
+<h3 class="pagebreak">⑥ 말로 앱을 움직이는 Action Registry</h3>
+<p>
+  음성 전용 에이전트를 따로 두지 않고 <b>같은 라우터</b>를 넓혔습니다. 마이크는 입력 방법일 뿐입니다.
+</p>
+<div class="flow mono box keep" style="margin-bottom:3mm">
+  마이크 → <span class="step">MediaRecorder</span> → <span class="step">serve.py /stt (키는 서버)</span> → 글자 →
+  <span class="step">기존 질의 파이프라인</span> → <span class="step">Action Registry 13개</span> → 실행
+  <div class="note" style="margin-top:1.5mm">OpenAI 키가 없으면 브라우저 내장 음성 인식(Web Speech · ko-KR)으로 자동 대체 · 상태는 idle → recording → transcribing → executing</div>
+</div>
+<table class="keep">
+  <thead><tr><th style="width:18%">갈래</th><th style="width:44%">action</th><th>실행 규칙</th></tr></thead>
+  <tbody>
+    <tr><td>화면 이동</td><td class="mono">navigate · openMaterialDetail · openPurchaseRequest · openReturnPage</td><td>표에 등록된 화면 키로만 이동 · 입력값이 주소가 되지 않는다</td></tr>
+    <tr><td>조회</td><td class="mono">searchMaterial · getInventoryStatus · runStockAnalysis · runAttrAlgorithm</td><td>바로 실행 (읽기만)</td></tr>
+    <tr><td>DB 변경</td><td class="mono">submitPurchaseRequest · returnMaterial · judgeMaterial · commitAttr · convertToPool</td><td><b>확인 창을 거친 뒤에만</b> · 각 화면의 버튼과 <b>같은 DB 호출</b></td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><b>안전 규칙</b> · LLM이 만든 URL · API 주소 · JS 코드는 어디서도 실행되지 않습니다. 자재코드는 <code>Q+7자리</code>, 수량은 1~999 정수만 통과합니다.</li>
+  <li><b>문맥 이해</b> · 「이 자재」 「이거」 는 주소의 <code>#q=</code> → 마지막으로 누른 행 → 마지막으로 말한 코드 순으로 해석합니다.</li>
+  <li><b>다단계</b> · 「Q1201564 찾아서 적정재고 화면에서 보여줘」 처럼 일이 여럿이면 <code>multi_step</code> 으로 순서를 받아 실행하고, 화면을 옮겨야 하면 남은 단계를 <code>sessionStorage</code> 에 실어 새 화면에서 이어 합니다.</li>
+</ul>
+
+<h3>⑦ 현장 QR · 폰에서 3초에 끝나는 반납</h3>
+<ul>
+  <li>자재식별표 QR(<code>segno</code> · 오류복정 M) → <code>material-view.html?code=Q4046777</code> → 자재 확인 → 확인 팝업 → <b>반납 화면 2단계</b>(1단계 스킵).</li>
+  <li><b>자재코드가 PK</b> · 주소 · 문장 · QR 어디서 와도 <code>DB.extract()</code> 가 코드를 뽑습니다(창고코드 <code>QFC01</code>·거래코드는 걸러냅니다).</li>
+  <li>정본 밖 자재(다른 부서 식별표)는 우리 재고를 건드리지 않고 <b>접수만 기록</b>합니다 · 화면이 그 사실을 적습니다.</li>
+  <li>오류 세 갈래를 각각 다르게 답합니다 · 코드 없음 / 형식 불일치 / 미등록.</li>
+  <li>물품 상태는 <b>반납 뒤 검사에서</b> 정합니다 · 반납자는 신고만 하고, 목록에서는 「반납 완료」 칸에만 상태가 보입니다.</li>
+</ul>
+
+<h3>⑧ 명암 튜토리얼 · 로그인하면 여섯 화면을 순서대로</h3>
+<ul>
+  <li>화면을 어둡게 덮고 <b>설명할 곳만 밝게</b> 남깁니다(구멍 + 링). 글로 「오른쪽 위 카드를 보세요」라고 적으면 눈이 그 카드를 못 찾습니다.</li>
+  <li>Dashboard → 보유목적 판단 → 적정재고 분석 → 적정구매시점 → 구매신청 → 자재반납 · 한 화면이 끝나면 <b>실제로 그 화면으로 옮겨 가</b> 이어 뜹니다(진행 위치는 localStorage).</li>
+  <li>단계마다 밝힐 대상을 선택자로 적어 두고, 그 자리가 없으면(단계에 따라 숨는 버튼 등) 가운데 카드로 <b>안전하게 되돌립니다</b>.</li>
+</ul>
+
+<h2 class="pagebreak"><span class="no">3</span>차별점</h2>
+
+<div class="grid2">
+  <div class="box hi keep">
+    <h4>1. 「정확도 87%」 라고 말하지 않습니다</h4>
+    <p style="margin:0">
+      보험품 확정 라벨이 <b>원천에 0건</b>입니다. 지도학습도, 정확도 계산도 성립하지 않습니다.
+      그래서 규칙 점수로 <b>제안</b>하고 <b>담당자 확정을 첫 라벨</b>로 씁니다.
+      화면 맨 아래에 그 사실을 적어 둡니다.
+    </p>
+  </div>
+  <div class="box hi keep">
+    <h4>2. 모든 숫자에 되짚을 근거가 붙습니다</h4>
+    <p style="margin:0">
+      값 옆 <code>?</code> 를 누르면 <b>산식 · 점수 · 모집단 · 기준일</b>이 그대로 나옵니다.
+      원천에 없는 값은 지어내지 않고 <b>「원천에 없습니다」</b>라고 적습니다
+      (창고 위치 · 월별 불출 이력 · ERP 상태 코드 등).
+    </p>
+  </div>
+  <div class="box keep">
+    <h4>3. 시연용 값을 시연용이라고 적습니다</h4>
+    <p style="margin:0">
+      이번 주 WO 6건은 <b>날짜만</b> 옮긴 시연 일정이고 설비·자재·재고는 원천 값입니다.
+      월별 불출량은 <b>합계만 정본</b>(24개월 소요 횟수)이고 분포는 시연용입니다.
+      둘 다 화면에 그렇게 씌어 있습니다.
+    </p>
+  </div>
+  <div class="box keep">
+    <h4>4. 연동 전인 것을 되는 척하지 않습니다</h4>
+    <p style="margin:0">
+      PR 발행 · ERP 상태 코드는 <b>「사내 시스템 연동 예정」</b>으로 적고 초안까지만 만듭니다.
+      준비 안 된 화면은 메뉴에서 <b>「준비 중」</b>으로 두어 404가 뜨지 않습니다.
+    </p>
+  </div>
+  <div class="box keep">
+    <h4>5. 값이 화면끼리 실제로 흐릅니다</h4>
+    <p style="margin:0">
+      보유목적 판단에서 확정 → 적정재고 목표·조치·금액 → 적정구매시점 마감 → 구매신청 초안 → 반납 →
+      다시 적정재고. <b>화면 9개 × 확정 전후 36항목</b>을 순회 점검해 문서로 남겼습니다(<code>db/FLOW_CHECK.md</code>).
+    </p>
+  </div>
+  <div class="box keep">
+    <h4>6. 사람이 결정하는 자리를 지킵니다</h4>
+    <p style="margin:0">
+      회색지대(점수 차 작음)는 기계가 억지로 정하지 않고 사람에게 넘깁니다.
+      DB를 바꾸는 일은 <b>전부 확인 창</b>을 거치고, 되돌릴 수 있게 3층에만 씁니다.
+    </p>
+  </div>
+</div>
+
+<h3>7. 검사기로 지키는 서비스 · 395항목</h3>
+<p>
+  화면을 손으로 눌러 확인하는 것으로는 「어제는 됐는데」를 막을 수 없습니다.
+  Node 표준 라이브러리만으로 <b>가짜 DOM</b>을 만들어 11화면의 스크립트를 끝까지 돌리고,
+  숫자가 어긋나는지까지 봅니다.
+</p>
+<table class="keep">
+  <thead><tr><th style="width:22%">검사기</th><th class="n" style="width:12%">항목</th><th>무엇을 지키나</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">test_actions</td><td class="n">117</td><td>등록된 action만 실행 · 값 검증 · 확인 창 · 3층 기록 · 문맥 · LLM이 만든 주소 차단</td></tr>
+    <tr><td class="mono">test_screens</td><td class="n">100</td><td>11화면이 오류 없이 끝까지 실행 · <code>undefined</code>·<code>NaN</code>·목업 잔재 없음 · 실제 값이 실렸는지</td></tr>
+    <tr><td class="mono">test_ask</td><td class="n">61</td><td>챗봇 답이 화면 숫자와 같은지 · 사전이 코드와 맞는지 · 확정 전후로 답이 따라 움직이는지</td></tr>
+    <tr><td class="mono">test_db_api</td><td class="n">50</td><td><code>db.js</code> 자체 시험 · 3층 반영 · 코드 추출 · 요약 일치</td></tr>
+    <tr><td class="mono">test_flow</td><td class="n">34</td><td>확정 전/후 화면 간 값 흐름</td></tr>
+    <tr><td class="mono">test_chat · test_trend</td><td class="n">33</td><td>챗봇 마크업·스트림 처리 · 추이선 계산</td></tr>
+  </tbody>
+</table>
+<p class="note">
+  발견해 고친 실제 버그 예 · ① 팝오버가 <b>자기를 연 클릭</b>에 곧바로 닫혀 보유 수량·히트맵 상자가 열리지 않던 문제 ·
+  ② <code>DB.txn</code> 이 <code>txnType</code> 을 받지 못해 <b>공용 전환이 어디서도 동작하지 않던</b> 문제 ·
+  ③ 접기 단추가 넓은 화면에서 <code>display:none</code> 이라 사이드바를 접을 수 없던 문제 ·
+  ④ 클래스 이름 충돌(<code>.due</code>)로 타임라인 범례 점이 한 줄에 서지 않던 문제.
+</p>
+
+<h3>8. 데이터를 외부로 보내지 않는 설계</h3>
+<table class="keep">
+  <thead><tr><th style="width:34%">외부로 나가는 것</th><th>나가지 않는 것</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>질문 문장 · 도구 스키마 · 화면 문맥(화면 키 · 자재코드 1개) · 녹음된 음성(선택)</td>
+      <td><b>자재 행 · 금액 · 부서 · 담당자 실명 · Oracle 표·컬럼명 · 대표 전화번호</b> · API 키(<code>.env</code> · 서버 보관)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2><span class="no">4</span>한계와 다음 단계</h2>
+<ul>
+  <li><b>정답 라벨 0건</b> · 정확도를 말할 수 없습니다. 담당자 확정이 쌓이면 그것이 첫 학습 데이터가 됩니다.</li>
+  <li><b>월말 재고 스냅샷 · 월별 불출 이력이 원천에 없습니다</b> · 추이선과 월별 불출량은 만든 방법을 화면에 적어 두었습니다.</li>
+  <li><b>ERP · EAM 상태 코드가 없습니다</b> · PR 발행과 반납 유형 7갈래 판정은 연동 후 붙습니다.</li>
+  <li><b>준비 중 화면</b> · 데이터 근거 · 자재 검색 · 주간 리포트 3개가 남았습니다(메뉴에서 「준비 중」).</li>
+  <li><b>운영 전 정리</b> · 시연용 값(이번 주 WO 날짜 · 월별 분포)을 실데이터로 교체하고, 시연에 쓴 API 키를 교체해야 합니다.</li>
+</ul>
+
+<footer>
+  <span>AI 자재 솔루션 · 기술 스택과 차별점</span>
+  <span>데이터 기준일 2026-09-03 · 문서 작성 2026-09-11</span>
+</footer>
+
+</body>
+</html>
