@@ -14,6 +14,18 @@ CONTEXT_COLS = ["지역", "분류", "분류1", "분류2", "LEVEL2", "LEVEL3",
 EXCLUDE_COLS = {"등록자정보", "등록일", "ITEMID", "순번", "NO", "전문가구분"}
 MAX_ANSWERS = 5
 
+# 원본 '내용' 셀 안에 붙어 들어온 P-GPT 메타데이터 보일러플레이트.
+# 컬럼 화이트리스트로는 걸러지지 않는다(셀 내용 자체에 섞여 있다).
+# 답변 내용이 아니라 메타데이터이므로 색인 단계에서 제거한다
+# — 개인정보를 애초에 들이지 않는 것이 마스킹보다 안전하다(7절).
+PGPT_META_RE = re.compile(
+    r"남겨주신\s*의견\s*작성자.{0,40}?등록일\s*\d{4}-\d{2}-\d{2}(?:\s*만족여부\s*\S*)?",
+    re.S)
+
+
+def scrub_inline_pii(text: str) -> str:
+    return PGPT_META_RE.sub(" ", text)
+
 
 def _find_header(rows, max_scan=6):
     for i, row in enumerate(rows[:max_scan]):
@@ -74,7 +86,7 @@ def parse_faq(path):
                 v = row[j] if j < len(row) else None
                 if v is None:
                     continue
-                v = normalize(str(v))
+                v = normalize(scrub_inline_pii(str(v)))
                 if v:
                     rec[h] = v
             if rec.get(TITLE_COL) and rec.get(CONTENT_COL):
