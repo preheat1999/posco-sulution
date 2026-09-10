@@ -39,7 +39,7 @@
         <div class="seg" id="sort">
           <button type="button" data-sort="week" class="on">이번 주 WO</button>
           <button type="button" data-sort="due">마감 급한 순</button>
-          <button type="button" data-sort="stop">휴지일 순</button>
+          <button type="button" data-sort="stop">작업 계획일 순</button>
         </div>
       </div>
     </div>
@@ -182,7 +182,7 @@
               UI.esc(w.left === null ? '자재 확보' : UI.dleft(w.left)) + '</div>' +
             '<div class="due-date">마감 ' +
               UI.esc(w.dueDate ? UI.date(w.dueDate) : '없음') +
-              ' · 휴지 ' + UI.esc(UI.date(w.stopStart)) + '</div>' +
+              ' · 작업 계획 ' + UI.esc(UI.date(w.stopStart)) + '</div>' +
           '</div>' +
           '<span class="sect-arrow" style="margin-left:10px">' + (on ? '∧' : '∨') + '</span>' +
         '</div>' +
@@ -236,7 +236,7 @@
     var marks = [];
     if (ax.due !== null) { marks.push(['due', ax.due, '마감 ' + short(w.dueDate)]); }
     marks.push(['now', ax.now, '오늘 ' + short(asof())]);
-    marks.push(['stop', ax.stop, '휴지 ' + short(w.stopStart)]);
+    marks.push(['stop', ax.stop, '작업 계획 ' + short(w.stopStart)]);
     marks.sort(function (a, b) { return a[1] - b[1]; });
     var last = -99;
     marks.forEach(function (m) {
@@ -247,10 +247,10 @@
     /* 점 세 개가 무엇인지 위에 먼저 적는다. 색만 있으면 점의 뜻을 알 수 없다 */
     var legend = '<div class="tlegend">' +
       (ax.due !== null
-        ? '<span class="tl due"><i></i>발주 마감선 ' + UI.esc(UI.date(w.dueDate)) + '</span>'
-        : '<span class="tl"><i></i>발주 마감선 없음 · 자재 확보</span>') +
+        ? '<span class="tl lim"><i></i>구매신청 deadline ' + UI.esc(UI.date(w.dueDate)) + '</span>'
+        : '<span class="tl"><i></i>구매신청 deadline 없음 · 자재 확보</span>') +
       '<span class="tl now"><i></i>기준일 (오늘) ' + UI.esc(UI.date(asof())) + '</span>' +
-      '<span class="tl stop"><i></i>휴지 착수 ' + UI.esc(UI.date(w.stopStart)) +
+      '<span class="tl stop"><i></i>작업 계획 일정 ' + UI.esc(UI.date(w.stopStart)) +
         (ax.toStop === null ? '' : ' (' + UI.esc(UI.dleft(ax.toStop)) + ')') + '</span>' +
       '</div>';
 
@@ -345,7 +345,7 @@
           .concat(Object.keys(L.all).map(function (k) {
             return ['선행일수 · ' + k, L.all[k] + '일'];
           }))
-          .concat([['내림 처리', 'floor · 하루라도 늦으면 휴지에 못 맞춘다']]),
+          .concat([['내림 처리', 'floor · 하루라도 늦으면 작업 계획 일정에 못 맞춘다']]),
         formula: L.formula,
         note: L.note
       });

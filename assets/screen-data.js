@@ -290,8 +290,30 @@
     if (!d) { return false; }
     return d >= P.meta.asof && d <= shift(P.meta.asof, MONTH_DAYS);
   }
+  /* WO 번호는 원천에 없다 · 우리가 만드는 표시용 식별자다.
+   *
+   * 사내 작업주문 번호가 K 로 시작한다 (구매신청 거래상태 원천의 K10665396) · 그 결을 따라
+   * **K + 발행일자(기준일 YYMMDD) + 세 자리 일련번호** 로 만든다 · 예 K260903000.
+   *
+   * 번호는 원천 순서로 매긴다 · 화면 정렬을 바꿀 때마다 같은 정비계획의 번호가 바뀌면
+   * 구매신청 초안에 적힌 번호와 어긋난다. 한 번만 바꿔 끼우고 그 뒤로는 그 값을 쓴다 */
+  var woNamed = false;
+
+  function woName() {
+    if (woNamed) { return; }
+    var P = window.PLAN;
+    if (!P || !P.wos) { return; }
+    woNamed = true;
+    var d = String(P.meta.asof || '').slice(2).replace(/-/g, '');
+    P.wos.forEach(function (w, i) {
+      w.woSrc = w.wo;                                   // 만들 때 쓴 옛 식별자 · 근거로 남긴다
+      w.wo = 'K' + d + ('00' + i).slice(-3);
+    });
+  }
+
   function planMonth() {
     var P = window.PLAN;
+    woName();
     return P ? P.wos.filter(inMonth) : [];
   }
 
@@ -324,6 +346,7 @@
     if (WEEK) { return WEEK; }
     var P = window.PLAN;
     if (!P) { return []; }
+    woName();
     var asof = P.meta.asof;
     var fine = P.wos.filter(function (w) { return w.needCount === 0 && w.matCount > 0; });
     var need = P.wos.filter(function (w) { return w.needCount > 0; });
@@ -355,9 +378,8 @@
       Object.keys(w).forEach(function (k) { row[k] = w[k]; });
       row.demo = true;
       row.planDate = shift(asof, p.stop);
-      /* WO 번호는 설비 · 휴지구분 · 정지시작일로 만든 표시용 식별자다(원천에 없다).
-       * 날짜를 옮겼으면 번호의 날짜도 같이 옮겨야 둘이 어긋나지 않는다 */
-      row.wo = 'M' + row.planDate.slice(2).replace(/-/g, '') + String(w.wo).slice(7);
+      /* 번호의 날짜는 **발행일자(기준일)** 다 · 작업 계획 일정을 옮겨도 번호는 그대로다
+       * (전에는 번호에 계획일을 넣어서 날짜를 옮길 때마다 번호까지 고쳐야 했다) */
       row.stopStart = row.planDate;
       row.reStart = shift(asof, p.stop + 4);
       row.dueDate = p.due === null ? null : shift(asof, p.due);
@@ -382,6 +404,7 @@
    * 남는 수량이 있으면 그만큼은 사지 않고 가져오면 된다 */
   function planCounts() {
     var P = window.PLAN;
+    woName();
     if (!P) { return { wos: 0, over: 0, soon: 0, now: 0, mats: 0,
                        moveN: 0, moveAmt: 0, orderAmt: 0, week: 0, all: 0, mdays: 30 }; }
     var month = planMonth();
@@ -461,7 +484,7 @@
     });
   }
 
-  /* 마감 · 오늘 · 휴지 세 점의 위치를 0~100 으로 준다.
+  /* 마감 · 오늘 · 작업 계획 세 점의 위치를 0~100 으로 준다.
    * 세 날짜를 그냥 적으면 순서가 안 보인다 */
   function planAxis(wo, asof) {
     var d = function (s) { return new Date(s + 'T00:00:00').getTime(); };
@@ -474,7 +497,7 @@
     return {
       due: due === null ? null : at(due), now: at(now), stop: at(stop),
       overdue: due !== null && due < now,
-      /* 휴지 착수까지 며칠 남았나 · 점 옆에 D-일수를 적는다 */
+      /* 작업 계획 일정까지 며칠 남았나 · 점 옆에 D-일수를 적는다 */
       toStop: Math.round((stop - now) / 86400000),
       fill: due === null ? null : [Math.min(at(due), at(now)), Math.max(at(due), at(now))]
     };
