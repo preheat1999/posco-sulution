@@ -3,6 +3,7 @@ import logging, os, sys, time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -54,6 +55,17 @@ def startup():
 
     STATE["searcher"] = Searcher(STATE["store"], STATE["bm25"],
                                  STATE["embedder"], STATE["vs"])
+
+
+WEB = Path(__file__).resolve().parent.parent / "web" / "index.html"
+
+
+@app.get("/", response_class=HTMLResponse)
+def ui():
+    """최소 채팅 UI — 외부 의존성 없는 단일 HTML (화면은 토큰 없이 연다)."""
+    if not WEB.exists():
+        return HTMLResponse("<h1>web/index.html 이 없습니다</h1>", status_code=404)
+    return FileResponse(WEB)
 
 
 @app.get("/api/health")
