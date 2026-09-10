@@ -319,6 +319,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .top-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .top-right { display: flex; align-items: center; gap: 10px; flex: none; }
+/* 좁아지면 오른쪽 묶음이 제목 위로 접혀 올라온다 · 자리를 못 얻는 것부터 뺀다.
+ * 기준일과 계산 시각은 화면 안에도 적혀 있고, 여기서 꼭 필요한 것은 「갱신」 과 사람이다 */
+@media (max-width: 900px) {
+  .top-right .cstat { display: none; }
+}
+@media (max-width: 700px) {
+  .top-right .pill { display: none; }
+  .top h1 { font-size: 16px; }
+}
 
 /* 메뉴를 좁혔다 넓혔다 하는 단추 · 넓은 화면에서도 늘 보인다.
  * 전에는 여기서 display:none 이라 마우스로는 좁히기에 손이 닿지 않았다

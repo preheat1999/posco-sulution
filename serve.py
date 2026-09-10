@@ -41,6 +41,7 @@ import re
 import socket
 import socketserver
 import ssl
+import sys
 import subprocess
 import threading
 import time
@@ -74,6 +75,17 @@ def load_tools():
 
 
 class H(http.server.SimpleHTTPRequestHandler):
+    """정적 파일 + 프록시.
+
+    HTTP/1.1 로 답한다 · 한 연결로 여러 파일을 받게 하려는 것이다.
+    1.0 이면 파일마다 연결을 새로 맺고, https 에서는 그때마다 TLS 악수를 한다 ·
+    폰에서 파일 스무 개를 받다가 몇 개가 조용히 빠졌다(실제로 그랬다).
+
+    길이를 아는 응답만 연결을 이어 쓸 수 있다 · 스트리밍(RAG)은 길이를 모르므로
+    그 응답에서만 Connection: close 를 붙이고 닫는다.
+    """
+
+    protocol_version = 'HTTP/1.1'
     """정적 파일 + /rag/ 프록시."""
 
     def do_POST(self):
@@ -282,6 +294,10 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.send_response(up.status)
                 ctype = up.headers.get('Content-Type') or 'application/json'
                 self.send_header('Content-Type', ctype)
+                # 길이를 모르는 채 흘려보내는 응답이다 · 이 연결은 다 쓰면 닫는다
+                # (HTTP/1.1 에서 길이도 없고 닫지도 않으면 브라우저가 끝을 몰라 계속 기다린다)
+                self.send_header('Connection', 'close')
+                self.close_connection = True
                 self.end_headers()
                 while True:
                     chunk = up.read(1)          # 한 바이트씩 · 줄이 오는 대로 흘려 준다
@@ -296,6 +312,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             msg = e.read()
             self.send_response(e.code)
             self.send_header('Content-Type', e.headers.get('Content-Type') or 'application/json')
+            self.send_header('Content-Length', str(len(msg)))
             self.end_headers()
             try:
                 self.wfile.write(msg)
@@ -437,13 +454,50 @@ def ensure_cert(ip):
     return make_cert(ip)
 
 
+class Server(http.server.ThreadingHTTPServer):
+    """연결 하나에 스레드 하나. TLS 악수도 그 스레드에서 한다.
+
+    듣는 소켓을 통째로 감싸면(ssl.wrap_socket(listening)) 악수가 **accept 자리에서 차례로**
+    일어난다 · 폰 하나가 여섯 연결을 한꺼번에 열면 뒤의 것이 줄줄이 밀리고,
+    기다리다 포기한 파일은 서버 로그에 남지도 않는다(요청이 오지 않았으니).
+    그래서 악수를 연결마다 따로 한다.
+    """
+
+    daemon_threads = True
+    allow_reuse_address = True
+    request_queue_size = 64
+
+    def __init__(self, addr, handler, ctx=None):
+        self.ctx = ctx
+        http.server.ThreadingHTTPServer.__init__(self, addr, handler)
+
+    def handle_error(self, request, client_address):
+        """연결이 끊긴 것은 오류가 아니다.
+
+        폰이 화면을 옮기거나 서랍을 닫으면 늘 생긴다 · 그때마다 빨간 추적을 뱉으면
+        시연 중에 콘솔이 뒤덮여 서버가 죽은 것처럼 보인다. 진짜 오류만 남긴다.
+        """
+        e = sys.exc_info()[1]
+        if isinstance(e, (ConnectionResetError, ConnectionAbortedError,
+                          BrokenPipeError, ssl.SSLError, TimeoutError)):
+            return
+        http.server.ThreadingHTTPServer.handle_error(self, request, client_address)
+
+    def finish_request(self, request, client_address):
+        if self.ctx is not None:
+            try:
+                request = self.ctx.wrap_socket(request, server_side=True)
+            except OSError:
+                return          # 악수가 깨진 연결 하나를 버린다 · 서버는 계속 산다
+        self.RequestHandlerClass(request, client_address, self)
+
+
 def serve_forever(host, port, tls=None):
-    socketserver.TCPServer.allow_reuse_address = True
-    srv = socketserver.ThreadingTCPServer((host, port), functools.partial(H, directory=ROOT))
+    ctx = None
     if tls:
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(tls[0], tls[1])
-        srv.socket = ctx.wrap_socket(srv.socket, server_side=True)
+    srv = Server((host, port), functools.partial(H, directory=ROOT), ctx)
     srv.serve_forever()
 
 
@@ -460,6 +514,12 @@ def lan_ip():
 
 
 def main():
+    # 파일로 넘겨 받아 볼 때도 줄이 바로 보이게 한다 (기본은 뭉쳐 두었다가 나중에 쓴다)
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+        sys.stderr.reconfigure(line_buffering=True)
+    except Exception:
+        pass
     ap = argparse.ArgumentParser()
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--port', type=int, default=8130)
