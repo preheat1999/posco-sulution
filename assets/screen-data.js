@@ -65,6 +65,8 @@
     var all = rows(), c = { all: 0, i2p: 0, p2i: 0, gray: 0, done: 0, out: 0, same: 0,
       /* 원본 단계가 쓰는 정본 속성 수 · 적정재고를 다시 봐야 하는 행 수 */
       insBase: 0, plnBase: 0, stale: 0, recalc: 0 };
+    /* 판정 근거에서 목록에 올리지 않는 것 · 사전 배제 + 판정일치.
+     * 743 = 손대야 하는 것(all) + 제외(excluded) 로 항상 맞아떨어진다 */
     all.forEach(function (r) {
       var b = attrBucket(r);
       c[b] += 1;
@@ -72,6 +74,7 @@
       if (r.baseType === '보험품') { c.insBase += 1; } else if (r.baseType === '계획품') { c.plnBase += 1; }
       if (r.stale) { c.stale += 1; if (r.recalc && !r.recalc.done) { c.recalc += 1; } }
     });
+    c.excluded = c.out + c.same;
     return c;
   }
 
@@ -398,6 +401,23 @@
     try { window.localStorage.setItem(STAGE_KEY, v); } catch (e) { /* 무시 */ }
   }
 
+  /* 언제 판단했는지 · 실행한 시각을 그대로 남긴다.
+   * 기준일(데이터 스냅샷 날짜)과 다른 값이라 따로 적는다 */
+  var STAMP_KEY = STAGE_KEY + '.at';
+  function stamp() {
+    try { return window.localStorage.getItem(STAMP_KEY) || ''; } catch (e) { return ''; }
+  }
+  function setStamp(v) {
+    try { window.localStorage.setItem(STAMP_KEY, v); } catch (e) { /* 무시 */ }
+  }
+  /* 년 · 월 · 일 · 시 · 분 · 초. 초까지 적어야 「언제 돌린 판단인가」 가 가려진다 */
+  function nowStamp(d) {
+    var t = d || new Date();
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()) + ' ' +
+      p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
+  }
+
   /* 사람의 확정을 알고리즘 담당의 경계 파일 형식으로 낸다.
    * 03_연동_인터페이스.md · classification_result.csv (Qcode, DeptCode, Type, 신뢰도, 판단근거)
    * 엔진은 이 파일을 읽어 보험품 · 계획품 행만 Type 을 바꾸고 적정재고를 다시 낸다.
@@ -429,6 +449,7 @@
     prSteps: prSteps, prList: prList, prDraft: prDraft,
     retTabs: retTabs, retList: retList, retEffect: retEffect,
     stage: stage, setStage: setStage, exportClassification: exportClassification,
+    stamp: stamp, setStamp: setStamp, nowStamp: nowStamp,
     /* 승인 · 반납이 일어나면 화면이 다시 그려져야 한다 */
     on: function (fn) { if (live) { DB.on(fn); } }
   };

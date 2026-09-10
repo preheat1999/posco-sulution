@@ -30,7 +30,10 @@
       </div>
     </div>
 
-    <!-- 세 단계. 원본 → 알고리즘 실행 → 사람 확정. 지금 어디인지 늘 보인다 -->
+    <!-- 언제 돌린 판단인가. 기준일(스냅샷)과 다른 값이라 제목 밑에 따로 적는다 -->
+    <div class="stampbar" id="stamp" hidden></div>
+
+    <!-- 네 단계. 원본 → 알고리즘 실행 → 사람 확정 → 적정재고. 지금 어디인지 늘 보인다 -->
     <div class="stageline" id="stageline"></div>
 
     <!-- 단계 0 · 원본만 있을 때 여기서 실행한다 -->
@@ -88,7 +91,7 @@
   var S = window.SCREEN;
   var PAGE = 12;
   var stage = S.stage();          // 'raw' · 원본만 | 'algo' · 알고리즘 결과가 올라와 있다
-  var tab = stage === 'raw' ? 'all' : 'gray';
+  var tab = 'all';                // 실행 직후에도 「전체」 부터 본다
   var sort = 'amt';
   var page = 0;
   var picked = null;
@@ -119,9 +122,14 @@
     var steps = [
       { k: '1', t: '원본 속성', s: '정본 743품목 · 보험품 ' + UI.num(c.insBase) + ' · 계획품 ' + UI.num(c.plnBase),
         state: 'done' },
-      { k: '2', t: '알고리즘 실행', s: stage === 'algo'
+      { k: '2', t: '알고리즘 실행',
+        /* 743 중 판정 근거에서 빠지는 것(사전 배제 · 판정일치)을 같이 적는다.
+         * 이걸 안 적으면 「743 이 왜 270 이 됐나」 가 화면에서 사라진다 */
+        s: stage === 'algo'
           ? '변경 제안 ' + UI.num(c.i2p + c.p2i) + ' · 보류 ' + UI.num(c.gray + c.done)
           : '아직 실행하지 않았습니다',
+        x: stage === 'algo'
+          ? '<span class="excl">제외대상 ' + UI.num(c.excluded) + '</span>' : '',
         state: stage === 'algo' ? 'done' : 'doing' },
       { k: '3', t: '담당자 확정', s: stage === 'algo'
           ? '확정 ' + UI.num(c.done) + ' · 남은 보류 ' + UI.num(c.gray)
@@ -137,7 +145,7 @@
       return '<div class="prstep ' + s.state + '">' +
         '<span class="sc">' + (s.state === 'done' ? '✓' : s.k) + '</span>' +
         '<span class="sk">' + UI.esc(s.t) + '</span>' +
-        '<span class="sv">' + UI.esc(s.s) + '</span></div>';
+        '<span class="sv">' + UI.esc(s.s) + (s.x ? ' · ' + s.x : '') + '</span></div>';
     }).join('');
 
     el('progress').className = 'badge ' + (stage === 'algo' ? 'ok' : '');
@@ -147,6 +155,19 @@
       : '원본 속성 · 알고리즘 실행 전';
     el('export').hidden = stage !== 'algo';
     el('sort').hidden = stage !== 'algo';        // 점수차는 실행 뒤에 생긴다
+    paintStamp(c);
+  }
+
+  /* 판단을 언제 돌렸는지. 실행하지 않았으면 줄 자체를 두지 않는다 */
+  function paintStamp(c) {
+    var bar = el('stamp');
+    if (stage !== 'algo') { bar.hidden = true; return; }
+    var at = S.stamp();
+    bar.hidden = false;
+    bar.innerHTML = '<span class="st-k">속성값 판단 실행</span>' +
+      '<b class="st-v">' + UI.esc(at || '시각을 기록하지 못했습니다') + '</b>' +
+      '<span class="st-x">기준일 ' + UI.esc(UI.date(DB.meta().asof)) +
+        ' 스냅샷 · 743품목 판정 · 제외 ' + UI.num(c.excluded) + '품목</span>';
   }
 
   /* 실행 전 · 무엇을 실행하는지 정확히 적는다.
@@ -256,7 +277,8 @@
         Math.max.apply(null, gaps).toFixed(1) + '점</span>'
       : '<span class="ni">◇</span><span>이 칸에는 자재가 없습니다</span>';
     el('lnote').innerHTML = '이 목록은 <b>손대야 하는 ' + UI.num(c.all) + '품목</b>입니다. ' +
-      '판정일치 ' + UI.num(c.same) + '품목과 배제 ' + UI.num(c.out) + '품목은 올리지 않습니다. ' +
+      '정본 743품목에서 <span class="excl">제외대상 ' + UI.num(c.excluded) + '품목</span>' +
+      '(사전 배제 ' + UI.num(c.out) + ' · 판정일치 ' + UI.num(c.same) + ')은 올리지 않습니다. ' +
       '점수차가 작은 것이 알고리즘이 가장 헷갈린 자재입니다.';
   }
 
@@ -404,8 +426,9 @@
     var i = 0;
     (function tick() {
       if (i >= STEPS.length) {
-        S.setStage('algo'); stage = 'algo'; tab = 'gray'; page = 0; picked = null; running = false;
-        location.hash = 'gray';
+        S.setStage('algo'); S.setStamp(S.nowStamp());
+        stage = 'algo'; tab = 'all'; page = 0; picked = null; running = false;
+        location.hash = 'all';        // 실행 직후에는 「전체」 가 눌린 화면을 본다
         paintAll();
         return;
       }

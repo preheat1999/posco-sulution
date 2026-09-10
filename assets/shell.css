@@ -1447,6 +1447,22 @@ td.num, th.num { text-align: right; }
 .prstep.doing .sv { color: var(--brand); }
 .prstep.done .sv { color: var(--ok); }
 
+/* 판단 시각 줄 · 제목 바로 밑. 기준일(스냅샷)과 실행 시각은 다른 값이다 */
+.stampbar {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 12px; padding: 9px 14px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+}
+.stampbar .st-k { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.stampbar .st-v {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  font-variant-numeric: tabular-nums; letter-spacing: -.2px; white-space: nowrap;
+}
+.stampbar .st-x { font-size: 11px; color: var(--muted); }
+
+/* 판정에서 빠진 것 · 붉게 적어 743 과의 차이를 눈에 남긴다 */
+.excl { color: var(--insur); font-weight: 600; }
+
 /* 속성값 판단 · 단계 줄. 원본 → 실행 → 확정 → 적정재고. 네 칸이 한 줄에 */
 .stageline {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 18px;
