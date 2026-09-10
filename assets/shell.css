@@ -809,51 +809,137 @@ td.num, th.num { text-align: right; }
   .chatbtn { padding: 0; width: 52px; justify-content: center; }
   .chatbtn .cbt { display: none; }
 }
-/* 튜토리얼 · 화면을 어둡게 덮고 설명할 곳만 밝게 남긴다.
+/* 튜토리얼 · 세 단계 퀘스트 · 화면을 어둡게 덮고 설명할 곳만 밝게 남긴다.
  *
  * 구멍은 요소 하나 크기의 투명한 상자다 · 바깥 어둠은 그 상자의 아주 넓은 그림자다
  * (판을 네 조각으로 자르지 않아도 되고, 구멍 모서리를 둥글게 둘 수 있다).
- * 어두운 곳은 클릭을 먹는다 · 튜토리얼 중에 화면이 움직이면 구멍이 딴 데를 가리킨다 */
+ *
+ * **구멍과 카드는 걸음마다 새로 만들지 않는다** · style 만 바꾸므로 transition 이 걸려
+ * 이전 자리에서 다음 자리로 미끄러진다. 그 움직임이 「지금 여기를 보라」 를 말해 준다.
+ */
 .tour-layer { position: fixed; inset: 0; z-index: 85; }
-.tour-layer.full { background: rgba(4, 6, 12, .8); }
+.tour-layer.full { background: rgba(4, 6, 12, .88); }
 .tspot {
-  position: absolute; border-radius: 14px; pointer-events: none;
-  box-shadow: 0 0 0 2px var(--b3), 0 0 0 9999px rgba(4, 6, 12, .8);
-  transition: left .18s ease, top .18s ease, width .18s ease, height .18s ease;
+  position: absolute; border-radius: 16px; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--b3), 0 0 0 9999px rgba(4, 6, 12, .82);
+  /* 넉넉하게 · 눈이 따라갈 수 있어야 한다 (0.18초는 「깜빡」 이고 0.45초는 「이동」 이다) */
+  transition: left .45s cubic-bezier(.22, .61, .36, 1),
+              top .45s cubic-bezier(.22, .61, .36, 1),
+              width .45s cubic-bezier(.22, .61, .36, 1),
+              height .45s cubic-bezier(.22, .61, .36, 1),
+              opacity .3s ease;
 }
-.tcard {
-  position: absolute; width: min(340px, calc(100vw - 24px));
-  background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 16px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, .7); padding: 16px 18px;
-}
-/* 구멍이 없는 걸음(첫 인사)은 가운데에 둔다 */
-.tour-layer.full .tcard { left: 50%; top: 50%; transform: translate(-50%, -50%); }
-.tcard-h { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.tcard .tnum {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 10.5px; color: var(--muted);
-}
-.tcard .tdots { display: flex; gap: 4px; margin-right: auto; }
-.tcard .tdots i {
-  width: 5px; height: 5px; border-radius: 999px; background: var(--line-2); display: block;
-}
-.tcard .tdots i.done { background: var(--muted); }
-.tcard .tdots i.on { background: var(--b3); width: 14px; }
-.tcard h3 { font-size: 15px; font-weight: 700; letter-spacing: -.3px; }
-.tcard p { font-size: 12.5px; line-height: 1.7; color: var(--text-2); margin-top: 6px; }
+.tour-layer.full .tspot { opacity: 0; }
 
-/* 여섯 화면 중 어디인지. 눌러서 그 화면으로 건너뛴다 */
-.tsteps { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 0; }
-.tchip {
-  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line);
-  background: transparent; color: var(--muted); font-size: 10px; line-height: 1.4;
-  white-space: nowrap; cursor: pointer;
+.tcard {
+  position: absolute; width: min(460px, calc(100vw - 28px));
+  background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 18px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, .74); padding: 18px 20px;
+  transition: left .45s cubic-bezier(.22, .61, .36, 1), top .45s cubic-bezier(.22, .61, .36, 1);
 }
-.tchip:hover { border-color: var(--line-2); color: var(--text-2); }
-.tchip.done { color: var(--text-2); border-color: var(--line-2); }
-.tchip.done::before { content: '✓ '; color: var(--ok); }
-.tchip.on { background: var(--brand-weak); border-color: transparent; color: var(--b1); font-weight: 600; }
-.tacts { display: flex; gap: 6px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+/* 구멍이 없는 걸음(문제 제기 · 성과 · 달성)은 가운데에 큰 카드로 둔다 ·
+ * 사람들이 못 보고 지나치면 안 되는 말이라 크게 세운다 */
+.tour-layer.full .tcard {
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(660px, calc(100vw - 36px)); padding: 26px 30px;
+}
+.tour-layer.full .tcard h3 { font-size: 20px; letter-spacing: -.6px; }
+.tour-layer.full .tcard p { font-size: 13.5px; }
+
+/* 카드 속이 바뀔 때 한 번 살짝 올라온다 */
+.tcard.swap { animation: tswap .34s cubic-bezier(.22, .61, .36, 1); }
+@keyframes tswap { from { opacity: .35; transform: translateY(7px); } }
+.tour-layer.full .tcard.swap { animation: tswapc .34s cubic-bezier(.22, .61, .36, 1); }
+@keyframes tswapc {
+  from { opacity: .35; transform: translate(-50%, -50%) scale(.975); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.tcard-h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.tcard h3 { font-size: 16px; font-weight: 700; letter-spacing: -.4px; }
+.tcard p { font-size: 12.8px; line-height: 1.75; color: var(--text-2); margin-top: 7px; }
+.tcard p b { color: var(--text); font-weight: 700; }
+.tcard .thint {
+  font-size: 11.5px; color: var(--muted); margin-top: 12px;
+  padding-top: 10px; border-top: 1px solid var(--line);
+}
+
+/* 단계 띠 · 지금 몇 단계인지 · 무엇을 끝냈는지 */
+.tst { display: flex; gap: 5px; flex-wrap: wrap; margin-right: auto; }
+.tsi {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line);
+  font-size: 9.5px; color: var(--muted); white-space: nowrap;
+}
+.tsi b { font-size: 10px; font-weight: 600; }
+.tsi.done { color: var(--text-2); border-color: var(--line-2); }
+.tsi.done::before { content: '✓'; color: var(--ok); margin-right: 1px; }
+.tsi.on { background: var(--brand-weak); border-color: transparent; color: var(--b1); }
+.tsi.on b { color: var(--b1); }
+
+.tdots { display: flex; gap: 4px; flex: none; }
+.tdots i { width: 5px; height: 5px; border-radius: 999px; background: var(--line-2); display: block; }
+.tdots i.done { background: var(--muted); }
+.tdots i.on { background: var(--b3); width: 15px; }
+
+.tacts { display: flex; gap: 7px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+
+/* 진행 중 · 튜토리얼이 화면에서 무언가를 실행하는 동안 */
+.twait { display: flex; align-items: center; gap: 9px; color: var(--text-2); }
+.twait i {
+  width: 13px; height: 13px; border-radius: 999px; flex: none;
+  border: 2px solid var(--line-2); border-top-color: var(--b3);
+  animation: tspin .7s linear infinite;
+}
+@keyframes tspin { to { transform: rotate(360deg); } }
+
+/* 성과 · 숫자가 차례로 올라온다 · 이 걸음의 주인공이라 크게 */
+.tfig { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.tfig-row {
+  border: 1px solid var(--line); border-radius: 14px; padding: 13px 16px;
+  background: var(--surface); opacity: 0;
+  animation: tfig .62s cubic-bezier(.22, .61, .36, 1) forwards;
+}
+@keyframes tfig { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.tfig-k { display: block; font-size: 11px; color: var(--muted); }
+.tfig-v {
+  display: block; font-size: 34px; font-weight: 700; letter-spacing: -1.4px;
+  line-height: 1.15; color: var(--ok); font-variant-numeric: tabular-nums; margin: 2px 0 3px;
+}
+.tfig-x { display: block; font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+/* 퀘스트 달성 · 소리는 쓰지 않는다 (시연장에서 소리는 사고다) · 조각과 배지로만 */
+.tquest {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 4px;
+  padding: 5px 12px 5px 9px; border-radius: 999px;
+  background: var(--ok-weak); color: var(--ok);
+  font-size: 12px; font-weight: 700; letter-spacing: .04em;
+  animation: tpop .5s cubic-bezier(.2, 1.5, .4, 1) both;
+}
+.tquest span { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+@keyframes tpop { from { opacity: 0; transform: scale(.8); } }
+
+.tconf { position: fixed; inset: 0; z-index: 90; pointer-events: none; overflow: hidden; }
+.tconf i {
+  position: absolute; top: -14px; width: 6px; height: 10px; border-radius: 1px;
+  animation-name: tfall; animation-timing-function: linear; animation-fill-mode: forwards;
+}
+@keyframes tfall {
+  0% { opacity: 0; }
+  10% { opacity: .95; }
+  100% { transform: translateY(106vh) rotate(680deg); opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .tour-layer.full .tcard { padding: 20px 18px; }
+  .tour-layer.full .tcard h3 { font-size: 17px; }
+  .tfig-v { font-size: 27px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tspot, .tcard { transition: none; }
+  .tcard.swap, .tfig-row, .tquest { animation: none; opacity: 1; }
+  .tconf { display: none; }
+}
 
 /* ---------------------------------------------------------------- 20. 로그인 (셸을 쓰지 않는다) */
 .login-wrap { max-width: 470px; margin: 0 auto; padding: 46px 18px 40px; }

@@ -138,7 +138,7 @@
   function paintAttrCard() {
     var d = A.donut(), s = A.summary();
     document.getElementById('d-attr').innerHTML =
-      dhead('<span class="ai">✦</span> AI 속성 분류', '', 'attr-why', 'attr.html') +
+      dhead('<span class="ai">✦</span> AI 보유목적 분류', '', 'attr-why', 'attr.html') +
       '<div class="donutbox">' + donutSvg(d, true) + '</div>' +
       '<div class="tiles ctr">' +
         tile('plan', UI.num(d.change), '', '변경 제안') +
@@ -305,7 +305,7 @@
   function attrWhy(btn) {
     var d = A.donut(), s = A.summary();
     POP.show(btn, {
-      title: 'AI 속성 분류 · ' + UI.num(d.total) + '품목 6갈래',
+      title: 'AI 보유목적 분류 · ' + UI.num(d.total) + '품목 6갈래',
       rows: d.segs.map(function (x) { return [x.label, UI.num(x.n) + '품목']; }),
       note: s.waitingN
         ? '담당자가 판단한 ' + UI.num(s.waitingN) + '품목이 확정 대기입니다. 보유목적 판단에서 ' +
