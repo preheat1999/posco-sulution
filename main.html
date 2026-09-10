@@ -30,34 +30,72 @@
 
     <div class="infobar" id="info">
       <div class="infobar-body">
-        재고를 얼마나 둘지 정한 기록이 사내 원장에 0건이었습니다. 보험품이라고 확정된 자재도 0종입니다.
-        그래서 이 시스템은 정답을 맞히는 대신 <b>규칙으로 제안하고 담당자 승인을 첫 라벨로 쌓는</b> 방식을 씁니다.
+        재고를 얼마나 둘지 정한 기록이 사내 원장에 0건이었고, 보험품이라고 확정된 자재도 0종이었습니다.
+        정답이 없으니 정확도를 말할 수 없습니다. 그래서 이 시스템은 <b>규칙으로 제안하고
+        담당자 승인을 첫 라벨로 쌓는</b> 방식을 씁니다.
         이 화면은 그 결과를 「지금 · 이번 주 · 기회 · 검토」 네 줄로 내려 줍니다.
+        숫자에 붙은 <b>?</b> 를 누르면 그 값이 어떻게 나왔는지 그대로 보여 줍니다.
       </div>
       <button class="pill infobar-toggle" type="button" id="info-t">자세히</button>
     </div>
 
-    <div class="kpiwrap" id="kpi"></div>
+    <div class="kpiwrap viz" id="kpi"></div>
 
-    <section class="card">
-      <header>
-        <div>
-          <h2>다음에 붙일 영역</h2>
-          <p class="sub">셸이 도는지 확인하는 단계입니다</p>
-        </div>
-      </header>
-      <div class="note" id="next-note">
-        오늘 할 일 · 정비 예정 발주 마감일 · 구매신청과 반납 진행 현황 · 설비별 자재 현황을
-        이 아래에 차례로 붙입니다. 지금은 상단 KPI 가 실제 DB 743건에서 나오는지만 확인합니다.
-      </div>
-    </section>
+    <div class="grid2">
+      <section class="card">
+        <header>
+          <div>
+            <h2>오늘 할 일</h2>
+            <p class="sub">긴급도 순으로 정리했습니다</p>
+          </div>
+          <div class="card-tools"><span class="badge" id="todo-sum">&nbsp;</span></div>
+        </header>
+        <div class="todo" id="todo"></div>
+      </section>
+
+      <section class="card">
+        <header>
+          <div>
+            <h2>정비 예정 · 발주 마감일</h2>
+            <p class="sub" id="due-sub">&nbsp;</p>
+          </div>
+          <div class="card-tools"><a class="btn line sm" href="plan.html">정비계획 열기</a></div>
+        </header>
+        <div class="due" id="due"></div>
+        <p class="note" id="due-note">&nbsp;</p>
+      </section>
+    </div>
+
+    <div class="grid2">
+      <section class="card">
+        <header>
+          <div>
+            <h2>구매신청 · 자재반납 진행 현황</h2>
+            <p class="sub">단계마다 몇 건이 걸려 있는지 보여 줍니다</p>
+          </div>
+        </header>
+        <div id="pipe"></div>
+      </section>
+
+      <section class="card">
+        <header>
+          <div>
+            <h2>설비별 자재 현황</h2>
+            <p class="sub">보유 수량을 누르면 창고와 타부서 보유를 확인합니다</p>
+          </div>
+          <div class="card-tools"><a class="btn line sm" href="stock.html">적정재고 열기</a></div>
+        </header>
+        <div class="tablewrap" id="eq"></div>
+      </section>
+    </div>
   </main>
 </div>
 
 <div class="overlay" id="overlay"></div>
 
-<!-- 스크립트 순서를 지킨다. 어댑터가 db.js 보다 먼저 돌면
-     빈 배열이 되고 오류도 안 난다. 화면은 조용히 「대장 없음」 을 띄운다 -->
+<!-- 스크립트 순서를 지킨다.
+     어댑터(analysis-data.js)가 db.js 보다 먼저 돌면 빈 배열이 되고 오류도 안 난다.
+     화면은 조용히 「대장 없음」 을 정상처럼 띄운다 -->
 <script src="assets/config.js"></script>
 <script src="assets/ui.js"></script>
 <script src="assets/org.js"></script>
@@ -68,109 +106,321 @@
 <script src="assets/db.js"></script>
 <script src="assets/db-biz.js"></script>
 <script src="assets/plan-data.js"></script>
+<script src="assets/analysis-data.js"></script>
 <script src="assets/nav.js"></script>
 <script>
 (function () {
   'use strict';
 
-  /* DB 가 없어도 화면이 뜨게 한다.
-     시연 중 스크립트 하나가 안 떠도 빈 화면이 남지 않아야 한다.
-     FALLBACK 의 코드는 전부 정본 743 안에 있는 실제 코드다.
-     없는 코드를 쓰면 눌렀을 때 빈 화면이 뜨고 불변식 1 이 잡는다 */
-  var FALLBACK = {
-    asof: null,
-    counts: { equipment: 14, materials: 743 },
-    nowAmt: 4974493448,
-    bucket: { '보험품→계획품': 149, '계획품→보험품': 90, '현행유지': 31 },
-    action: { '발주': 120, '감축': 481, '유지': 142 },
-    signal: { red: 67 },
-    cutAmt: 2970514193,
-    live: false
-  };
+  var A = window.ANALYSIS;
 
-  function read() {
-    if (!window.DB) { return FALLBACK; }
-    var s = DB.summary();
-    var m = DB.meta();
-    return {
-      asof: m.asof,
-      counts: m.counts,
-      nowAmt: s.nowAmt,
-      bucket: s.bucket,
-      action: s.action,
-      signal: s.signal,
-      cutAmt: s.cutAmt,
-      live: true
-    };
+  // ------------------------------------------------------------ 도넛
+  /* 차트 라이브러리를 쓰지 않는다. 원 하나에 stroke-dasharray 로 조각을 낸다.
+     사내망에서 외부 주소가 막히면 화면이 통째로 깨진다 */
+  function donutSvg(d) {
+    var R = 40, C = 2 * Math.PI * R, off = 0, segs = '';
+    d.segs.forEach(function (s) {
+      if (!s.n) { return; }
+      var len = C * s.pct / 100;
+      segs += '<circle cx="52" cy="52" r="' + R + '" fill="none" stroke="' + s.color +
+        '" stroke-width="14" stroke-dasharray="' + len.toFixed(2) + ' ' +
+        (C - len).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) +
+        '" transform="rotate(-90 52 52)"></circle>';
+      off += len;
+    });
+    return '<svg class="donut" viewBox="0 0 104 104" role="img" ' +
+      'aria-label="재판정 결과 ' + d.total + '품목의 비율">' +
+      '<circle cx="52" cy="52" r="40" fill="none" stroke="var(--line)" stroke-width="14"></circle>' +
+      segs +
+      '<text class="donut-v" x="52" y="51" text-anchor="middle">' + UI.num(d.total) + '</text>' +
+      '<text class="donut-k" x="52" y="64" text-anchor="middle">품목 재판정</text>' +
+      '</svg>';
   }
 
-  /* 라벨을 한 줄로 붙이면 좁은 칸에서 뜻이 잘린다.
-     와이어프레임의 KPI 는 숫자 · 라벨 · 딸린 값 세 줄이다 */
-  function kpi(cls, value, unit, label, extra) {
+  function donutLegend(d) {
+    return '<div class="legend">' + d.segs.map(function (s) {
+      return '<div class="legend-row' + (s.act ? '' : ' dim') + '">' +
+        '<span class="legend-dot" style="background:' + s.color + '"></span>' +
+        '<span class="legend-k">' + UI.esc(s.label) + '</span>' +
+        '<span class="legend-v">' + UI.num(s.n) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function kpiCell(cls, value, unit, label, extra) {
     return '<div class="kpi ' + cls + '">' +
       '<div class="v">' + value + (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
       '<div class="k">' + label + '</div>' +
-      (extra ? '<div class="k2">' + extra + '</div>' : '') +
-      '</div>';
+      (extra ? '<div class="k2">' + extra + '</div>' : '') + '</div>';
   }
 
-  function paint() {
-    var d = read();
+  function paintKpi() {
+    var m = A.meta(), d = A.donut(), w = A.money(), s = A.summary();
+    var keepPct = w.nowAmt ? (w.keepAmt / w.nowAmt * 100) : 0;
 
     document.getElementById('asof').textContent =
-      d.asof ? ('기준일 ' + UI.date(d.asof)) : '기준일 확인 중';
+      m.asof ? ('기준일 ' + UI.date(m.asof)) : '기준일 확인 중';
 
-    /* 요약 숫자를 화면에 적어 두지 않는다. 매번 DB 에서 다시 센다.
-       적어 두면 승인해도 이 칸만 옛 값으로 남는다 */
     document.getElementById('kpi').innerHTML =
+      /* 담당 현황 */
       '<div class="kpigroup">' +
         '<p class="gt"><span>담당 현황</span></p>' +
         '<div class="row">' +
-          kpi('', UI.num(d.counts.equipment), '기', '담당 설비') +
-          kpi('', UI.num(d.counts.materials), '품목', '담당 자재') +
-          kpi('', UI.wonShort(d.nowAmt), UI.wonShortUnit(d.nowAmt), '보유 재고') +
+          kpiCell('', UI.num(m.counts.equipment), '기', '담당 설비') +
+          kpiCell('', UI.num(m.counts.materials), '품목', '담당 자재') +
+        '</div>' +
+        '<div class="row" style="margin-top:12px">' +
+          kpiCell('', UI.wonShort(w.nowAmt), UI.wonShortUnit(w.nowAmt), '보유 재고',
+                  '목표 ' + UI.won(w.tgtAmt)) +
         '</div>' +
       '</div>' +
 
+      /* AI 속성 분류 · 도넛 */
       '<a class="kpigroup" href="attr.html">' +
         '<p class="gt"><span><span class="ai">✦</span> AI 속성 분류</span>' +
         '<span class="gt-link">바로가기</span></p>' +
-        '<div class="row">' +
-          kpi('plan', UI.num(d.bucket['보험품→계획품']), '품목', '보험품 →', '계획품') +
-          kpi('insur', UI.num(d.bucket['계획품→보험품']), '품목', '계획품 →', '보험품') +
-          kpi('', UI.num(d.bucket['현행유지']), '품목', '현행유지', '사람 판단') +
-        '</div>' +
+        '<div class="kpi-viz">' + donutSvg(d) + donutLegend(d) + '</div>' +
+        '<p class="note" style="margin-top:9px">' +
+          '<b>' + UI.num(d.change) + '품목</b>은 속성을 바꾸는 것을 제안하고, ' +
+          '<b>' + UI.num(d.hold) + '품목</b>은 판단을 보류했습니다' +
+          (d.done ? ' · 담당자가 <b>' + UI.num(d.done) + '품목</b>을 확정했습니다' : '') +
+        '</p>' +
       '</a>' +
 
+      /* AI 적정재고 · 감축 체감 */
       '<a class="kpigroup" href="stock.html">' +
         '<p class="gt"><span><span class="ai">✦</span> AI 적정재고 분석</span>' +
         '<span class="gt-link">바로가기</span></p>' +
         '<div class="row">' +
-          kpi('core', UI.num(d.action['발주']), '품목', '발주 필요',
-              '즉시 ' + UI.num(d.signal.red) + '건') +
-          kpi('ok', UI.num(d.action['감축']), '품목', '감축 대상', UI.won(d.cutAmt)) +
+          kpiCell('core', UI.num(w.orderItems), '품목', '발주 필요',
+                  '즉시 ' + UI.num(s.signal.red || 0) + '건') +
+          kpiCell('ok', UI.wonShort(w.cutAmt), UI.wonShortUnit(w.cutAmt), '감축 가능',
+                  UI.num(w.cutItems) + '품목') +
         '</div>' +
+        '<div class="cut-bar" role="img" aria-label="보유 재고 중 목표를 넘는 몫 ' +
+          UI.pct(w.cutAmt, w.nowAmt) + '">' +
+          '<div class="cut-seg keep" style="width:' + keepPct.toFixed(1) + '%"></div>' +
+          '<div class="cut-seg over" style="width:' + w.cutPct.toFixed(1) + '%"></div>' +
+        '</div>' +
+        '<div class="cut-legend">' +
+          '<span><i class="keep"></i>적정 <b>' + UI.won(w.keepAmt) + '</b></span>' +
+          '<span><i class="over"></i>목표 초과 <b>' + UI.won(w.cutAmt) + ' · ' +
+            UI.pct(w.cutAmt, w.nowAmt) + '</b></span>' +
+        '</div>' +
+        finPill(w) +
       '</a>';
-
-    if (!d.live) {
-      document.getElementById('next-note').innerHTML =
-        '<b>DB 스크립트가 뜨지 않아 예비 값으로 그렸습니다.</b> ' +
-        'assets/db-master.js 부터 db.js 까지 로드 순서를 확인하세요.';
-    }
   }
 
-  /* 설명 배너는 첫 줄만 보인다. 왜 이 화면이 필요한지는 처음 한 번만 궁금하다.
-     매 화면에서 세로 60px 을 돌려받는다 */
+  /* 「그래서 돈이 얼마 남는가」.
+     감축액만 보여 주면 큰 숫자로 지나간다. 해마다 남는 돈으로 환산해야 체감된다.
+     산식과 상수는 명세에서 읽은 값이다. 화면이 만들지 않는다 */
+  function finPill(w) {
+    if (w.finance === null) {
+      return '<div class="fin-pill">금융비용 절감 산식을 명세에서 읽지 못했습니다 · ' +
+             'db-derived.js 의 meta.spec.finance 를 확인하세요</div>';
+    }
+    return '<div class="fin-pill">' +
+      '<b>연 ' + UI.won(w.finance) + '</b>' +
+      '<span>금융비용이 남습니다 · 감축 ' + UI.won(w.cutAmt) + ' + 공용화 회수 ' +
+      UI.won(w.poolAmt) + ' 기준 (부서 모집단)</span></div>';
+  }
+
+  // ------------------------------------------------------------ 오늘 할 일
+  function paintTodo() {
+    var rows = A.todo();
+    var total = rows.reduce(function (a, r) { return a + r.n; }, 0);
+    document.getElementById('todo-sum').textContent = '처리 대기 ' + UI.num(total) + '품목';
+
+    document.getElementById('todo').innerHTML = rows.map(function (r, i) {
+      return '<div class="todo-row ' + r.tone + '">' +
+        '<span class="tag ' + r.tone + '">' + UI.esc(r.tag) + '</span>' +
+        '<div class="todo-body">' +
+          '<span class="todo-num">' + UI.num(r.n) + r.unit + '</span> ' + UI.esc(r.text) +
+          ' <button class="askbtn" type="button" data-why="' + i + '" ' +
+          'aria-label="근거 보기">?</button>' +
+          '<div class="todo-why">' + UI.esc(r.why) + '</div>' +
+          '<div class="todo-act">' + r.acts.map(function (a) {
+            return '<a class="btn soft sm" href="' + a[1] + '">' + UI.esc(a[0]) + '</a>';
+          }).join('') + '</div>' +
+        '</div></div>';
+    }).join('');
+
+    /* 근거를 숨기지 않는다. 어떤 값을 어떻게 세었는지 그대로 보여 준다 */
+    document.getElementById('todo').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('.askbtn');
+      if (!b) { return; }
+      var r = rows[Number(b.getAttribute('data-why'))];
+      var s = A.summary();
+      POP.show(b, {
+        title: r.tag + ' · ' + UI.num(r.n) + r.unit,
+        rows: [
+          ['세는 기준', r.tag === '지금' ? '발주 신호 red (즉시발주)'
+            : r.tag === '이번 주' ? '발주 신호 yellow (발주임박)'
+            : r.tag === '기회' ? '조치 감축 (재고 > 목표재고)'
+            : '판정 회색지대 (점수 차이가 작아 보류)'],
+          ['모집단', UI.num(s.items) + '품목'],
+          ['다시 센 값', UI.num(r.n) + r.unit]
+        ],
+        note: r.why
+      });
+    });
+  }
+
+  // ------------------------------------------------------------ 발주 마감일
+  function paintDue() {
+    var d = A.dueList(5);
+    document.getElementById('due-sub').textContent =
+      '정비 일정에 묶인 ' + UI.num(d.total) + '건 중 급한 순으로 5건';
+
+    document.getElementById('due').innerHTML = d.rows.length ? d.rows.map(function (r) {
+      /* 얼굴은 남은 일수로 정한다. 신호(red/gray)는 재고 기준이라 배지로 따로 낸다.
+         둘을 한 아이콘에 섞으면 무엇을 보고 급한지 알 수 없다 */
+      var tone = UI.tone(r.dDays);
+      return '<div class="due-row tone-' + tone + '">' +
+        UI.face(tone) +
+        '<div class="due-body">' +
+          '<div class="due-name">' + UI.esc(r.name || '품명 미확인') + '</div>' +
+          '<div class="due-meta">' + UI.esc(r.q) + ' · ' +
+            UI.esc(r.sigEq || '설비 미확인') + ' · ' + UI.esc(r.sigKind || '휴지구분 미확인') +
+            ' · ' + UI.esc(r.grade || '?') + '등급</div>' +
+        '</div>' +
+        '<div class="due-right">' +
+          '<div class="due-d">' + UI.esc(UI.dleft(r.dDays)) + '</div>' +
+          '<div class="due-date">마감 ' + UI.esc(UI.date(r.dueDate)) + '</div>' +
+          '<div style="margin-top:3px">' + UI.signalBadge(r.signal, r.status) + '</div>' +
+        '</div></div>';
+    }).join('') :
+      '<div class="empty"><strong>정비 일정에 묶인 자재가 없습니다</strong>' +
+      '정비계획 화면에서 휴지 일정을 확인하세요</div>';
+
+    /* 「전부 마감 초과」 가 데이터의 사실이다. 숨기지 않고 뜻을 붙여 적는다 */
+    document.getElementById('due-note').innerHTML =
+      UI.num(d.total) + '건이 모두 발주 마감일을 넘겼습니다. 그중 <b>' + UI.num(d.now) +
+      '건</b>은 재고가 예상 소요보다 적어 지금 신청해야 하고, 나머지는 재고로 충당됩니다. ' +
+      '마감을 넘겼다는 것과 지금 신청해야 한다는 것은 다릅니다.';
+  }
+
+  // ------------------------------------------------------------ 진행 파이프라인
+  function paintPipe() {
+    document.getElementById('pipe').innerHTML = A.pipelines().map(function (p) {
+      /* 병목은 「지금 걸려 있는 단계」 중에서 고른다.
+         끝난 단계(done)나 연동 예정(wait)에 병목 표시가 붙으면 뜻이 없다.
+         처음에 전체에서 최댓값을 골랐더니 「대상 확인 6건 완료」 가 병목으로 표시됐다 */
+      var work = p.steps.filter(function (s) { return s.state === 'doing' && s.n > 0; });
+      var jam = work.reduce(function (a, b) { return b.n > a.n ? b : a; }, work[0] || null);
+
+      return '<div class="pipe-set">' +
+        '<div class="pipe-head">' +
+          '<span>' + p.ico + ' ' + UI.esc(p.title) + '</span>' +
+          '<span class="sub">전체 ' + UI.num(p.total) + p.unit + '</span>' +
+          '<a class="btn line sm" href="' + p.href + '" style="margin-left:auto">열기</a>' +
+        '</div>' +
+        '<div class="pipe-row">' + p.steps.map(function (s) {
+          var cls = s.state === 'wait' ? 'wait' : (s.state === 'done' ? 'done' : 'doing');
+          var mark = s.state === 'done' ? '✓' : (s.state === 'wait' ? '·' : '●');
+          return '<div class="pipe-step' + (jam && s === jam ? ' jam' : '') + '">' +
+            '<span class="dot ' + cls + '">' + mark + '</span>' +
+            '<span class="pipe-n">' + UI.num(s.n) + p.unit + '</span>' +
+            '<span class="pipe-name">' + UI.esc(s.name) + '</span>' +
+            '</div>';
+        }).join('') + '</div>' +
+        '<p class="pipe-note">' + UI.esc(p.note) + '</p>' +
+        '</div>';
+    }).join('');
+  }
+
+  // ------------------------------------------------------------ 설비별 자재
+  function paintEq() {
+    var n = A.needRows(5);
+    if (!n.rows.length) {
+      document.getElementById('eq').innerHTML =
+        '<div class="empty"><strong>발주가 필요한 자재가 없습니다</strong>' +
+        '적정재고 분석에서 감축 대상을 확인하세요</div>';
+      return;
+    }
+
+    /* 표를 카드로 바꿀 수 있게 모든 td 에 data-label 을 넣는다.
+       하나라도 빠지면 좁은 화면에서 그 값이 무엇인지 알 수 없다 */
+    document.getElementById('eq').innerHTML =
+      '<table><thead><tr>' +
+        '<th>설비 · 자재</th><th>속성</th>' +
+        '<th class="num">보유 → 목표</th><th>조치</th>' +
+      '</tr></thead><tbody>' +
+      n.rows.map(function (r) {
+        var move = A.transferable(r);
+        return '<tr>' +
+          '<td data-label="설비 · 자재"><div class="cell-2">' +
+            '<div class="cell-1st">' + UI.esc(r.eq || '설비 연결 미확인') + '</div>' +
+            '<div class="cell-2nd">' + UI.esc(r.name || '품명 미확인') + ' · ' +
+              UI.esc(r.q) + (r.csp ? ' · 핵심예비품' : '') + '</div>' +
+          '</div></td>' +
+          '<td data-label="속성">' + UI.typeBadge(r.type) + ' ' + UI.gradeBadge(r.grade) + '</td>' +
+          /* 카드 모드에서 td 는 flex 라 자식이 각각 좌우로 벌어진다.
+             그냥 두면 「1 ... → ... 2」 로 떨어져 보인다. 한 덩어리로 묶는다 */
+          '<td class="num" data-label="보유 → 목표"><span>' +
+            '<button class="linkq" type="button" data-q="' + UI.esc(r.q) + '">' +
+              UI.num(r.stock) + '</button>' +
+            '<span class="arrow">→</span>' + UI.num(r.target) + '</span></td>' +
+          '<td data-label="조치"><span class="badge core">발주 ' + UI.num(r.needNow) + '</span>' +
+            (move > 0 ? ' <span class="badge ok">이관 ' + UI.num(move) + ' 가능</span>' : '') +
+          '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<p class="note" style="margin-top:10px">발주 필요 ' + UI.num(n.total) +
+      '품목 중 설비가 연결된 ' + UI.num(n.linked) + '품목을 먼저, 그다음 금액이 큰 순입니다. ' +
+      '나머지 <b>' + UI.num(n.unlinked) + '품목은 설비 연결이 원천에 없습니다</b> · ' +
+      '작업주문과 자재계획의 교집합이 비어 있는 문제로, 데이터 근거 화면에 그대로 적어 뒀습니다. ' +
+      '이관이 가능하면 사는 것보다 쌉니다.</p>';
+
+    /* 보유 수량을 누르면 창고와 타부서 보유를 보여 준다.
+       창고 위치(BIN)는 원천에 없다. 「미확인」 이라고 적고 지어내지 않는다 */
+    document.getElementById('eq').addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('.linkq');
+      if (!b) { return; }
+      var r = window.DB ? DB.item(b.getAttribute('data-q')) : null;
+      if (!r) { return; }
+      POP.show(b, {
+        title: r.name + ' · ' + r.q,
+        rows: [
+          ['창고', r.wh || '미확인'],
+          ['창고 위치(BIN)', '미확인 · 원천에 없습니다'],
+          ['부서 보유', UI.num(r.stock)],
+          ['전사 보유', UI.num(r.stockAll)],
+          ['타부서 보유', UI.num(A.transferable(r)) + ' · 이관 후보'],
+          ['목표재고', UI.num(r.target)],
+          ['조치', r.actionNow]
+        ],
+        formula: r.reason || '',
+        note: '조달 ' + (r.proc || '미확인') + ' · 리드타임 평균 ' +
+              UI.num(r.ltMean) + '일 · 공급사 ' + UI.num(r.suppliers) + '곳'
+      });
+    });
+  }
+
+  // ------------------------------------------------------------ 배너 · 구독
   var info = document.getElementById('info');
   document.getElementById('info-t').addEventListener('click', function () {
     var on = info.classList.toggle('open');
     this.textContent = on ? '접기' : '자세히';
   });
 
-  paint();
+  function paintAll() {
+    paintKpi();
+    paintDue();
+    paintPipe();
+    paintEq();
+  }
 
-  /* 승인 · 반납이 일어나면 이 화면 숫자도 같이 움직여야 한다 */
-  if (window.DB) { DB.on(paint); }
+  paintTodo();   // 이벤트를 한 번만 붙인다
+  paintAll();
+
+  /* 승인 · 반납이 일어나면 이 화면 숫자도 같이 움직여야 한다.
+     화면에 숫자를 적어 두지 않았으므로 다시 그리면 끝이다 */
+  A.on(function () { paintTodo(); paintAll(); });
+
+  if (!A.live) {
+    document.getElementById('due-note').innerHTML =
+      '<b>DB 스크립트가 뜨지 않아 예비 값으로 그렸습니다.</b> ' +
+      'assets/db-master.js 부터 db.js 까지 로드 순서를 확인하세요.';
+  }
 })();
 </script>
 <script src="assets/tour.js"></script>

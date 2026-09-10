@@ -283,10 +283,42 @@
       out.tgtAmt = Math.round(tgtAmt);
       out.cutAmt = Math.round(cutAmt);
       out.zeroTarget = rows.filter(function (r2) { return (Number(r2.target) || 0) === 0; }).length;
-      out.poolItems = rows.filter(function (r2) { return !!r2.poolGrade; }).length;
-      out.poolAmt = Math.round(rows.reduce(function (s, r2) {
-        return s + (Number(r2.staleValue) || 0);
-      }, 0));
+
+      /* 정체 금액을 두 값으로 나눈다.
+       * 명세의 공용화 규칙 · strong 즉시공용화 · medium 공용화권장 · review 보류.
+       * review 는 핵심이고 보험품이라 공용화 대상이 아니다.
+       * 전부 더하면 회수액이 11.45억원이 되어 금융비용 절감이 부풀려진다.
+       * strong + medium 만 세면 요약의 9.47억원과 정확히 맞는다 */
+      var poolAll = 0, poolGet = 0, poolN = 0, poolGetN = 0;
+      for (i = 0; i < rows.length; i++) {
+        r = rows[i];
+        if (!r.poolGrade) { continue; }
+        var sv = Number(r.staleValue) || 0;
+        poolAll += sv; poolN += 1;
+        if (r.poolGrade === 'strong' || r.poolGrade === 'medium') {
+          poolGet += sv; poolGetN += 1;
+        }
+      }
+      out.poolItems = poolN;               // 정체 종수
+      out.poolAmt = Math.round(poolGet);   // 공용화로 회수 가능한 금액
+      out.poolAmtAll = Math.round(poolAll);
+      out.poolRecoverItems = poolGetN;
+      out.poolHoldItems = poolN - poolGetN;
+      out.poolHoldAmt = Math.round(poolAll - poolGet);
+
+      /* 금융비용 절감. 상수를 화면이 만들지 않는다.
+       * 기여율과 이자율을 명세 문장에서 뽑는다. 여기 숫자를 적어 두면
+       * 명세가 바뀔 때 이 줄만 옛 값으로 남는다 */
+      var fin = String((D.meta.spec && D.meta.spec.finance) || '');
+      var rate = /기여율\s*([0-9.]+)/.exec(fin);
+      var intr = /이자율\s*([0-9.]+)/.exec(fin);
+      out.financeRate = rate ? Number(rate[1]) : null;
+      out.financeInterest = intr ? Number(intr[1]) : null;
+      out.finance = (out.financeRate !== null && out.financeInterest !== null)
+        ? Math.round((out.cutAmt + out.poolAmt) * out.financeRate * out.financeInterest)
+        : null;
+      out.financeFormula = fin;
+
       // 알고리즘이 낸 요약 원본. 대조용으로만 쓴다
       out.shipped = D.summary;
       return out;
