@@ -104,17 +104,13 @@
         ['리드타임 표준편차', UInum(r.ltStd) + '일'],
         ['등록 공급사', UInum(r.suppliers) + '곳' + (Number(r.suppliers) === 1 ? ' (독점)' : ''),
           Number(r.suppliers) === 1 ? 'ins' : ''],
-        ['연 사용 횟수', UInum(r.cycles) + '회'],
+        ['24개월 소요 횟수', UInum(r.cycles) + '회'],
         ['자재 단가', won(r.price)],
         ['핵심예비품', r.csp ? '지정됨' : '아님', r.csp ? 'warn' : ''],
         ['조달', r.proc || '미확인'],
         ['판정 경로', r.path || '미확인']
       ],
       factors: f,
-      /* 가중치는 명세에서 읽는다. 화면이 상수를 만들지 않는다 */
-      weightText: (sp.factors || []).length
-        ? (sp.factors || []).map(function (x) { return x.w + '×' + x.name; }).join(' + ')
-        : '가중치를 명세에서 읽지 못했습니다',
       confText: { HIGH: '높음', MEDIUM: '보통', LOW: '낮음' }[r.conf] || r.conf || '미확인',
       why: r.why || ''
     };

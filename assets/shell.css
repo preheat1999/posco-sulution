@@ -1721,6 +1721,19 @@ td.num, th.num { text-align: right; }
 .stageline .prstep.wait { cursor: default; }
 .stageline .prstep.wait:hover { background: none; }
 
+/* 월별 불출량 · 오른쪽 카드 안의 작은 그림.
+ * 축 이름 · 격자 셋 · 선 하나 · 점만 둔다 · 카드 안이라 그림이 크면 값이 안 읽힌다 */
+.mchart { margin: 14px 0 2px; }
+.mc-h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 4px;
+}
+.mc-h b { font-size: 12.5px; color: var(--text); font-variant-numeric: tabular-nums; }
+.mchart svg { display: block; width: 100%; height: auto; }
+.mc-t { font-size: 9px; fill: var(--muted); }
+.mc-n { font-size: 10.5px; line-height: 1.6; color: var(--muted); margin-top: 4px; }
+.mc-n b { color: var(--text-2); font-weight: 600; }
+
 /* 원본 단계 · 접혀 있을 때 무엇을 누르면 되는지 한 줄로 알린다.
  * 접었다는 말을 안 적으면 「목록이 안 뜬다」 로 읽힌다 */
 .foldhint {

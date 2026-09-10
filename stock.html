@@ -100,15 +100,16 @@
   // ------------------------------------------------------------ 머리 숫자
   function paintStat() {
     var w = A.money(), s = A.summary(), c = S.stockCounts();
-    /* 왼쪽에 회수 · 감축, 가운데에 모집단, 오른쪽에 발주.
-     * 빼는 쪽(-)과 더하는 쪽(+)을 가운데 기준으로 나눠 놓으면 방향이 보인다 */
+    /* 맨 왼쪽이 모집단이다 · 「무엇을 몇 품목 본 것인가」 를 먼저 읽어야
+     * 그다음 세 숫자(회수 · 감축 · 발주)가 무엇의 일부인지 알 수 있다.
+     * 그 뒤로 빼는 쪽(−) 둘, 더하는 쪽(+) 하나 순서다 */
     el('stat').innerHTML =
+      box('hero', '', '분석 대상', UI.num(c.all), '품목', '전수 분석 완료',
+          UI.num(c.all) + ' / ' + UI.num(c.all) + ' 계산') +
       box('ok', '−', '공용화 회수', UI.wonShort(s.poolAmt), UI.wonShortUnit(s.poolAmt),
           UI.num(s.poolItems) + '품목 정체', '즉시공용화 · 권장') +
       box('ok', '−', '감축 가능', UI.num(c.cut), '품목', UI.won(w.cutAmt) + ' 감축분',
           '목표를 넘는 몫') +
-      box('hero', '', '분석 대상', UI.num(c.all), '품목', '전수 분석 완료',
-          UI.num(c.all) + ' / ' + UI.num(c.all) + ' 계산') +
       box('core', '+', '발주 필요', UI.num(c.order), '품목',
           '즉시 ' + UI.num(s.signal.red || 0) + '건', '리드타임 고려');
   }
