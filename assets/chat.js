@@ -10,8 +10,12 @@
  *   3) 근거를 못 찾은 답(no_answer)은 경고 톤으로 따로 보인다.
  *
  * 토큰(X-API-Token)은 코드에 두지 않는다 · 저장소가 공개라서다.
- * .env → serve.py → assets/config.local.js 로 내려온 값(CFG.CHAT_TOKEN)을 먼저 쓰고,
- * 그 파일이 없는 환경에서는 서랍에서 한 번 넣어 이 브라우저에만 담아 둔다.
+ *
+ * 부르는 길 두 가지 ·
+ *   1) 프록시 (CFG.CHAT_PROXY) · serve.py 가 띄운 같은 출처의 /rag 를 부른다.
+ *      토큰은 서버가 붙이고, CORS 는 애초에 생기지 않는다 (폰도 그대로 된다).
+ *   2) 직접 · CFG.CHAT_API 가 RAG 서버 주소일 때. 그때는 토큰이 필요하고
+ *      서버 허용 목록에 있는 주소(localhost:3000 등)에서만 열린다.
  */
 (function () {
   'use strict';
@@ -49,13 +53,15 @@
 
   function esc(s) { return window.UI ? UI.esc(s) : String(s); }
   function el(id) { return document.getElementById(id); }
-  /* 토큰을 찾는 순서 · .env 에서 내려온 값 → 이 브라우저에 넣어 둔 값.
-   * .env 가 있으면 매번 넣지 않아도 된다 · 없는 환경(배포 · 다른 PC)에서는 서랍에서 넣는다 */
+  /* 프록시로 부를 때는 토큰이 필요 없다 · 서버가 붙인다.
+   * 직접 부를 때는 .env 에서 내려온 값 → 이 브라우저에 넣어 둔 값 순으로 찾는다 */
+  var PROXY = !!CFG.CHAT_PROXY;
   function token() {
+    if (PROXY) { return 'proxy'; }        // 화면이 「토큰 없음」 으로 멈추지 않게 하는 표시값
     if (CFG.CHAT_TOKEN) { return String(CFG.CHAT_TOKEN); }
     try { return window.localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
   }
-  function tokenFromEnv() { return !!CFG.CHAT_TOKEN; }
+  function tokenFromEnv() { return PROXY || !!CFG.CHAT_TOKEN; }
   function suggest() { return SUGGEST[PAGE] || SUGGEST.main; }
 
   // ---------------------------------------------------------------- 뼈대
@@ -180,7 +186,9 @@
         '</div>' +
         (tk
           ? '<div class="chat-tools">' + (tokenFromEnv()
-            ? '<span class="chat-tsrc">토큰 · .env</span>'
+            ? '<span class="chat-tsrc">' + (PROXY
+              ? '서버 프록시 · 토큰은 서버에서 붙입니다'
+              : '토큰 · .env') + '</span>'
             : '<button class="linkbtn" type="button" id="tokenclear">토큰 지우기</button>') +
             '</div>'
           : '') +
@@ -223,11 +231,19 @@
   }
 
   function connWarn() {
-    var why = health.why === 'fetch'
-      ? '브라우저가 서버에 닿지 못했습니다. 이 화면의 주소(' + esc(location.origin) +
+    var why;
+    if (health.why !== 'fetch') {
+      why = '서버가 살아 있지만 모델이 아직 올라오지 않았습니다.';
+    } else if (PROXY) {
+      /* 프록시를 쓰면 CORS 는 원인이 아니다 · RAG 서버가 꺼졌거나 다른 Wi-Fi 다 */
+      why = '이 서버가 RAG 서버(' + esc(CFG.CHAT_API_UPSTREAM || '주소 미확인') +
+        ')에 닿지 못했습니다. RAG 서버가 켜져 있는지, 같은 Wi-Fi 인지 확인하세요.';
+    } else {
+      why = '브라우저가 서버에 닿지 못했습니다. 이 화면의 주소(' + esc(location.origin) +
         ')가 서버의 허용 목록에 없거나(CORS), 다른 Wi-Fi 일 수 있습니다. ' +
-        '허용된 주소는 http://localhost:3000 · :5173 · :8000 입니다.'
-      : '서버가 살아 있지만 모델이 아직 올라오지 않았습니다.';
+        '허용된 주소는 http://localhost:3000 · :5173 · :8000 입니다 · ' +
+        'serve.py 로 띄우면 프록시를 거쳐 어느 주소에서도 됩니다.';
+    }
     return '<div class="callout ins"><span class="ci">!</span><span><b>연결되지 않았습니다</b>' +
       why + ' <button class="linkbtn" type="button" id="chatretry">다시 확인</button></span></div>';
   }
@@ -289,11 +305,19 @@
     if (r.route && r.route !== 'rag') { head += routeBadge(r.route); }
 
     if (r.no_answer) {
+      /* 근거를 못 찾았다고 하면서도 「참고:」 로 문서를 붙여 오는 답이 있다.
+       * 그 출처를 감추면 어디서 나온 참고인지 확인할 길이 없다 · 접어서 같이 둔다 */
       return '<div class="chat-ai noans" id="turn-' + i + '">' + head +
         '<span class="na-ico">⚠</span><div><b>사내 문서에서 근거를 찾지 못했습니다</b>' +
         '<div class="md">' + html + '</div>' +
-        '<div class="na-why">이 답은 문서 근거가 없습니다 · 그대로 업무에 쓰지 마세요. ' +
-        '질문을 바꾸거나 담당자에게 확인하세요.</div></div></div>';
+        '<div class="na-why">이 답은 <b>확정 근거가 없습니다</b> · 그대로 업무에 쓰지 마세요. ' +
+        '질문을 바꾸거나 담당자에게 확인하세요.</div>' +
+        (cites.length
+          ? '<div class="chat-srcs"><div class="cs-h">참고로 찾은 문서 ' + cites.length +
+            '건 · 질문에 대한 답은 아닙니다</div>' +
+            cites.map(function (c) { return srcCard(c, i); }).join('') + '</div>'
+          : '') +
+        '</div></div>';
     }
 
     /* 출처 줄 · 문서 답은 citations 가 출처다. 정형 데이터(sql) 답은 문서가 아니라 DB 를
@@ -414,6 +438,9 @@
 
   function friendly(e) {
     var m = String(e && e.message || e || '');
+    if (/401|403/.test(m) && PROXY) {
+      return '토큰이 맞지 않습니다 (' + m + ') · .env 의 CHAT_TOKEN 을 고치고 서버를 다시 띄우세요';
+    }
     if (/401|403/.test(m)) {
       return tokenFromEnv()
         ? '토큰이 맞지 않습니다 (' + m + ') · .env 의 CHAT_TOKEN 을 확인하고 서버를 다시 띄우세요'
@@ -450,7 +477,9 @@
   function stream(question, history, t) {
     return fetch(API + '/api/chat/stream', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Token': token() },
+      headers: PROXY
+        ? { 'Content-Type': 'application/json' }
+        : { 'Content-Type': 'application/json', 'X-API-Token': token() },
       body: JSON.stringify({ question: question, category: null, history: history })
     }).then(function (res) {
       if (!res.ok) { throw new Error('HTTP ' + res.status); }

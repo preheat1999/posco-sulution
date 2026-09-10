@@ -12,6 +12,11 @@
 
 띄우면 폰으로 열 주소와 QR 만드는 명령을 같이 적어 준다.
 
+또 하나 · /rag/... 로 오는 요청을 RAG 서버로 넘긴다 (같은 출처로 부르게 만들어 CORS 를 없앤다).
+폰은 http://10.1.14.204:8130 으로 들어오는데 그 주소는 RAG 서버 허용 목록에 없다 ·
+브라우저가 막는 것이고 서버는 정상이다. 화면이 /rag/api/chat/stream 을 부르면
+이 서버가 .env 의 토큰을 붙여 10.1.14.205:8000 으로 대신 물어보고 답을 그대로 흘려 준다.
+
 또 하나 · .env 를 읽어 assets/config.local.js 를 만든다.
 화면은 정적 파일(빌드 없음)이라 브라우저가 .env 를 직접 읽을 수 없다 · 그 다리를 여기서 놓는다.
 .env 와 config.local.js 는 둘 다 .gitignore 다 (저장소가 공개라 토큰을 올리면 안 된다).
@@ -23,11 +28,84 @@ import io
 import os
 import socket
 import socketserver
+import urllib.error
+import urllib.request
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
+RAG = {'api': '', 'token': ''}      # .env 에서 읽는다 (main 이 채운다)
+PREFIX = '/rag/'
+
+
 class H(http.server.SimpleHTTPRequestHandler):
+    """정적 파일 + /rag/ 프록시."""
+
+    def do_POST(self):
+        if self.path.startswith(PREFIX):
+            self.proxy('POST')
+            return
+        self.send_error(405, 'Only /rag/ accepts POST')
+
+    def do_GET(self):
+        if self.path.startswith(PREFIX):
+            self.proxy('GET')
+            return
+        super().do_GET()
+
+    def proxy(self, method):
+        """/rag/api/... → <RAG 서버>/api/... 로 넘긴다.
+
+        스트림(NDJSON)을 그대로 흘려야 진행 표시가 산다 · 다 받고 나서 한 번에 주면
+        6~11초 동안 화면이 멈춘 것처럼 보인다. 그래서 청크 단위로 바로 내려보낸다.
+        """
+        if not RAG['api']:
+            self.send_error(503, 'CHAT_API not set in .env')
+            return
+        url = RAG['api'].rstrip('/') + '/' + self.path[len(PREFIX):].lstrip('/')
+        body = None
+        if method == 'POST':
+            n = int(self.headers.get('Content-Length') or 0)
+            body = self.rfile.read(n) if n else b''
+        req = urllib.request.Request(url, data=body, method=method)
+        req.add_header('Content-Type', self.headers.get('Content-Type') or 'application/json')
+        if RAG['token']:
+            # 토큰은 서버에서 붙인다 · 브라우저로 내려보내지 않아도 된다
+            req.add_header('X-API-Token', RAG['token'])
+        try:
+            with urllib.request.urlopen(req, timeout=180) as up:
+                self.send_response(up.status)
+                ctype = up.headers.get('Content-Type') or 'application/json'
+                self.send_header('Content-Type', ctype)
+                self.end_headers()
+                while True:
+                    chunk = up.read(1)          # 한 바이트씩 · 줄이 오는 대로 흘려 준다
+                    if not chunk:
+                        break
+                    try:
+                        self.wfile.write(chunk)
+                        self.wfile.flush()
+                    except (BrokenPipeError, ConnectionAbortedError):
+                        return                  # 사용자가 서랍을 닫았다
+        except urllib.error.HTTPError as e:
+            msg = e.read()
+            self.send_response(e.code)
+            self.send_header('Content-Type', e.headers.get('Content-Type') or 'application/json')
+            self.end_headers()
+            try:
+                self.wfile.write(msg)
+            except Exception:
+                pass
+        except Exception as e:
+            self.send_response(502)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            try:
+                self.wfile.write(('{"detail":"RAG 서버에 닿지 못했습니다 · %s"}'
+                                  % str(e).replace('"', "'")).encode('utf-8'))
+            except Exception:
+                pass
+
     def end_headers(self):
         self.send_header('Cache-Control', 'no-store, must-revalidate')
         self.send_header('Pragma', 'no-cache')
@@ -74,10 +152,13 @@ def write_local_config(env):
         '  var C = window.CFG = window.CFG || {};',
     ]
     if api:
-        body.append("  C.CHAT_API = '%s';" % api)
+        # 화면은 같은 출처의 /rag 를 부른다 · 이 서버가 RAG 서버로 넘긴다 (CORS 없음).
+        # 토큰도 서버가 붙이므로 브라우저에 내려보내지 않는다
+        body.append("  C.CHAT_API = '/rag';")
+        body.append("  C.CHAT_API_UPSTREAM = '%s';" % api)
+        body.append("  C.CHAT_PROXY = true;")
     if token:
-        body.append("  C.CHAT_TOKEN = '%s';" % token)
-        body.append("  C.CHAT_TOKEN_SRC = '.env';")
+        body.append("  C.CHAT_TOKEN_SRC = 'serve.py 프록시';")
     body.append('})();')
     body.append('')
     path = os.path.join(ROOT, 'assets', 'config.local.js')
@@ -105,6 +186,8 @@ def main():
 
     env = read_env()
     local = write_local_config(env)
+    RAG['api'] = env.get('CHAT_API', '')
+    RAG['token'] = env.get('CHAT_TOKEN', '')
     ip = lan_ip()
     base = 'http://%s:%d' % (ip, a.port)
     print('서버 · %s:%d (no-store)' % (a.host, a.port))
@@ -115,12 +198,12 @@ def main():
     print('이 주소로 QR 만들기 ·')
     print('  python -B make_qr.py --base %s --all' % base)
     print()
-    print('RAG · %s · 토큰 %s → assets/config.local.js (저장소에 안 올라감)'
-          % (local['api'] or '주소 없음', '있음' if local['token'] else '없음'))
-    if local['api'] and a.port not in (3000, 5173, 8000):
-        print('  주의 · RAG 서버가 허용하는 주소는 localhost:3000 · 5173 · 8000 이다.')
-        print('        이 포트(%d)로 열면 챗봇이 CORS 로 막힌다 ·' % a.port)
-        print('        --port 3000 으로 띄우거나 백엔드에 이 주소를 추가해 달라고 요청한다.')
+    print('RAG · %s' % (local['api'] or '주소 없음'))
+    if local['api']:
+        print('  화면은 같은 출처의 /rag 를 부르고 이 서버가 넘긴다 · CORS 가 생기지 않는다')
+        print('  토큰 %s · 서버에서 붙인다 (브라우저로 내려보내지 않음)'
+              % ('있음' if local['token'] else '없음 · .env 에 CHAT_TOKEN 을 넣어라'))
+        print('  폰도 그대로 된다 · %s/main.html' % base)
     print()
     print('폰이 안 붙으면 · 윈도 방화벽에서 이 포트를 한 번 허용해야 한다')
     print('  (관리자 명령창) netsh advfirewall firewall add rule '
