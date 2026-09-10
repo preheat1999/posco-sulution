@@ -13,22 +13,37 @@
 (function () {
   'use strict';
 
+  /* 아이콘 글꼴(Material Symbols)이 오지 않았을 때 쓸 판사봉 ·
+   * 유니코드에 이 글자가 없어서(🔨 은 그냥 망치다) 직접 그린다.
+   * 비스듬한 망치머리 + 손잡이 + 받침대 세 조각 · currentColor 라 선택하면 파랑이 된다 */
+  var ICO_GAVEL =
+    '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+      '<g transform="rotate(45 8 6.6)">' +
+        '<rect x="2.1" y="3.2" width="4.7" height="6.8" rx="1.2"></rect>' +
+        '<rect x="7.1" y="5.8" width="7.4" height="1.7" rx="0.85"></rect>' +
+      '</g>' +
+      '<rect x="0.9" y="12.7" width="9.6" height="2.3" rx="1.15"></rect>' +
+    '</svg>';
+
   var MENU = [
     {
       label: '관리',
       items: [
-        { key: 'main', name: 'Dashboard', href: 'main.html', ico: '▤' },
-        { key: 'search', name: '자재 검색', href: 'search.html', ico: '⌕', soon: true }
+        { key: 'main', name: 'Dashboard', href: 'main.html', sym: 'dashboard', ico: '▤' },
+        { key: 'search', name: '자재 검색', href: 'search.html', sym: 'search', ico: '⌕', soon: true }
       ]
     },
     {
       label: '분석',
       items: [
         /* 아이콘은 그 화면이 하는 일이다 · 판단은 판사봉, 적정재고는 양팔저울(보유와 목표를 견준다).
-         * 그림 글꼴을 따로 받지 않는다 · 사내망에서 막히면 아이콘이 통째로 빈칸이 된다 */
-        { key: 'attr', name: '보유목적 판단', href: 'attr.html', ico: '🔨', count: 'gray' },
-        { key: 'stock', name: '적정재고 분석', href: 'stock.html', ico: '⚖', count: 'order' },
-        { key: 'report', name: '주간 리포트', href: 'report.html', ico: '✉', soon: true }
+         * sym 은 아이콘 글꼴 이름, ico 는 글꼴이 오지 않았을 때 쓸 글리프다 */
+        { key: 'attr', name: '보유목적 판단', href: 'attr.html',
+          sym: 'gavel', ico: ICO_GAVEL, count: 'gray' },
+        { key: 'stock', name: '적정재고 분석', href: 'stock.html',
+          sym: 'balance', ico: '⚖', count: 'order' },
+        { key: 'report', name: '주간 리포트', href: 'report.html',
+          sym: 'mail', ico: '✉', soon: true }
       ]
     },
     {
@@ -36,9 +51,12 @@
       items: [
         /* 적정구매시점은 「언제 사야 하는가」 라서 분석이 아니라 업무다 ·
          * 구매신청 바로 위에 둔다 */
-        { key: 'plan', name: '적정구매시점', href: 'plan.html', ico: '⚙', count: 'over' },
-        { key: 'purchase', name: '구매신청 (PR)', href: 'purchase.html', ico: '🛒', count: 'pr' },
-        { key: 'return', name: '자재반납 (QR)', href: 'return.html', ico: '↩', count: 'ret' }
+        { key: 'plan', name: '적정구매시점', href: 'plan.html',
+          sym: 'event_available', ico: '⚙', count: 'over' },
+        { key: 'purchase', name: '구매신청 (PR)', href: 'purchase.html',
+          sym: 'shopping_cart', ico: '🛒', count: 'pr' },
+        { key: 'return', name: '자재반납 (QR)', href: 'return.html',
+          sym: 'assignment_return', ico: '↩', count: 'ret' }
       ]
     }
   ];
@@ -87,6 +105,17 @@
       '<span class="lk-t">' + esc(label) + '</span></' + tag + '>';
   }
 
+  /* 아이콘 글꼴이 실제로 왔는지 · 안 왔으면 리가처 이름이 글자로 보이므로 글리프로 되돌린다.
+   * document.fonts 가 없는 기계(아주 옛 브라우저)에서는 글리프로 둔다 */
+  var symOk = false;
+
+  function icoHtml(it) {
+    if (it.sym && symOk) {
+      return '<span class="msym">' + it.sym + '</span>';
+    }
+    return it.ico || '·';
+  }
+
   function draw() {
     var side = document.getElementById('side');
     if (!side) { return; }
@@ -110,7 +139,7 @@
          * 「준비 중」 이라고 적어 두고 화면이 생기면 soon 만 지운다 */
         if (it.soon) {
           html += '<span class="navitem soon" aria-disabled="true">' +
-            '<span class="navitem-ico" aria-hidden="true">' + it.ico + '</span>' +
+            '<span class="navitem-ico" aria-hidden="true">' + icoHtml(it) + '</span>' +
             '<span class="navitem-body">' +
               '<span class="navitem-name">' + esc(it.name) + '</span>' +
               '<span class="navitem-sub">준비 중</span>' +
@@ -118,7 +147,7 @@
           return;
         }
         html += '<a class="navitem' + (it.key === page ? ' on' : '') + '" href="' + esc(it.href) + '">' +
-          '<span class="navitem-ico" aria-hidden="true">' + it.ico + '</span>' +
+          '<span class="navitem-ico" aria-hidden="true">' + icoHtml(it) + '</span>' +
           '<span class="navitem-body">' +
             '<span class="navitem-name">' + esc(it.name) + '</span>' +
             (it.sub ? '<span class="navitem-sub">' + esc(it.sub) + '</span>' : '') +
@@ -279,9 +308,28 @@
     wire();
     crumb();
     avatar();
+    watchFont();
     /* 승인 · 반납이 일어나면 배지 숫자가 따라 움직여야 한다.
      * 안 그러면 사이드바만 옛 값으로 남는다 */
     if (window.DB) { window.DB.on(function () { draw(); wire(); }); }
+  }
+
+  /* 글꼴이 늦게 온다 · 오면 그때 아이콘만 다시 그린다.
+   * 못 오면 그대로 글리프로 남는다 (메뉴에 「gavel」 같은 글자가 뜨는 것을 막는다) */
+  function watchFont() {
+    if (!document.fonts || !document.fonts.load) { return; }
+    var FAM = "18px 'Material Symbols Outlined'";
+    function check() {
+      var ok = false;
+      try { ok = document.fonts.check(FAM); } catch (e) { ok = false; }
+      if (ok && !symOk) { symOk = true; draw(); wire(); }
+    }
+    try {
+      document.fonts.load(FAM, 'gavel').then(check, function () { /* 못 왔다 · 글리프로 둔다 */ });
+    } catch (e) { /* 무시 */ }
+    if (document.fonts.ready && document.fonts.ready.then) {
+      document.fonts.ready.then(check, function () { /* 무시 */ });
+    }
   }
 
   if (document.readyState === 'loading') {
