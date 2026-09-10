@@ -1,0 +1,170 @@
+{
+ "_읽는법": {
+  "num": "빈 칸은 null. 정수로 떨어지면 정수, 아니면 실수",
+  "bool": "O 는 true, X 는 false",
+  "list;": "세미콜론으로 나눈 배열. 빈 문자열은 버린다",
+  "str": "빈 칸은 null",
+  "date": "YYYY-MM-DD 문자열 그대로",
+  "주의": "CSV 는 타입을 잃는다. 이 표대로 되돌리지 않으면 산식이 조용히 틀린다"
+ },
+ "01_부서.csv": {
+  "_pk": [
+   "code"
+  ],
+  "code": "str",
+  "path": "str",
+  "part": "str",
+  "section": "str",
+  "eqGroup": "str",
+  "tel": "str"
+ },
+ "02_자재_정본.csv": {
+  "_pk": [
+   "q",
+   "dept"
+  ],
+  "q": "str",
+  "dept": "str",
+  "name": "str",
+  "group": "str",
+  "type": "str",
+  "csp": "bool",
+  "ceq": "bool",
+  "wh": "str",
+  "stockDept": "num",
+  "stockAll": "num",
+  "suppliers": "num",
+  "price": "num",
+  "ltMean": "num",
+  "ltStd": "num",
+  "cycles": "num",
+  "proc": "str",
+  "recvDate": "date",
+  "eq": "str",
+  "holdStd": "num  설치 수 기준. 보험품 목표의 max(raw, 설치수기준, 1) 에 쓰인다"
+ },
+ "03_설비.csv": {
+  "_pk": [
+   "name"
+  ],
+  "name": "str",
+  "dept": "str",
+  "items": "list;"
+ },
+ "04_정비계획.csv": {
+  "_pk": [
+   "eq",
+   "kind",
+   "stopStart"
+  ],
+  "eq": "str",
+  "kind": "str",
+  "stopStart": "date",
+  "reStart": "date",
+  "hours": "num",
+  "crew": "num",
+  "factory": "str",
+  "line": "str",
+  "dept": "str"
+ },
+ "05_속성판정_파생.csv": {
+  "_pk": [
+   "q",
+   "dept"
+  ],
+  "q": "str",
+  "dept": "str",
+  "verdict": "str",
+  "path": "str",
+  "why": "str",
+  "si": "num",
+  "sp": "num",
+  "conf": "str",
+  "cspScore": "num",
+  "stockSrc": "str"
+ },
+ "06_적정재고_파생.csv": {
+  "_pk": [
+   "q",
+   "dept"
+  ],
+  "q": "str",
+  "dept": "str",
+  "type": "str",
+  "typeSrc": "str",
+  "grade": "str",
+  "target": "num",
+  "need": "num",
+  "amount": "num",
+  "action": "str",
+  "reason": "str",
+  "signal": "str",
+  "status": "str",
+  "sigEq": "str",
+  "sigKind": "str",
+  "stopDate": "date",
+  "dueDate": "date",
+  "dDays": "num",
+  "expect": "num",
+  "issues": "num",
+  "trend": "list;  24개월 소요 추이. 각 원소를 num 으로"
+ },
+ "07_정체자재.csv": {
+  "_pk": [
+   "q",
+   "dept"
+  ],
+  "q": "str",
+  "dept": "str",
+  "ageDays": "num",
+  "staleValue": "num",
+  "poolGrade": "str",
+  "action": "str"
+ },
+ "08_반납_거래상태.csv": {
+  "_pk": [
+   "q"
+  ],
+  "q": "str",
+  "cond": "str",
+  "off": "num  기준일 대비 불출 경과일 · 음수",
+  "left": "num",
+  "wo": "str",
+  "asm": "str",
+  "code": "str",
+  "issueWh": "str",
+  "acc": "str",
+  "locator": "str",
+  "eq": "str"
+ },
+ "09_구매신청_거래상태.csv": {
+  "_pk": [
+   "q"
+  ],
+  "q": "str",
+  "active": "bool",
+  "qty": "num",
+  "warn": "num",
+  "wo": "str",
+  "kind": "str",
+  "eq": "str",
+  "planDate": "date"
+ },
+ "10_QR태그.csv": {
+  "_pk": [
+   "q"
+  ],
+  "q": "str",
+  "unit": "str"
+ },
+ "11_연관자재.csv": {
+  "_pk": [
+   "q",
+   "rel"
+  ],
+  "q": "str",
+  "rel": "str",
+  "rate": "num",
+  "why": "str"
+ }
+}
