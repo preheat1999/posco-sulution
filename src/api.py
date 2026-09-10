@@ -3,7 +3,7 @@ import logging, os, sys, time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -12,6 +12,7 @@ from store import ChunkStore
 from bm25 import BM25Index
 from search import Searcher
 import answer as answer_mod
+import stream_api
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("api")
@@ -86,17 +87,30 @@ def health():
     }
 
 
-@app.post("/api/chat")
-def chat(req: ChatRequest, x_api_token: str | None = Header(default=None)):
+def _guard(req, x_api_token):
     token = os.environ.get("RAG_API_TOKEN")
     if token and x_api_token != token:
         raise HTTPException(status_code=401, detail="invalid token")
     if not req.question or not req.question.strip():
         raise HTTPException(status_code=400, detail="question is required")
+    return req.question.strip()
 
+
+@app.post("/api/chat/stream")
+def chat_stream(req: ChatRequest, x_api_token: str | None = Header(default=None)):
+    """진행 단계 + 답변 토큰을 NDJSON 으로 흘린다 (8-2). 이벤트 계약은 stream_api.py."""
+    q = _guard(req, x_api_token)
+    return StreamingResponse(
+        stream_api.event_stream(STATE, q, req.history, log),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@app.post("/api/chat")
+def chat(req: ChatRequest, x_api_token: str | None = Header(default=None)):
+    q = _guard(req, x_api_token)
     t0 = time.time()
     trace, metrics = [], {}
-    q = req.question.strip()
 
     qv = None
     if STATE["searcher"].mode == "hybrid" and STATE["embedder"]:

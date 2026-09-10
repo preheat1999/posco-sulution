@@ -1,5 +1,5 @@
 """프롬프트 조립 → LLM 호출 → [n] 인용 파싱 → citations 생성."""
-import os, re, time
+import json, os, re, time
 import httpx
 from config import cfg
 import prompts
@@ -79,6 +79,61 @@ def call_llm(system, user, model=None):
     raise RuntimeError(f"LLM 호출 실패: {last}")
 
 
+def call_llm_stream(system, user, model=None):
+    """OpenRouter SSE 스트리밍 제너레이터.
+
+    ("delta", 조각) 을 **도착하는 즉시** 흘리고 마지막에 ("done", (본문, usage, 모델)).
+    ★ 조각을 모아뒀다가 한꺼번에 내보내면 진행표시로서 의미가 없다(실측으로 확인).
+
+    폴백이 있는 이유: 스트리밍은 제공사·프록시 사정으로 끊길 수 있는데,
+    시연 중 답변이 통째로 사라지는 것보다 조금 늦게 한 번에 나오는 편이 낫다."""
+    m = model or cfg.get("llm.model")
+    key = os.environ["OPENROUTER_API_KEY"]
+    text, usage = "", {}
+    try:
+        with httpx.stream("POST", "https://openrouter.ai/api/v1/chat/completions",
+                          headers={"Authorization": f"Bearer {key}",
+                                   "Content-Type": "application/json"},
+                          json={"model": m,
+                                "messages": [{"role": "system", "content": system},
+                                             {"role": "user", "content": user}],
+                                "temperature": cfg.get("llm.temperature"),
+                                "max_tokens": cfg.get("llm.max_tokens"),
+                                "stream": True,
+                                "stream_options": {"include_usage": True}},
+                          timeout=cfg.get("llm.timeout_seconds")) as r:
+            r.raise_for_status()
+            for line in r.iter_lines():
+                if not line or line.startswith(":"):
+                    continue
+                if not line.startswith("data: "):
+                    continue
+                payload = line[6:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    d = json.loads(payload)
+                except ValueError:
+                    continue
+                if d.get("usage"):
+                    usage = d["usage"]
+                for ch in d.get("choices") or []:
+                    piece = (ch.get("delta") or {}).get("content") or ""
+                    if piece:
+                        text += piece
+                        yield ("delta", piece)
+        if text.strip():
+            yield ("done", (text, usage, m))
+            return
+    except Exception:
+        pass
+    # 폴백 (모델 폴백·재시도 포함). 조각으로 나눠 흘릴 수 없으므로 완성본을 한 번에 준다.
+    text, usage, m = call_llm(system, user)
+    if text:
+        yield ("delta", text)
+    yield ("done", (text, usage, m))
+
+
 def parse_citations(answer, chunks):
     """답변의 [n] 중 실제 존재하는 번호만 citations 로 만든다."""
     used, out = [], []
@@ -101,6 +156,41 @@ def sentence_citation_coverage(answer):
     if not sents:
         return 1.0
     return sum(1 for s in sents if CITE_RE.search(s)) / len(sents)
+
+
+def generate_iter(question, chunks, history=None):
+    """generate() 의 스트리밍판. ("delta", 조각) 을 흘리다가 ("result", dict) 로 끝난다."""
+    no_answer = cfg.get("workflow.no_answer_message")
+    context, n_used = build_context(chunks)
+    system = prompts.RAG_SYSTEM.format(no_answer=no_answer)
+    user = prompts.RAG_USER.format(context=mask_pii(context),
+                                   history=build_history(history),
+                                   question=question)
+    answer, usage, model = "", {}, cfg.get("llm.model")
+    for kind, payload in call_llm_stream(system, user):
+        if kind == "delta":
+            yield ("delta", payload)          # 도착 즉시 통과시킨다
+        else:
+            answer, usage, model = payload
+
+    answer = answer.strip()
+    coverage = sentence_citation_coverage(answer)
+    no_ans = no_answer[:20] in answer
+    if not no_ans and coverage < cfg.get("llm.min_citation_coverage"):
+        yield ("stage", "인용 보강")
+        boosted, usage2, _ = call_llm(system,
+                                      prompts.CITATION_BOOST.format(context=mask_pii(context),
+                                                                    answer=answer))
+        if boosted.strip():
+            answer = boosted.strip()
+            coverage = sentence_citation_coverage(answer)
+            for k in ("prompt_tokens", "completion_tokens"):
+                usage[k] = usage.get(k, 0) + usage2.get(k, 0)
+            yield ("replace", answer)
+
+    yield ("result", {"answer": answer, "no_answer": no_ans,
+                      "citations": parse_citations(answer, chunks[:n_used]),
+                      "coverage": coverage, "usage": usage, "model": model})
 
 
 def generate(question, chunks, history=None):

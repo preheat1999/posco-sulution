@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>포스코 자재관리 도우미</title>
+<!-- 외부 요청 없이 favicon 404 를 없앤다 (오프라인 안전) -->
+<link rel="icon" href="data:,">
 <style>
   :root{
     --bg:#f4f5f7; --panel:#fff; --ink:#16181d; --muted:#6b7280; --line:#e3e6ea;
@@ -60,6 +62,18 @@
         border-top-color:var(--accent);border-radius:50%;animation:s .7s linear infinite;
         vertical-align:-2px;margin-right:7px}
   @keyframes s{to{transform:rotate(360deg)}}
+  /* 진행 단계 표시 */
+  .steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .step{font-size:12px;color:var(--muted);border:1px solid var(--line);
+        border-radius:999px;padding:3px 11px;display:flex;align-items:center;gap:6px}
+  .step .dot{width:6px;height:6px;border-radius:50%;background:#cfd5dc;flex:none}
+  .step.now{color:var(--accent);border-color:#bcd6ea;background:var(--accent-soft)}
+  .step.now .dot{background:var(--accent);animation:p 1s ease-in-out infinite}
+  .step.done{color:#0a6b3d;border-color:#b7e0c9;background:#eefaf3}
+  .step.done .dot{background:#0a6b3d}
+  @keyframes p{50%{opacity:.25}}
+  .cursor{display:inline-block;width:7px;height:15px;background:var(--accent);
+          vertical-align:-2px;animation:p .9s steps(2) infinite}
 </style>
 </head>
 <body>
@@ -180,16 +194,25 @@ function bubble(cls, html){
   return d.firstChild;
 }
 
+const STAGES = ['질의 분석', '사내 문서 검색', '근거 정밀 선별', '답변 작성'];
+
+function renderSteps(cur){
+  return '<div class="steps">' + STAGES.map((s, i) => {
+    const cls = i < cur ? 'done' : (i === cur ? 'now' : '');
+    return '<span class="step ' + cls + '"><span class="dot"></span>' + s + '</span>';
+  }).join('') + '</div>';
+}
+
 async function send(){
   const q = $('#q').value.trim();
   if (!q) return;
   $('#q').value = '';
   $('#send').disabled = true;
   bubble('q', esc(q));
-  const box = bubble('a', '<span class="spin"></span>사내 문서를 검색하고 있습니다…');
+  const box = bubble('a', renderSteps(0));
   const t0 = performance.now();
   try{
-    const r = await fetch('/api/chat', {
+    const r = await fetch('/api/chat/stream', {
       method:'POST',
       headers:{'Content-Type':'application/json', 'X-API-Token': tok.value.trim()},
       body: JSON.stringify({question:q, history:[]}),
@@ -200,7 +223,37 @@ async function send(){
       return;
     }
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
+
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = '', text = '', d = null, stage = 0;
+    while (true){
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const lines = buf.split('\n');
+      buf = lines.pop();                       // 마지막 조각은 아직 미완성일 수 있다
+      for (const line of lines){
+        if (!line.trim()) continue;
+        let ev; try { ev = JSON.parse(line); } catch(_) { continue; }
+        if (ev.type === 'stage'){
+          if (ev.index < 4) stage = ev.index + 1;
+          if (!text) box.innerHTML = renderSteps(stage);
+        } else if (ev.type === 'delta'){
+          text += ev.text;
+          box.innerHTML = renderSteps(4) + md(text) + '<span class="cursor"></span>';
+          box.scrollIntoView({behavior:'smooth', block:'end'});
+        } else if (ev.type === 'replace'){
+          text = ev.answer;
+          box.innerHTML = renderSteps(4) + md(text);
+        } else if (ev.type === 'error'){
+          throw new Error(ev.message);
+        } else if (ev.type === 'result'){
+          d = ev;
+        }
+      }
+    }
+    if (!d) throw new Error('결과 이벤트를 받지 못했습니다');
+
     let html = md(d.answer);
     if (d.no_answer) box.className = 'a noans';
     if (d.citations.length){
