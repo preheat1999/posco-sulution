@@ -346,7 +346,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
  * 거기에 줄 간격(margin-bottom)을 주면 입력칸 사이가 벌어진다 */
 .dashrow { display: grid; gap: 16px; margin-bottom: 16px; }
 .dashrow.c2 { grid-template-columns: 1.12fr 1fr; }
-.dashrow.c3 { grid-template-columns: 1fr 1fr 1fr; }
 /* grid 자식도 min-width:auto 다. 안의 nowrap 한 줄이 칸을 벌린다 */
 .dashrow > * { min-width: 0; }
 .dashrow > .card { margin-bottom: 0; }
@@ -808,8 +807,6 @@ td.num, th.num { text-align: right; }
   .kpiwrap.five { grid-template-columns: repeat(2, 1fr); }
   /* 3열을 2열로. 세 번째 칸(목록 카드)은 한 줄을 다 쓰게 둔다.
    * 반쪽 폭에 목록을 넣으면 자재명이 한 글자씩 잘린다 */
-  .dashrow.c3 { grid-template-columns: 1fr 1fr; }
-  .dashrow.c3 > :nth-child(3) { grid-column: 1 / -1; }
 }
 
 /* 960 · 사이드바를 햄버거 오버레이로 */
@@ -830,8 +827,7 @@ td.num, th.num { text-align: right; }
   .hamb { display: grid; }
   .grid2 { grid-template-columns: 1fr; }
   .kpiwrap, .kpiwrap.viz { grid-template-columns: 1fr 1fr; }
-  .dashrow.c2, .dashrow.c3 { grid-template-columns: 1fr; }
-  .dashrow.c3 > :nth-child(3) { grid-column: auto; }
+  .dashrow.c2 { grid-template-columns: 1fr; }
 }
 
 /* 760 · 상단 바를 두 줄로.
@@ -1090,58 +1086,10 @@ td.num, th.num { text-align: right; }
  * 적정재고는 「이만큼 빼도 된다」 가 한눈에 느껴져야 한다.
  * 차트 라이브러리를 쓰지 않는다. 사내망에서 막히면 화면이 통째로 깨진다
  */
-.kpi-viz { display: flex; align-items: center; gap: 16px; flex: 1; }
-/* 그림은 크게. Stitch 코드의 치수를 그대로 쓴다 · 지름 210 · 링 16 */
+/* 그림은 크게. Stitch 안의 치수를 그대로 쓴다 · 지름 210 · 링 16 (.donut.lg) */
 .donut { width: 124px; height: 124px; flex: none; }
 .donut-v { font-size: 18px; font-weight: 600; letter-spacing: -.6px; fill: var(--text); }
 .donut-k { font-size: 9px; fill: var(--muted); }
-
-/* 도넛 오른쪽 한 칸을 두 겹으로 쓴다.
- * 평소에는 「그래서 몇 품목을 손대야 하는가」 문장, 마우스를 올리면 6갈래 내역.
- * 둘을 세로로 쌓지 않는 이유 · 마우스를 올릴 때 카드 높이가 바뀌면
- * 아래 카드가 밀려 내려가고 커서가 카드를 벗어나 다시 닫힌다(깜빡임).
- * 같은 자리에 겹쳐 두면 높이가 고정이라 안 흔들린다 */
-.viz-right { position: relative; flex: 1; min-width: 0; min-height: 124px; }
-.viz-msg, .viz-legend {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  justify-content: center; transition: opacity .14s ease;
-}
-.viz-msg { font-size: 11.5px; line-height: 1.35; color: var(--muted); gap: 12px; }
-.viz-msg b {
-  display: block; font-size: 21px; font-weight: 600; letter-spacing: -.8px;
-  color: var(--text); line-height: 1.15;
-}
-.viz-msg b.ok { color: var(--ok); }
-.viz-hint {
-  margin-top: 7px; font-size: 10.5px; color: var(--muted);
-  display: flex; align-items: center; gap: 4px;
-}
-.viz-legend { opacity: 0; pointer-events: none; }
-.kpigroup:hover .viz-msg, .kpigroup:focus-within .viz-msg { opacity: 0; }
-.kpigroup:hover .viz-legend, .kpigroup:focus-within .viz-legend { opacity: 1; }
-
-/* 마우스가 없는 기계(터치 · 발표용 태블릿)에서는 hover 가 아예 안 온다.
- * 그러면 내역을 볼 방법이 사라지므로 그쪽에서는 처음부터 펼쳐 둔다 */
-/* 한 줄에 세 칸일 때는 칸이 좁고 대신 높다.
- * 도넛을 그만큼 키운다 · 작은 도넛에 빈 곳이 넓으면 카드가 비어 보인다 */
-/* 한 줄에 세 칸일 때는 칸이 좁고 대신 높다. 도넛을 세로로 크게 놓는다 */
-.dashrow.c3 .kpi-viz { flex-direction: column; gap: 16px; }
-.dashrow.c3 .donut { width: 210px; height: 210px; }
-.dashrow.c3 .viz-right { min-height: 0; width: 100%; }
-/* 세로로 놓으면 숫자 두 개를 나란히 둘 수 있다 */
-.dashrow.c3 .viz-msg { flex-direction: row; gap: 12px; text-align: center; }
-.dashrow.c3 .viz-msg > div:not(.viz-hint) {
-  flex: 1; background: var(--surface-2); border-radius: 14px; padding: 12px 10px;
-}
-.dashrow.c3 .viz-msg .viz-hint { position: absolute; left: 0; right: 0; bottom: -18px;
-  justify-content: center; }
-.dashrow.c3 .viz-msg b { font-size: 24px; }
-
-@media (hover: none) {
-  .viz-right { min-height: 0; }
-  .viz-msg { display: none; }
-  .viz-legend { position: static; opacity: 1; pointer-events: auto; }
-}
 
 .legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .legend { gap: 5px; }
@@ -1167,6 +1115,13 @@ td.num, th.num { text-align: right; }
   display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
   font-size: 11px; color: var(--muted);
 }
+/* 대시보드 카드 안에서는 라벨이 두 글자뿐이라 금액을 키운다 · 두 줄의 금액을 견주는 게 이 그림의 일이다 */
+.dcard .cmp-lab { font-size: 12.5px; color: var(--text-2); font-weight: 500; }
+.dcard .cmp-v {
+  font-size: 17px; letter-spacing: -.5px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.cmp-dv { margin-left: 5px; font-size: 10.5px; font-weight: 500; color: var(--core); white-space: nowrap; }
 /* 막대를 40px 로 키우고 값을 막대 안에 넣는다.
  * 막대 밖에 적으면 눈이 두 번 움직인다 */
 .cmp-track {
@@ -1274,9 +1229,7 @@ td.num, th.num { text-align: right; }
 .dot.wait { border-style: dashed; color: var(--muted); }
 
 @media (max-width: 640px) {
-  .kpi-viz { gap: 14px; }
-  .donut, .dashrow.c3 .donut { width: 112px; height: 112px; }
-  .viz-right, .dashrow.c3 .viz-right { min-height: 112px; }
+  .donut { width: 112px; height: 112px; }
   .cmp-gap { font-size: 0; }        /* 글자가 안 들어가면 빗금만 남긴다 */
   .fin-pill b { font-size: 17px; }
   .kpigroup.lead .kpi.big .v { font-size: 34px; }
@@ -2209,4 +2162,160 @@ td.num, th.num { text-align: right; }
   .fgrid { grid-template-columns: 1fr; }
   .pgrid { grid-template-columns: 1fr; }
   .decide-row { flex-direction: column; }
+}
+
+/* ---------------------------------------------------------------- 20. 대시보드 3열
+ *
+ * 한 화면에 세 가지만 둔다 · 무엇을 맡았나(속성) · 얼마를 쥐고 있나(재고) · 언제까지인가(마감).
+ * 세 카드의 높이를 그리드가 맞추고, 각 카드는 [머리 · 몸 · 바닥] 세 층이다.
+ * 바닥 줄(margin-top:auto)이 카드마다 같은 자리에 오므로 내용 길이가 달라도 아래가 가지런하다.
+ *
+ * 색을 새로 만들지 않았다 · 코랄(급함) · 앰버(주의) · 틸(절감) · 블루(값) 넷 안에서만 쓴다.
+ */
+.dash3 {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px; margin-bottom: 20px; align-items: stretch;
+}
+.dash3 > * { min-width: 0; }
+
+.dcard {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow), var(--edge); padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+/* 머리 · 제목과 갈 곳. 아래 실선이 「여기까지가 제목」 을 만든다 */
+.dhead {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--line);
+}
+.dhead .dh-l { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.dcard h2 { font-size: 15.5px; font-weight: 600; letter-spacing: -.35px; }
+.dcard h2 .ai { color: var(--brand); }
+.dlink {
+  display: inline-flex; align-items: center; gap: 2px; flex: none;
+  font-size: 11.5px; font-weight: 500; color: var(--brand); white-space: nowrap;
+}
+.dlink:hover { color: var(--b2); text-decoration: none; }
+/* 바닥 · 카드마다 같은 높이에 온다 · 왼쪽은 조건, 오른쪽은 결과 */
+.dfoot {
+  margin-top: auto; padding-top: 9px; border-top: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 10.5px; line-height: 1.5; color: var(--muted);
+}
+.dfoot .df-r { font-size: 11px; font-weight: 600; white-space: nowrap; }
+.dfoot .df-r.ok { color: var(--ok); }
+.dfoot .df-r.ins { color: var(--insur); }
+.dfoot .df-r.core { color: var(--core); }
+.dfoot .df-r.plan { color: var(--brand); }
+.dfoot a.df-r:hover { text-decoration: underline; }
+
+/* 큰 숫자 타일 · 카드 안에서 한 단 밝은 판에 얹는다 */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; min-width: 0; }
+.tile .tv {
+  font-size: 34px; font-weight: 700; letter-spacing: -1.2px; line-height: 1;
+  font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 3px;
+}
+.tile .tv small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--text-2); }
+.tile .tk { display: block; margin-top: 7px; font-size: 10.5px; font-weight: 600; color: var(--muted); }
+.tile.core .tv { color: var(--core); } .tile.core .tk { color: var(--core); }
+.tile.ok .tv { color: var(--ok); }    .tile.ok .tk { color: var(--ok); }
+.tile.plan .tv { color: var(--b3); }
+.tile.ins .tv { color: var(--insur); }
+/* 도넛 아래 두는 타일은 가운데로 두고 한 치수 줄인다 · 도넛이 주인공이다 */
+.tiles.ctr { max-width: 300px; margin: 0 auto; width: 100%; }
+.tiles.ctr .tile { display: grid; place-items: center; text-align: center; padding: 12px; }
+.tiles.ctr .tv { font-size: 24px; letter-spacing: -.9px; }
+.tiles.ctr .tk { margin-top: 6px; font-weight: 500; }
+
+/* 도넛 칸 · 남는 높이를 여기서 먹는다 (세 카드 높이가 그리드로 맞춰진다) */
+.donutbox { flex: 1; display: grid; place-items: center; padding: 14px 0 16px; }
+.donut.lg { width: 210px; height: 210px; }
+.donut.lg .donut-v { font-size: 21px; letter-spacing: -.8px; font-weight: 700; }
+.donut.lg .donut-k { font-size: 6.5px; }
+
+/* 마감 줄 · 한 줄에 하나 · 이름 · 코드 · 남은 일수 · 막대 */
+.duelist { display: flex; flex-direction: column; gap: 6px; }
+.duerow {
+  display: flex; flex-direction: column; gap: 6px; color: inherit;
+  background: var(--surface-2); border-radius: 12px; padding: 8px 10px;
+  transition: background .14s ease;
+}
+a.duerow:hover { background: var(--slate-2); text-decoration: none; }
+.duerow .dr-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.duerow .dr-l { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.duerow .dr-dot { width: 8px; height: 8px; border-radius: 999px; flex: none; }
+.duerow .dr-n {
+  font-size: 12.5px; font-weight: 600; letter-spacing: -.2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.duerow .dr-q {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10.5px; color: var(--muted); white-space: nowrap; flex: none;
+}
+.duerow .dr-d {
+  font-size: 16px; font-weight: 700; letter-spacing: -.4px; flex: none;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.duerow .dr-bar { height: 6px; border-radius: 999px; background: var(--bg); overflow: hidden; }
+.duerow .dr-bar i { display: block; height: 100%; border-radius: 999px; }
+
+/* 마감 카드 안의 한 줄 알림 · 지금 신청할 것이 있으면 코랄, 없으면 조용한 판 */
+.duecall {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 11px; border-radius: 12px; font-size: 12.5px; font-weight: 600;
+}
+.duecall.ins { background: var(--insur-weak); color: var(--insur); }
+.duecall.calm { background: var(--surface-2); color: var(--text-2); font-weight: 500; }
+.duecall .dc-l { display: flex; align-items: center; gap: 6px; min-width: 0; }
+
+/* 문맥 띠 · 오른쪽에 상태와 갱신을 둔다 */
+.ctxbar .cmono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10.5px; color: var(--muted); white-space: nowrap;
+}
+.ctxbar .cright { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
+.ctxbar .cstat {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface-2); padding: 4px 10px; border-radius: 10px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10.5px; color: var(--text-2); white-space: nowrap;
+}
+.ctxbar .cstat i { width: 7px; height: 7px; border-radius: 999px; background: var(--ok); flex: none; }
+.pulse { animation: dpulse 2s ease-in-out infinite; }
+@keyframes dpulse { 50% { opacity: .35; } }
+
+/* 흐름 띠 · 숫자 하나와 갈 곳 하나 · 라벨 왼쪽 · 값 오른쪽 */
+.quick.flow a { justify-content: space-between; gap: 10px; padding: 12px 14px; border-radius: 14px; }
+.quick.flow .qi { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; }
+.quick.flow .qb { display: flex; align-items: center; gap: 10px; }
+.quick.flow .qk { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.quick.flow .qv {
+  font-size: 16px; font-weight: 700; letter-spacing: -.4px;
+  font-variant-numeric: tabular-nums; flex: none;
+}
+.quick.flow a.ins .qv { color: var(--insur); }
+.quick.flow a.ok .qv { color: var(--ok); }
+.quick.flow a.plan .qv { color: var(--b3); }
+
+/* 맨 아래 한 줄 · 가운데로 두고 양쪽에 점을 찍는다 */
+.endnote {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 14px 0 24px; font-size: 11px; line-height: 1.6; color: var(--muted); text-align: center;
+}
+.endnote i { width: 6px; height: 6px; border-radius: 999px; background: var(--muted); opacity: .6; flex: none; }
+
+/* 좁아지면 · 셋 → 둘 → 하나. 마감 카드가 제일 길어서 넓은 칸을 준다 */
+@media (max-width: 1180px) {
+  .dash3 { grid-template-columns: 1fr 1fr; }
+  .dash3 > :nth-child(3) { grid-column: 1 / -1; }
+}
+@media (max-width: 960px) {
+  .dash3 { grid-template-columns: 1fr; gap: 16px; }
+  .dash3 > :nth-child(3) { grid-column: auto; }
+}
+@media (max-width: 640px) {
+  .donut.lg { width: 168px; height: 168px; }
+  .tile .tv { font-size: 28px; }
+  .ctxbar .cright { margin-left: 0; width: 100%; }
 }
