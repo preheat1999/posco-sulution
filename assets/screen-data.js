@@ -644,32 +644,52 @@
   /* 반납 유형은 원천의 물품 상태(cond)를 그대로 쓴다.
    * 명세의 7갈래 판정은 알고리즘이 내는 값이라 아직 데이터에 없다.
    * 없는 칸을 화면에서 만들지 않는다 · 대신 실제 상태별로 나눈다 */
+  /* 칸은 반납 여부다 · 상태(신품 · 중고 · 불용)로 나누지 않는다.
+   * 상태는 반납받은 자재를 검사하고 사람이 정하는 값이라, 반납 전에는 아직 없다 */
   function retTabs() {
-    var B = window.DB_BIZ;
-    var list = (B && B.returns) || [];
-    var c = {};
-    list.forEach(function (r) { c[r.cond] = (c[r.cond] || 0) + 1; });
-    var tabs = [{ key: 'all', label: '전체', n: list.length }];
-    Object.keys(c).forEach(function (k) { tabs.push({ key: k, label: k, n: c[k] }); });
-    return tabs;
+    var all = retRows();
+    var done = all.filter(function (r) { return r.returned; }).length;
+    return [
+      { key: 'all', label: '전체', n: all.length },
+      { key: 'wait', label: '반납 대기', n: all.length - done },
+      { key: 'done', label: '반납 완료', n: done }
+    ];
+  }
+
+  /* 이 자재를 반납한 이력이 있는가 · 3층(반납 트랜잭션 · QR 반납 접수)을 본다 */
+  function retDone(q) {
+    if (!live) { return 0; }
+    var ch = DB.changes();
+    var n = (ch.stock_transactions || []).filter(function (t) {
+      return t.q === q && t.txnType === '반납';
+    }).length;
+    n += (ch.qr_returns || []).filter(function (t) { return t.code === q; }).length;
+    return n;
   }
 
   function retList(tab) {
+    var out = retRows();
+    if (tab === 'wait') { return out.filter(function (r) { return !r.returned; }); }
+    if (tab === 'done') { return out.filter(function (r) { return r.returned; }); }
+    return out;
+  }
+
+  function retRows() {
     var B = window.DB_BIZ;
     if (!B || !live) { return []; }
-    var out = (B.returns || []).map(function (t) {
+    return (B.returns || []).map(function (t) {
       var r = DB.item(t.q) || {};
       return {
         q: t.q, name: r.name || '품명 미확인', cond: t.cond, left: t.left, off: t.off,
         wo: t.wo, asm: t.asm, code: t.code, issueWh: t.issueWh, acc: t.acc,
         locator: t.locator, unit: unitOf(t.q),
         stock: r.stock, target: r.target, actionNow: r.actionNow, price: r.price,
+        /* 반납한 이력이 있는가 · 상태는 이 줄에서만 보여 준다 */
+        returned: retDone(t.q),
         /* 반납 트랜잭션 종류. 부호는 config 가 정한다 · 화면이 정하지 않는다 */
         txnType: '반납'
       };
     });
-    if (tab && tab !== 'all') { out = out.filter(function (r) { return r.cond === tab; }); }
-    return out;
   }
 
   /* 반납하면 무엇이 바뀌는지 미리 보여 준다 */

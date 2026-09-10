@@ -51,6 +51,12 @@
    *   sessionStorage   주소가 지워지는 경로(홈 화면 추가 · 리다이렉트)를 대비한 보험
    * 코드가 있으면 1단계(자재 고르기)를 건너뛰고 2단계부터 시작한다 */
   function readCode() {
+    /* 목록을 보러 온 것이면 세션에 남은 코드를 버린다.
+     * 이게 없으면 「다른 자재 반납」 을 눌러도 세션 코드 때문에 같은 자재가 또 열렸다 */
+    if (String(location.search || '').indexOf('list=1') >= 0) {
+      try { window.sessionStorage.removeItem('mtrl.qr.code'); } catch (e) { /* 무시 */ }
+      return '';
+    }
     var m = String(location.search || '').match(/[?&]code=([^&]*)/);
     if (m) { return decodeURIComponent(m[1]); }
     var h = String(location.hash || '').replace('#', '');
@@ -72,11 +78,16 @@
   /* 반납자 · 현장에서 이 사람이 반납했다는 기록이 남는다.
    * 로그인 세션이 있으면 그 사람으로 채우고, 없으면 아래 기본값이다 ·
    * 폰은 여러 사람이 돌려 쓰기 때문에 고칠 수 있어야 한다 */
+  /* 반납자는 자재 확인 화면(material-view.html)에서 확인한 값이다.
+   * 여기서는 고치지 않고 그대로 보여 준다 · 두 화면에서 따로 고치면 어느 값이 남는지 흐려진다 */
   var who = (function () {
+    var saved = null;
+    try { saved = JSON.parse(window.sessionStorage.getItem('mtrl.qr.who') || 'null'); }
+    catch (e) { saved = null; }
     var me = window.ORG ? ORG.load() : null;
     return {
-      emp: (me && me.empNo) || '638844',
-      name: (me && me.name) || '이예열'
+      emp: (saved && saved.emp) || (me && me.empNo) || '638844',
+      name: (saved && saved.name) || (me && me.name) || '이예열'
     };
   })();
 
@@ -121,11 +132,14 @@
         return '<button class="pick" type="button" data-q="' + UI.esc(r.q) + '">' +
           '<span class="pick-body">' +
             '<span class="pick-name">' + UI.esc(r.name) + '</span>' +
-            '<span class="pick-meta">' + UI.esc(r.q) + ' · ' + UI.esc(r.cond) +
-              ' · 잔여 ' + UI.num(r.left) + ' ' + UI.esc(r.unit) + '</span>' +
+            /* 상태(신품 · 중고)는 반납 뒤에 정한다 · 목록에 미리 적지 않는다 */
+            '<span class="pick-meta">' + UI.esc(r.q) +
+              ' · 잔여 ' + UI.num(r.left) + ' ' + UI.esc(r.unit) +
+              (r.returned ? ' · 반납 완료' : '') + '</span>' +
           '</span>' +
           '<span class="pick-right"><span class="pick-v">' + UI.num(r.left) + '</span>' +
-            '<span class="pick-k">잔여</span></span></button>';
+            '<span class="pick-k">' + (r.returned ? '반납함' : '잔여') +
+            '</span></span></button>';
       }).join('') + '</div>';
   }
 
@@ -137,12 +151,13 @@
         (window.QRDB && !QRDB.valid(q) ? '자재코드 형식이 아닙니다' : '등록되지 않은 자재입니다') +
         '</strong>' + UI.esc(q) + ' 는 자재 대장과 QR 등록 자재에 모두 없습니다 · ' +
         '자재 담당자에게 코드를 확인하세요</div>' +
-        '<a class="btn line block" href="mobile-return.html" style="margin-top:12px">' +
+        '<a class="btn line block" href="mobile-return.html?list=1" style="margin-top:12px">' +
         '반납 목록으로</a>';
       return;
     }
     if (qty === null) { qty = r.left; }
-    if (cond === null) { cond = r.cond; }
+    /* 상태는 반납 뒤에 정한다 · 여기서는 비워 둔다 */
+    cond = '';
 
     if (done) { el('panel').innerHTML = doneView(r); return; }
 
@@ -178,56 +193,46 @@
         '</div>' +
       '</div>' +
 
-      '<p class="gt" style="margin:16px 0 8px"><span>물품 상태</span>' +
-        '<span class="gt-sub">' + (r.qrOnly ? '기본값 ' : '원천 값 ') +
-        UI.esc(r.cond) + '</span></p>' +
-      '<div class="condlist">' + condList(r).map(function (c) {
-        return '<button class="condbtn' + (c[0] === cond ? ' on' : '') + '" type="button" ' +
-          'data-cond="' + UI.esc(c[0]) + '">' +
-          '<span class="cn">' + UI.esc(c[0]) + '</span>' +
-          '<span class="cd">' + UI.esc(c[1]) + '</span></button>';
-      }).join('') + '</div>' +
+      /* 물품 상태는 반납한 뒤 검사에서 사람이 정한다. 여기서 미리 고르게 하면
+       * 현장에서 찍은 값이 검사 결과처럼 남는다 */
+      '<div class="callout" style="margin-top:16px;background:var(--surface-2);' +
+        'border:1px solid var(--line)"><span class="ci" style="color:var(--muted)">◇</span>' +
+        '<span><b style="color:var(--text)">물품 상태는 반납 뒤에 정합니다</b>' +
+        '신품 · 중고 · 불용 판정은 반납받은 자재를 검사하고 담당자가 정합니다 · ' +
+        '이 화면에서는 정하지 않습니다.</span></div>' +
 
       '<p class="gt" style="margin:16px 0 8px"><span>반납자</span>' +
-        '<span class="gt-sub">이 이름으로 이력이 남습니다</span></p>' +
+        '<span class="gt-sub">자재 확인 화면에서 확인한 값</span></p>' +
       '<div class="fgrid">' +
         '<div class="fval"><span class="fk">사번</span>' +
-          '<input class="whoin" data-who="emp" inputmode="numeric" ' +
-            'value="' + UI.esc(who.emp) + '" aria-label="반납자 사번"></div>' +
+          '<span class="fv">' + UI.esc(who.emp) + '</span></div>' +
         '<div class="fval"><span class="fk">이름</span>' +
-          '<input class="whoin" data-who="name" ' +
-            'value="' + UI.esc(who.name) + '" aria-label="반납자 이름"></div>' +
+          '<span class="fv">' + UI.esc(who.name) + '</span></div>' +
       '</div>' +
 
-      (e ? '<div class="callout ok" style="margin-top:16px"><span class="ci">↩</span>' +
-        '<span><b>재고 ' + UI.num(e.stock[0]) + ' → ' + UI.num(e.stock[1]) + '</b>' +
-        '조치 ' + UI.esc(e.action[0]) + ' → ' + UI.esc(e.action[1]) +
-        ' · 회수 ' + UI.won(e.amount) + '</span></div>' : '') +
+      /* 회수 금액 · 이 반납으로 부서 장부에 돌아오는 돈이다.
+       * 정본 자재는 어댑터가 낸 값(재고 · 조치까지), QR 로 들어온 자재는 단가 × 수량이다 */
+      (e
+        ? '<div class="callout ok" style="margin-top:16px"><span class="ci">₩</span>' +
+          '<span><b>회수 금액 ' + UI.won(e.amount) + '</b>' +
+          '재고 ' + UI.num(e.stock[0]) + ' → ' + UI.num(e.stock[1]) +
+          ' · 조치 ' + UI.esc(e.action[0]) + ' → ' + UI.esc(e.action[1]) + '</span></div>'
+        : (r.qrOnly && Number(r.qr.price)
+          ? '<div class="callout ok" style="margin-top:16px"><span class="ci">₩</span>' +
+            /* 식별표 금액과 대조하니 원 단위 그대로 적는다 · 「2만원」 으로 뭉치면 못 견준다 */
+            '<span><b>회수 금액 ' +
+              UI.num(Math.round(Number(r.qr.price) * qty)) + '원</b>' +
+            '단가 ' + UI.num(Math.round(Number(r.qr.price))) + '원 × ' + UI.num(qty) + ' ' +
+            UI.esc(r.unit) + ' · 부서 재고에는 반영되지 않습니다</span></div>'
+          : '')) +
 
       '<button class="btn block" type="button" id="go" ' +
         'style="min-height:52px;margin-top:16px">반납 처리</button>' +
       (viaQr
         ? '<a class="btn line block" href="material-view.html?code=' +
           encodeURIComponent(r.q) + '" style="margin-top:10px">자재 확인으로 돌아가기</a>'
-        : '<a class="btn line block" href="mobile-return.html" ' +
+        : '<a class="btn line block" href="mobile-return.html?list=1" ' +
           'style="margin-top:10px">다른 자재 고르기</a>');
-  }
-
-  /* 상태 설명은 원천 값에 붙는 뜻만 적는다. 없는 갈래를 만들지 않는다 */
-  function condList(r) {
-    var known = {
-      '신품': '뜯지 않았습니다 · 그대로 입고',
-      '중고': '썼습니다 · 검사 후 입고',
-      '불용': '못 씁니다 · 폐기 대상',
-      '철강재': '철강재 · 별도 처리',
-      '투자': '투자자재 · 별도 계정',
-      'Consignment': '위탁 · 공급사 반품'
-    };
-    var out = [[r.cond, known[r.cond] || (r.qrOnly ? '식별표 기준' : '원천 값')]];
-    Object.keys(known).forEach(function (k) {
-      if (k !== r.cond) { out.push([k, known[k]]); }
-    });
-    return out.slice(0, 4);
   }
 
   function doneView(r) {
@@ -254,7 +259,10 @@ woChk() +
         UI.esc(r.qr.owner || '미확인') + ' · ' + UI.esc(r.qr.tel || '연락처 미확인') +
         ' 로 전달할 값입니다.</p>' : '') +
       '</div>' +
-      '<a class="btn block" href="mobile-return.html" style="margin-top:14px">' +
+      '<p class="note" style="margin-top:12px;text-align:left">물품 상태(신품 · 중고 · 불용)는 ' +
+        '반납받은 자재를 검사하고 담당자가 정합니다 · 반납 화면의 <b>반납 완료</b> 칸에서 ' +
+        '확정된 상태를 봅니다.</p>' +
+      '<a class="btn block" href="mobile-return.html?list=1" style="margin-top:14px">' +
         '다른 자재 반납</a>' +
       '<a class="btn line block" href="return.html" style="margin-top:10px">' +
         '반납 화면으로</a>';
@@ -291,9 +299,6 @@ woChk() +
     /* 반납자 입력 · 값만 담아 둔다. 여기서 다시 그리면 글자 칠 때마다 칸이 튄다 */
     var wi = e.target.closest && e.target.closest('[data-who]');
     if (wi) { return; }
-    var c = e.target.closest && e.target.closest('[data-cond]');
-    if (c) { cond = c.getAttribute('data-cond'); paintPanel(); return; }
-
     if (e.target.closest && e.target.closest('#go')) {
       var r2 = target();
       if (!r2 || !window.DB) { return; }
@@ -304,7 +309,8 @@ woChk() +
           code: r2.q, dept: r2.qrOnly ? (r2.qr.deptCode || '') : undefined,
           qty: qty, unit: r2.unit, cond: cond,
           by: (who.name || '담당자') + (who.emp ? ' (' + who.emp + ')' : ''),
-          note: viaQr ? '현장 QR 반납' : '현장 반납'
+          cond: '',                       // 상태는 반납 뒤 검사에서 정한다
+          note: (viaQr ? '현장 QR 반납' : '현장 반납') + ' · 상태 미정'
         });
         done = true;
         paintPanel();

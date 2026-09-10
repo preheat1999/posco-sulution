@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """자재식별표에 붙일 QR 을 만든다.
 
-QR 에 담는 값 · <배포 주소>/mobile-return.html?code=Q0000000
-스캔하면 브라우저가 모바일 반납 화면을 열고, code 파라미터를 읽어 1단계(QR 스캔)를
-건너뛰고 2단계(자재정보 초안 확인)부터 시작한다.
+QR 에 담는 값 · <배포 주소>/material-view.html?code=Q0000000
+스캔하면 자재 확인 화면이 열린다 · 식별표 값과 반납자를 확인하고 「반납 · 확인」 을
+누르면 반납 화면으로 넘어가 2단계(자재정보 초안 확인)부터 이어진다.
 
 사용법 ·
     python -B make_qr.py                                  기본값으로 만든다
     python -B make_qr.py --code Q4046777                  자재 하나
     python -B make_qr.py --base http://192.168.0.10:8130  사내망 · 노트북 주소
-    python -B make_qr.py --page material-view.html        자재 확인 화면으로 보내기
+    python -B make_qr.py --page mobile-return.html        반납 화면으로 바로 보내기
     python -B make_qr.py --all                             qr-items.js 에 등록된 전부
 
 내는 것 (qr/ 폴더) ·
@@ -37,9 +37,9 @@ OUT = os.path.join(ROOT, 'qr')
 
 # 배포된 사이트 주소. 코드 안에 도메인을 박지 않으려고 인자로 받고, 기본값만 여기 둔다
 DEFAULT_BASE = 'https://main.dl62ond6b4cv9.amplifyapp.com'
-# QR 이 여는 화면 · 모바일 반납으로 바로 보낸다 (code 가 있으면 2단계부터 시작한다).
-# 자재 확인 화면을 거치게 하려면 --page material-view.html 로 만든다
-DEFAULT_PAGE = 'mobile-return.html'
+# QR 이 여는 화면 · 자재 확인 화면이다 (식별표 값 · 반납자를 여기서 확인한다).
+# 반납 화면으로 바로 보내려면 --page mobile-return.html 로 만든다
+DEFAULT_PAGE = 'material-view.html'
 
 # 인쇄용 · 현장에서 장갑 끼고 폰으로 찍는다. 한 칸을 두껍게 두어야 잘 읽힌다
 SCALE = 16          # QR 한 칸 = 16px

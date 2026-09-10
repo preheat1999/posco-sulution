@@ -190,7 +190,11 @@ ok(/부족/.test(seen.stock || '') && /초과/.test(seen.stock || ''),
 ok(!/2\.33/.test(seen.stock || ''), 'stock · Stitch 목업의 2.33 이 안 들어갔다');
 ok(/156/.test(seen.plan || ''), 'plan · 정비계획 156건');
 ok(/K10665396/.test(seen.purchase || ''), 'purchase · 실제 작업주문 번호');
-ok(/Consignment|신품/.test(seen['return'] || ''), 'return · 실제 물품 상태');
+/* 물품 상태는 반납받은 자재를 검사하고 사람이 정한다 · 반납 전 목록에는 나오지 않는다.
+ * 그래서 「반납 뒤 결정」 이 적혀 있는지, 상태 이름이 미리 새지 않는지를 본다 */
+ok(/반납 뒤 결정/.test(seen['return'] || ''), 'return · 반납 전에는 상태를 적지 않는다');
+ok(!/Consignment/.test(seen['return'] || ''), 'return · 상태 이름이 미리 새지 않는다');
+ok(/반납 대기|반납 완료/.test(seen['return'] || ''), 'return · 칸이 반납 여부로 나뉜다');
 
 console.log('');
 console.log('=== 지어낸 값이 섞였는가 (Stitch 목업 잔재) ===');

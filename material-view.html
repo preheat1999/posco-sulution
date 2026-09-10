@@ -56,6 +56,20 @@
   var raw = readCode();
   var code = QRDB.norm(raw);
 
+  /* 반납자 · 이 사람 이름으로 반납 이력이 남는다.
+   * 폰은 여러 사람이 돌려 쓰니 채워 두되 고칠 수 있어야 한다 ·
+   * 로그인 세션이 있으면 그 사람으로 채운다 */
+  var who = (function () {
+    var me = window.ORG ? ORG.load() : null;
+    var saved = null;
+    try { saved = JSON.parse(window.sessionStorage.getItem('mtrl.qr.who') || 'null'); }
+    catch (e) { saved = null; }
+    return {
+      emp: (saved && saved.emp) || (me && me.empNo) || '638844',
+      name: (saved && saved.name) || (me && me.name) || '이예열'
+    };
+  })();
+
   function el(id) { return document.getElementById(id); }
 
   function paint() {
@@ -139,6 +153,17 @@
           '<span class="fv">' + UI.esc(p[1]) + '</span></div>';
       }).join('') + '</div>' +
 
+      '<p class="gt" style="margin:16px 0 8px"><span>반납자</span>' +
+        '<span class="gt-sub">이 이름으로 이력이 남습니다</span></p>' +
+      '<div class="fgrid">' +
+        '<div class="fval"><span class="fk">사번</span>' +
+          '<input class="whoin" data-who="emp" inputmode="numeric" ' +
+            'value="' + UI.esc(who.emp) + '" aria-label="반납자 사번"></div>' +
+        '<div class="fval"><span class="fk">이름</span>' +
+          '<input class="whoin" data-who="name" ' +
+            'value="' + UI.esc(who.name) + '" aria-label="반납자 이름"></div>' +
+      '</div>' +
+
       (r.inMaster
         ? '<div class="callout ok" style="margin-top:14px"><span class="ci">✓</span>' +
           '<span><b>우리 부서 자재 대장에 있는 자재입니다</b>' +
@@ -183,11 +208,17 @@
       body: '<b>' + UI.esc(r.name || '품명 미확인') + '</b>' +
         (r.spec ? ' · ' + UI.esc(r.spec) : '') + ' · ' +
         UI.num(r.qty) + ' ' + UI.esc(r.unit || ''),
+      rows: [['반납자', who.name + ' · 사번 ' + who.emp],
+             ['물품 상태', '반납 후 검사에서 정합니다']],
       ok: '확인',
       cancel: '취소',
       onOk: function () {
-        /* 코드를 넘겨 준다 · 주소에 붙이고, 주소가 지워지는 경로를 대비해 세션에도 둔다 */
-        try { window.sessionStorage.setItem('mtrl.qr.code', code); } catch (e) { /* 무시 */ }
+        /* 코드와 반납자를 넘겨 준다 · 주소에 붙이고, 주소가 지워지는 경로를 대비해
+         * 세션에도 둔다. 반납자는 다음 화면에서 고치지 않는다 (여기서 확인한 값이다) */
+        try {
+          window.sessionStorage.setItem('mtrl.qr.code', code);
+          window.sessionStorage.setItem('mtrl.qr.who', JSON.stringify(who));
+        } catch (e) { /* 무시 */ }
         window.location.href = 'mobile-return.html?code=' + encodeURIComponent(code);
       }
     });
@@ -199,6 +230,15 @@
       var v = el('manual') ? el('manual').value : '';
       window.location.href = 'material-view.html?code=' + encodeURIComponent(QRDB.norm(v));
     }
+  });
+
+  /* 반납자 칸에 친 값을 담아 둔다. 여기서 다시 그리면 글자 칠 때마다 칸이 튄다 */
+  document.addEventListener('input', function (e) {
+    var wi = e.target.closest && e.target.closest('[data-who]');
+    if (!wi) { return; }
+    who[wi.getAttribute('data-who')] = String(e.target.value || '').trim();
+    try { window.sessionStorage.setItem('mtrl.qr.who', JSON.stringify(who)); }
+    catch (err) { /* 무시 */ }
   });
 
   document.addEventListener('keydown', function (e) {
