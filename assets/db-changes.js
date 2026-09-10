@@ -25,7 +25,10 @@
                           'priorVerdict', 'reason'],
     stock_transactions: ['q', 'dept', 'txnType', 'qty', 'txnAt', 'processedBy', 'note'],
     pooling_overrides: ['q', 'dept', 'action', 'by', 'at', 'note'],
-    pr_drafts: ['q', 'dept', 'data', 'by', 'at']
+    pr_drafts: ['q', 'dept', 'data', 'by', 'at'],
+    /* 현장 QR 반납 접수 · 정본(우리 부서 743) 밖 자재도 들어온다.
+     * 그래서 stock_transactions 와 섞지 않는다 · 부서 재고를 움직이면 안 되는 값이다 */
+    qr_returns: ['code', 'dept', 'qty', 'unit', 'cond', 'by', 'at', 'note']
   };
 
   var listeners = [];

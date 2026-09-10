@@ -508,6 +508,43 @@
       return row;
     },
 
+    /* 현장 QR 반납 접수.
+     *
+     * 정본에 있는 자재라면 stock_transactions(반납)로 재고가 움직인다.
+     * 정본 밖 자재(다른 부서 식별표)는 우리 부서 재고를 건드릴 수 없으므로
+     * 접수 이력만 남긴다 · 화면이 그 사실을 그대로 적는다 */
+    qrReturn: function (o) {
+      o = o || {};
+      var code = String(o.code || '').trim().toUpperCase();
+      if (!/^Q\d{7}$/.test(code)) { throw new Error('자재코드는 Q 와 숫자 7자리다'); }
+      var qty = Math.abs(Number(o.qty) || 0);
+      if (!qty) { throw new Error('반납 수량이 없다'); }
+      var inMaster = !!MAT[key(code, o.dept || DEFAULT_DEPT)];
+      var row = C.add('qr_returns', {
+        code: code, dept: o.dept || '', qty: qty, unit: o.unit || '',
+        cond: o.cond || '', by: o.by || '담당자', at: o.at || nowStamp(),
+        note: o.note || ''
+      });
+      /* 우리 부서 자재면 재고도 같이 움직인다 */
+      if (inMaster) {
+        C.add('stock_transactions', {
+          q: code, dept: o.dept || DEFAULT_DEPT, txnType: '반납', qty: qty,
+          txnAt: o.at || nowStamp(), processedBy: o.by || '담당자',
+          note: 'QR 반납 · ' + (o.cond || '')
+        });
+      }
+      invalidate();
+      return { row: row, inMaster: inMaster };
+    },
+
+    /* 접수 이력 · 최근 것이 뒤다 */
+    qrReturns: function (code) {
+      var rows = C ? C.rows('qr_returns') : [];
+      if (!code) { return rows; }
+      var c = String(code).trim().toUpperCase();
+      return rows.filter(function (r) { return r.code === c; });
+    },
+
     pool: function (o) {
       o = o || {};
       var dept = o.dept || DEFAULT_DEPT;

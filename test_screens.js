@@ -4,7 +4,8 @@
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = 'C:/Users/user/Desktop/26 포스코 해커톤 본선';
-const PAGES = ['main', 'attr', 'stock', 'plan', 'purchase', 'return', 'mobile-return', 'login'];
+const PAGES = ['main', 'attr', 'stock', 'plan', 'pool', 'purchase', 'return',
+               'mobile-return', 'material-view', 'login'];
 
 let bad = 0;
 function ok(cond, msg) {
@@ -71,7 +72,13 @@ function run(page, preset, loc) {
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   sandbox.document = makeDoc();
-  sandbox.location = { hash: (loc && loc.hash) || '', href: '', replace() {} };
+  sandbox.location = {
+    hash: (loc && loc.hash) || '', search: (loc && loc.search) || '',
+    href: '', replace() {}
+  };
+  sandbox.sessionStorage = {
+    getItem: () => null, setItem: () => {}, removeItem: () => {}
+  };
   Object.assign(box, preset || {});   // 화면이 읽을 저장소 값을 미리 넣는다 (단계 등)
   sandbox.localStorage = {
     getItem: (k) => (Object.prototype.hasOwnProperty.call(box, k) ? box[k] : null),
@@ -134,7 +141,37 @@ PAGES.forEach((p) => {
   ok(all.indexOf(cta) >= 0, p + '(실행 전) · 「' + cta + '」 버튼이 있다');
   ok(!leak.test(all), p + '(실행 전) · ' + leakName + ' 가 새지 않는다');
   ok(!/undefined|NaN/.test(all), p + '(실행 전) · undefined · NaN 없음');
-})
+});
+
+/* QR 진입 화면 · 세 갈래를 다 그려 본다 */
+[['', '자재코드가 없습니다', 'code 없음'],
+ ['?code=Q123', '형식이 아닙니다', '잘못된 형식'],
+ ['?code=Q9999999', '등록되지 않은', '없는 코드'],
+ ['?code=Q4046777', 'Bolt-Nut', '등록된 코드']].forEach(([search, want, label]) => {
+  let r = null, err = null;
+  try { r = run('material-view', null, { search }); } catch (e) { err = e; }
+  ok(!err, 'material-view(' + label + ') 오류 없이 실행' + (err ? ' · ' + err.message : ''));
+  if (!r) { return; }
+  let all = '';
+  const st = r.document._store;
+  Object.keys(st).forEach((k) => { all += st[k]._html + ' ' + st[k]._text + ' '; });
+  ok(all.indexOf(want) >= 0, 'material-view(' + label + ') · 「' + want + '」 를 적는다');
+  ok(!/undefined|NaN/.test(all), 'material-view(' + label + ') · undefined · NaN 없음');
+});
+
+/* 모바일 반납 · QR 코드로 들어오면 목록을 건너뛰고 그 자재부터 본다 */
+{
+  let r = null, err = null;
+  try { r = run('mobile-return', null, { search: '?code=Q4046777' }); } catch (e) { err = e; }
+  ok(!err, 'mobile-return(QR) 오류 없이 실행' + (err ? ' · ' + err.message : ''));
+  if (r) {
+    const st = r.document._store;
+    ok((st.pick ? st.pick._html : '') === '', 'mobile-return(QR) · 자재 고르기 단계를 건너뛴다');
+    const panel = st.panel ? st.panel._html : '';
+    ok(panel.indexOf('Bolt-Nut') >= 0, 'mobile-return(QR) · 그 자재부터 시작한다');
+    ok(panel.indexOf('KUX12DQ') >= 0, 'mobile-return(QR) · 다른 부서 자재임을 적는다');
+  }
+}
 
 console.log('');
 console.log('=== 실제 값이 실렸는가 ===');

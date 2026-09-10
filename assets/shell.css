@@ -1789,6 +1789,27 @@ td.num, th.num { text-align: right; }
 .fval.ai { border-color: var(--brand); background: var(--brand-weak); }
 .fval .funit { font-size: 10.5px; color: var(--muted); flex: none; }
 
+/* QR 로 들어온 자재 확인 화면 (material-view.html) */
+.qr-mark {
+  width: 36px; height: 36px; flex: none; border-radius: 10px;
+  border: 1px solid var(--line-2); background: var(--surface-2);
+  display: grid; place-items: center; font-size: 15px; color: var(--b1);
+}
+/* 식별표 항목은 이름과 값을 한 줄에 · 폰에서 한 손으로 훑는다 */
+.phone .fgrid { grid-template-columns: 1fr; gap: 7px; }
+.phone .fval { min-height: 42px; padding: 9px 12px; font-size: 13px; }
+.phone .fval .fk { color: var(--muted); font-size: 11.5px; flex: none; }
+.phone .fval .fv { font-weight: 600; text-align: right; word-break: break-all; }
+/* 취소 · 반납 두 개를 나란히. 오른쪽이 실행이다 */
+.qr-acts {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px;
+}
+.qr-acts .btn { min-height: 52px; }
+.qr-err {
+  width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--core-weak); color: var(--core); font-size: 20px; font-weight: 600;
+}
+
 /* QR 카드는 21절에 있다. 여기서는 글자만 더한다 */
 .qr-title { font-size: 13.5px; font-weight: 600; margin: 14px 0 4px; text-align: center; }
 .qr-sub { font-size: 11px; color: var(--muted); line-height: 1.7; text-align: center; }

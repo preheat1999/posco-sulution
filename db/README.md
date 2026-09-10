@@ -271,7 +271,15 @@ attribute_overrides  q dept newType approvedBy approvedAt priorVerdict reason
 stock_transactions   q dept txnType qty txnAt processedBy note
 pooling_overrides    q dept action by at note
 pr_drafts            q dept data by at
+qr_returns           code dept qty unit cond by at note
 ```
+
+`qr_returns` 는 현장 자재식별표 QR 로 들어온 반납 접수다.
+`DB.qrReturn({code, dept, qty, unit, cond})` 하나로 받고, 그 코드가 정본(우리 부서 743)에
+있으면 `stock_transactions` 에 반납 한 줄을 같이 넣어 재고를 움직인다.
+정본 밖 코드(다른 부서 식별표 · 예 `Q4046777` / 재고부서 `KUX12DQ`)면 접수만 기록하고
+부서 재고는 건드리지 않는다 · 화면도 그 사실을 그대로 적는다.
+QR 로 들어오는 자재는 `assets/qr-items.js` 에 자재코드를 PK 로 등록한다.
 
 `txnType` 은 `반납` `불출` `입고` `공용전환` 넷뿐이다.
 `qty` 는 **언제나 양수**로 넣고 부호는 읽는 쪽이 종류를 보고 정한다

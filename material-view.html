@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>자재 확인 · 자재반납</title>
+<link rel="stylesheet" href="assets/shell.css">
+<script>window.PAGE = 'return';</script>
+</head>
+<body>
+
+<!--
+  자재식별표 QR 이 여는 화면.
+  https://main.dl62ond6b4cv9.amplifyapp.com/material-view.html?code=Q4046777
+
+  셸(사이드바)을 쓰지 않는다 · 현장에서 폰으로 스캔해 한 손으로 보는 화면이다.
+  색 · 글꼴 · 카드 · 버튼은 나머지 화면과 같은 것을 쓴다.
+-->
+<div class="phone">
+  <div class="phone-top">
+    <span class="qr-mark" aria-hidden="true">▣</span>
+    <div style="min-width:0">
+      <div style="font-size:13.5px;font-weight:600">자재 확인</div>
+      <div style="font-size:10.5px;color:var(--muted)" id="src">자재식별표 QR</div>
+    </div>
+    <span class="pill" style="margin-left:auto" id="code">&nbsp;</span>
+  </div>
+
+  <div class="phone-body" id="body"></div>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/org.js"></script>
+<script src="assets/popover.js"></script>
+<script src="assets/db-master.js"></script>
+<script src="assets/db-derived.js"></script>
+<script src="assets/db-changes.js"></script>
+<script src="assets/db.js"></script>
+<script src="assets/qr-items.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* 주소에서 코드를 읽는다. QR 은 ?code=Q4046777 로 온다 ·
+   * 옛 QR 이나 손으로 붙인 주소가 #Q4046777 로 올 수도 있어 둘 다 받는다 */
+  function readCode() {
+    var s = String(location.search || '');
+    var m = s.match(/[?&]code=([^&]*)/);
+    if (m) { return decodeURIComponent(m[1]); }
+    var h = String(location.hash || '').replace('#', '');
+    return h || '';
+  }
+
+  var raw = readCode();
+  var code = QRDB.norm(raw);
+
+  function el(id) { return document.getElementById(id); }
+
+  function paint() {
+    el('code').textContent = code || '코드 없음';
+
+    /* 1 · 주소에 코드가 없다 */
+    if (!code) {
+      el('body').innerHTML = errView(
+        'QR 에 자재코드가 없습니다',
+        '자재식별표의 QR 을 다시 스캔하세요. 주소에 <code>?code=Q0000000</code> 형태로 ' +
+        '자재코드가 붙어 있어야 합니다.'
+      );
+      return;
+    }
+
+    /* 2 · 형식이 규칙과 다르다 · Q + 숫자 7자리 */
+    if (!QRDB.valid(code)) {
+      el('body').innerHTML = errView(
+        '자재코드 형식이 아닙니다',
+        '읽은 값은 <b>' + UI.esc(raw) + '</b> 입니다. 자재코드는 <b>Q 와 숫자 7자리</b> ' +
+        '(예 Q4046777) 입니다. 식별표가 찢어졌거나 다른 QR 을 읽었을 수 있습니다.'
+      );
+      return;
+    }
+
+    /* 3 · 등록되지 않은 코드 */
+    var r = QRDB.get(code);
+    if (!r) {
+      el('body').innerHTML = errView(
+        '등록되지 않은 자재입니다',
+        '<b>' + UI.esc(code) + '</b> 는 자재 대장과 QR 등록 자재에 모두 없습니다. ' +
+        '자재 담당자에게 코드를 확인해 주세요.'
+      );
+      return;
+    }
+
+    el('src').textContent = r.source + (r.inMaster ? ' · 정본 자재' : ' · 현장 등록');
+    el('body').innerHTML = itemView(r);
+  }
+
+  /* 자재식별표에 인쇄된 항목을 그대로 낸다. 없는 칸은 「미확인」 이라고 적는다 */
+  function itemView(r) {
+    var rows = [
+      ['자재코드', r.code],
+      ['품명', r.name || '미확인'],
+      ['규격', r.spec || '미확인'],
+      ['단위', r.unit || '미확인'],
+      [r.inMaster ? '현재고' : '수량',
+        (r.qty === null || r.qty === undefined) ? '미확인' : UI.num(r.qty) + ' ' + (r.unit || '')],
+      /* 식별표 금액은 원 단위 그대로 적는다 · 「2만원」 으로 뭉치면 대조가 안 된다 */
+      ['단가', (r.price === null || r.price === undefined)
+        ? '미확인' : UI.num(Math.round(r.price)) + '원'],
+      ['금액', (r.price && r.qty)
+        ? UI.num(Math.round(r.price * r.qty)) + '원' : '미확인'],
+      ['창고', r.wh || '미확인'],
+      ['입고일자', r.recvDate ? UI.date(r.recvDate) : '미확인'],
+      ['재고부서', r.deptCode || '미확인'],
+      ['부서 경로', r.deptPath || '미확인'],
+      ['재고담당', r.owner || '미확인'],
+      ['TEL', r.tel || '미확인']
+    ];
+
+    return '<p class="gt"><span>스캔한 자재</span>' +
+        '<span class="gt-sub">' + UI.esc(r.source) + '</span></p>' +
+      '<h1 style="font-size:20px;font-weight:600;letter-spacing:-.5px;margin:2px 0 3px">' +
+        UI.esc(r.name || '품명 미확인') + '</h1>' +
+      '<p class="sub">' + UI.esc(r.code) + (r.spec ? ' · ' + UI.esc(r.spec) : '') + '</p>' +
+
+      /* 수량 하나를 크게 · 현장에서 먼저 확인하는 값이다 */
+      '<div class="card" style="margin-top:14px;text-align:center">' +
+        '<div style="font-size:40px;font-weight:600;letter-spacing:-1.6px;line-height:1.1">' +
+          UI.num(r.qty) +
+          '<small style="font-size:15px;color:var(--muted);margin-left:4px">' +
+          UI.esc(r.unit || '') + '</small></div>' +
+        '<div class="sub">' + (r.inMaster ? '현재고 · ' : '식별표 수량 · ') +
+          UI.num(Math.round(r.price)) + '원 / ' + UI.esc(r.unit || '단위') + '</div>' +
+      '</div>' +
+
+      '<div class="fgrid" style="margin-top:14px">' + rows.map(function (p) {
+        return '<div class="fval"><span class="fk">' + UI.esc(p[0]) + '</span>' +
+          '<span class="fv">' + UI.esc(p[1]) + '</span></div>';
+      }).join('') + '</div>' +
+
+      (r.inMaster
+        ? '<div class="callout ok" style="margin-top:14px"><span class="ci">✓</span>' +
+          '<span><b>우리 부서 자재 대장에 있는 자재입니다</b>' +
+          '반납하면 부서 재고가 함께 움직입니다.</span></div>'
+        : '<div class="callout" style="margin-top:14px;background:var(--surface-2);' +
+          'border:1px solid var(--line)"><span class="ci" style="color:var(--muted)">◇</span>' +
+          '<span><b style="color:var(--text)">다른 부서 식별표입니다</b>' +
+          '재고부서가 ' + UI.esc(r.deptCode) + ' 입니다. 반납 접수는 기록되지만 ' +
+          '우리 부서 재고에는 반영되지 않습니다.</span></div>') +
+
+      '<div class="qr-acts">' +
+        '<a class="btn line" href="return.html">취소</a>' +
+        '<button class="btn" type="button" id="go">반납</button>' +
+      '</div>';
+  }
+
+  function errView(title, body) {
+    return '<div class="card" style="margin-top:18px">' +
+        '<div class="qr-err">!</div>' +
+        '<h1 style="font-size:17px;font-weight:600;margin:12px 0 6px">' +
+          UI.esc(title) + '</h1>' +
+        '<p class="sub" style="line-height:1.65">' + body + '</p>' +
+      '</div>' +
+      /* 식별표가 상했을 때 손으로 넣을 자리 · 현장에서 이 경우가 잦다 */
+      '<p class="gt" style="margin:16px 0 8px"><span>코드를 직접 넣기</span></p>' +
+      '<div style="display:flex;gap:8px">' +
+        '<input class="input" id="manual" inputmode="latin" autocapitalize="characters" ' +
+          'placeholder="Q4046777" value="' + UI.esc(QRDB.valid(code) ? code : '') + '" ' +
+          'style="flex:1;min-height:46px">' +
+        '<button class="btn" type="button" id="find" style="min-height:46px">확인</button>' +
+      '</div>' +
+      '<a class="btn line block" href="return.html" style="margin-top:12px">반납 화면으로</a>';
+  }
+
+  /* 반납 · 확인을 한 번 받고 기존 반납 화면으로 넘긴다.
+   * 실제 처리는 그 화면에서 한다 · 여기서 두 번 처리하면 이력이 두 줄 남는다 */
+  function ask(anchor) {
+    var r = QRDB.get(code);
+    if (!r) { return; }
+    UI.confirm({
+      title: code + ' 자재를 반납처리하겠습니까?',
+      body: '<b>' + UI.esc(r.name || '품명 미확인') + '</b>' +
+        (r.spec ? ' · ' + UI.esc(r.spec) : '') + ' · ' +
+        UI.num(r.qty) + ' ' + UI.esc(r.unit || ''),
+      ok: '확인',
+      cancel: '취소',
+      onOk: function () {
+        /* 코드를 넘겨 준다 · 주소에 붙이고, 주소가 지워지는 경로를 대비해 세션에도 둔다 */
+        try { window.sessionStorage.setItem('mtrl.qr.code', code); } catch (e) { /* 무시 */ }
+        window.location.href = 'mobile-return.html?code=' + encodeURIComponent(code);
+      }
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('#go')) { ask(e.target); return; }
+    if (e.target.closest && e.target.closest('#find')) {
+      var v = el('manual') ? el('manual').value : '';
+      window.location.href = 'material-view.html?code=' + encodeURIComponent(QRDB.norm(v));
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target && e.target.id === 'manual') {
+      window.location.href = 'material-view.html?code=' +
+        encodeURIComponent(QRDB.norm(e.target.value));
+    }
+  });
+
+  paint();
+})();
+</script>
+</body>
+</html>
