@@ -67,6 +67,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* 마우스 클릭에는 링이 안 나오고 키보드에만 나온다 */
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
+/* hidden 속성을 반드시 이기게 둔다.
+ * 부품에 display:flex 같은 값을 주면 브라우저 기본 [hidden]{display:none} 을
+ * 이겨 버려서, hidden 으로 감춘 것이 그대로 보인다.
+ * 실제로 SSO 단계 표시의 점과 표지의 빈 통계 카드가 계속 떠 있었다 */
+[hidden] { display: none !important; }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
@@ -677,4 +683,162 @@ td.num, th.num { text-align: right; }
   .side, .overlay, .chatbtn, .tourbtn, .hamb { display: none !important; }
   .layout { grid-template-columns: 1fr; }
   .card { box-shadow: none; border-color: var(--line-2); }
+}
+
+/* ---------------------------------------------------------------- 24. 표지 · 로그인 2단 레이아웃
+ *
+ * 로그인만 업무 화면과 다른 색을 쓴다.
+ * 발표 자료(PPT)의 아이덴티티가 자주빛 그라디언트 + 노란 강조인데,
+ * 업무 화면은 인디고(--brand) 한 계열로 통일돼 있다.
+ * 표지에서 두 계열을 섞으면 발표와 화면이 다른 제품처럼 보인다.
+ * 그래서 **표지 전용 토큰을 여기서만** 두고 업무 화면 팔레트는 손대지 않는다.
+ */
+.auth {
+  --auth-1: #6D4AE0;      /* 자주빛 시작 */
+  --auth-2: #A855C8;      /* 자주빛 끝 */
+  --auth-3: #4B31A8;      /* 깊은 그림자 */
+  --auth-hl: #FFD24A;     /* 노란 강조. PPT 의 「자재」 강조색 */
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: 100vh;
+  background: var(--surface);
+}
+
+/* 왼쪽 · 브랜드 패널 */
+.auth-brand {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(150deg, var(--auth-1) 0%, var(--auth-2) 62%, var(--auth-1) 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 44px 36px;
+}
+/* 그림은 흐름을 막지 않게 뒤로 깐다 */
+.brand-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* 글자 뒤를 덮는 막.
+ * SVG 안에 사각형으로 깔았더니 preserveAspectRatio="slice" 때문에
+ * 그림과 같이 잘려 나가 430px 에서 제목이 스패너 위에 올라앉았다.
+ * 막은 그림이 아니라 패널에 붙여야 어느 폭에서도 아래쪽을 덮는다 */
+.auth-brand::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0; height: 66%;
+  background: linear-gradient(180deg,
+    rgba(58, 30, 110, 0) 0%, rgba(58, 30, 110, .5) 52%, rgba(51, 25, 95, .82) 100%);
+  pointer-events: none;
+}
+.brand-copy { position: relative; z-index: 1; margin-top: auto; }
+.brand-eyebrow {
+  font-size: 15px; font-weight: 700; line-height: 1.5;
+  color: rgba(255, 255, 255, .88); letter-spacing: -.2px;
+}
+.brand-title {
+  font-size: 38px; font-weight: 800; line-height: 1.22;
+  letter-spacing: -1px; margin-top: 6px;
+}
+.brand-team {
+  margin-top: 22px; font-size: 12.5px; line-height: 1.7;
+  color: rgba(255, 255, 255, .8);
+}
+.brand-team b { display: block; font-size: 13px; color: #fff; font-weight: 700; }
+.hl { color: var(--auth-hl); }
+
+/* 실제 값을 보여 주는 떠 있는 카드.
+ * 숫자를 여기 적어 두지 않는다. DB 에서 읽어 넣고, DB 가 없으면 카드를 지운다.
+ * 표지에 가짜 숫자를 적으면 시연 첫 화면부터 거짓이 된다 */
+.stat-float {
+  position: relative; z-index: 1;
+  display: inline-flex; gap: 22px; flex-wrap: wrap;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 14px; padding: 14px 18px;
+  backdrop-filter: blur(6px);
+}
+.stat-float .sv { font-size: 19px; font-weight: 800; letter-spacing: -.5px; }
+.stat-float .sk { font-size: 11px; color: rgba(255, 255, 255, .78); white-space: nowrap; }
+
+/* 오른쪽 · 입력 패널 */
+.auth-form { display: flex; align-items: center; justify-content: center; padding: 40px 32px; }
+.auth-inner { width: 100%; max-width: 396px; }
+
+.auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 34px; }
+.auth-logo-mark {
+  width: 34px; height: 34px; border-radius: 10px; flex: none;
+  background: linear-gradient(140deg, #6D4AE0, #A855C8);
+  color: #fff; display: grid; place-items: center;
+  font-size: 15px; font-weight: 800;
+}
+.auth-logo-name { font-size: 17px; font-weight: 800; letter-spacing: -.4px; }
+
+.auth-greet { font-size: 25px; font-weight: 800; letter-spacing: -.7px; line-height: 1.3; }
+.auth-greet-sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+/* 사내 SSO 버튼. 이 화면의 주 경로다 */
+.sso {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; min-height: 50px; margin-top: 26px;
+  border: 1px solid var(--line-2); border-radius: 12px;
+  background: var(--surface); color: var(--text);
+  font-size: 13.5px; font-weight: 700;
+  transition: border-color .12s ease, background .12s ease;
+}
+.sso:hover { border-color: var(--auth-1, var(--brand)); background: var(--bg); }
+.sso[disabled] { cursor: default; color: var(--muted); }
+.sso-mark {
+  width: 22px; height: 22px; border-radius: 6px; flex: none;
+  background: #1C4C9C; color: #fff;
+  display: grid; place-items: center;
+  font-size: 10px; font-weight: 800; letter-spacing: -.3px;
+}
+/* 로딩은 스피너 대신 단계 문구를 보여 준다. 무엇을 기다리는지 알 수 있다 */
+.sso-step {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px; font-size: 11.5px; color: var(--muted);
+}
+.sso-dot {
+  width: 7px; height: 7px; border-radius: 999px; flex: none;
+  background: var(--auth-1, var(--brand));
+  animation: ssopulse 1s ease-in-out infinite;
+}
+@keyframes ssopulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+
+.divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 18px; }
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--line-2);
+}
+.divider span { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+
+.auth-foot { margin-top: 26px; font-size: 11px; line-height: 1.8; color: var(--muted); }
+
+/* 960 · 브랜드 패널을 위쪽 띠로 눕힌다.
+ * 세로로 쌓기만 하면 폰에서 그림이 화면 절반을 먹고 입력칸이 접힌 아래로 밀린다 */
+@media (max-width: 960px) {
+  .auth { grid-template-columns: 1fr; min-height: 0; }
+  .auth-brand { padding: 26px 22px 22px; min-height: 250px; }
+  .brand-title { font-size: 27px; }
+  .brand-eyebrow { font-size: 13px; }
+  .auth-form { padding: 28px 22px 40px; }
+  .auth-inner { max-width: 460px; margin: 0 auto; }
+  .stat-float { display: none; }   /* 띠가 길어지면 입력칸이 화면 밖으로 밀린다 */
+
+  /* 띠가 짧아지면 그림과 글자가 반드시 겹친다. 막을 진하게 해도 금속 부품이
+   * 제목을 지나간다. 그래서 겹치지 않게 나눈다 · 글자 왼쪽 · 그림 오른쪽.
+   * 발표 자료(PPT)의 배치도 그렇게 되어 있다 */
+  .brand-art { left: 46%; right: -10%; width: auto; }
+  .auth-brand::after { display: none; }
+  .brand-copy { padding-right: 42%; }
+}
+
+@media (max-width: 640px) {
+  /* 430px 에서는 글자 반 · 그림 반으로 나누면 제목이 세 줄이 된다.
+   * 표지의 할 일은 「무엇을 만들었는지 한눈에」 이므로 글자를 살리고 그림을 뺀다 */
+  .auth-brand { min-height: 172px; padding: 22px 18px 18px; }
+  .brand-art { display: none; }
+  .brand-copy { padding-right: 0; }
+  .brand-title { font-size: 24px; letter-spacing: -.7px; }
+  .brand-team { margin-top: 12px; }
+  .auth-greet { font-size: 21px; }
+  .auth-logo { margin-bottom: 24px; }
 }
