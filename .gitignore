@@ -6,6 +6,9 @@
 raw/
 data/
 !data/rehearsal.md
+!data/report.html
+!data/report.pdf
+!data/report_evidence.json
 
 # --- 대용량 산출물 ---
 models/

@@ -6,17 +6,18 @@
   "doc_category": "faq",
   "route": "sql",
   "no_answer": false,
-  "total_ms": 11116,
+  "total_ms": 7151,
   "embed_ms": null,
   "retrieve_ms": null,
   "rerank_ms": null,
   "generate_ms": null,
-  "sql_ms": 2290,
+  "sql_ms": 1221,
   "route_source": "llm",
   "citation_coverage": 1.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "FAQ-02",
@@ -25,11 +26,11 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9924,
-  "embed_ms": 273,
-  "retrieve_ms": 936,
-  "rerank_ms": 1797,
-  "generate_ms": 3564,
+  "total_ms": 9768,
+  "embed_ms": 232,
+  "retrieve_ms": 672,
+  "rerank_ms": 1435,
+  "generate_ms": 4072,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.667,
@@ -37,7 +38,8 @@
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-03",
@@ -46,20 +48,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7491,
-  "embed_ms": 227,
-  "retrieve_ms": 753,
-  "rerank_ms": 2842,
-  "generate_ms": 2308,
+  "total_ms": 7311,
+  "embed_ms": 170,
+  "retrieve_ms": 777,
+  "rerank_ms": 2598,
+  "generate_ms": 2269,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.5,
+  "citation_coverage": 1.0,
   "n_citations": 2,
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-04",
@@ -68,14 +71,14 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9293,
-  "embed_ms": 279,
-  "retrieve_ms": 768,
-  "rerank_ms": 3435,
-  "generate_ms": 3441,
+  "total_ms": 13279,
+  "embed_ms": 233,
+  "retrieve_ms": 698,
+  "rerank_ms": 3177,
+  "generate_ms": 4791,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.889,
+  "citation_coverage": 0.8,
   "n_citations": 4,
   "cited_files": [
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
@@ -83,7 +86,8 @@
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-05",
@@ -92,19 +96,20 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9945,
-  "embed_ms": 243,
-  "retrieve_ms": 761,
-  "rerank_ms": 3524,
-  "generate_ms": 2985,
+  "total_ms": 8410,
+  "embed_ms": 196,
+  "retrieve_ms": 624,
+  "rerank_ms": 3003,
+  "generate_ms": 1975,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.857,
+  "citation_coverage": 0.833,
   "n_citations": 1,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-06",
@@ -113,20 +118,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7042,
-  "embed_ms": 252,
-  "retrieve_ms": 733,
-  "rerank_ms": 3102,
-  "generate_ms": 2952,
+  "total_ms": 6151,
+  "embed_ms": 219,
+  "retrieve_ms": 620,
+  "rerank_ms": 2986,
+  "generate_ms": 2325,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.5,
+  "citation_coverage": 0.8,
   "n_citations": 2,
   "cited_files": [
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-07",
@@ -135,14 +141,14 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 5481,
-  "embed_ms": 234,
-  "retrieve_ms": 764,
-  "rerank_ms": 1850,
-  "generate_ms": 2632,
+  "total_ms": 6721,
+  "embed_ms": 189,
+  "retrieve_ms": 609,
+  "rerank_ms": 1779,
+  "generate_ms": 4142,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.571,
+  "citation_coverage": 0.375,
   "n_citations": 4,
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
@@ -150,7 +156,8 @@
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-08",
@@ -159,20 +166,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9218,
-  "embed_ms": 237,
-  "retrieve_ms": 725,
-  "rerank_ms": 2260,
-  "generate_ms": 2667,
+  "total_ms": 7624,
+  "embed_ms": 207,
+  "retrieve_ms": 601,
+  "rerank_ms": 2200,
+  "generate_ms": 1761,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.571,
+  "citation_coverage": 0.833,
   "n_citations": 2,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-09",
@@ -181,21 +189,22 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8866,
-  "embed_ms": 237,
-  "retrieve_ms": 648,
-  "rerank_ms": 3106,
-  "generate_ms": 2819,
+  "total_ms": 10107,
+  "embed_ms": 252,
+  "retrieve_ms": 2059,
+  "rerank_ms": 3147,
+  "generate_ms": 3260,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.875,
+  "citation_coverage": 0.556,
   "n_citations": 3,
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-10",
@@ -204,17 +213,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 8796,
-  "embed_ms": 221,
-  "retrieve_ms": 636,
-  "rerank_ms": 2196,
-  "generate_ms": 1961,
+  "total_ms": 9935,
+  "embed_ms": 213,
+  "retrieve_ms": 1494,
+  "rerank_ms": 2313,
+  "generate_ms": 1920,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.0,
-  "n_citations": 0,
-  "cited_files": [],
-  "hit": false
+  "citation_coverage": 0.5,
+  "n_citations": 2,
+  "cited_files": [
+   "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
+   "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
+  ],
+  "hit": true,
+  "refused": true
  },
  {
   "id": "FAQ-11",
@@ -223,20 +236,20 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9526,
-  "embed_ms": 217,
-  "retrieve_ms": 846,
-  "rerank_ms": 3302,
-  "generate_ms": 3762,
+  "total_ms": 9255,
+  "embed_ms": 232,
+  "retrieve_ms": 809,
+  "rerank_ms": 3726,
+  "generate_ms": 2982,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.75,
-  "n_citations": 2,
+  "citation_coverage": 0.625,
+  "n_citations": 1,
   "cited_files": [
-   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-12",
@@ -245,21 +258,22 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 14843,
-  "embed_ms": 253,
-  "retrieve_ms": 751,
-  "rerank_ms": 3572,
-  "generate_ms": 8260,
+  "total_ms": 11235,
+  "embed_ms": 230,
+  "retrieve_ms": 646,
+  "rerank_ms": 4479,
+  "generate_ms": 4599,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.7,
+  "citation_coverage": 0.588,
   "n_citations": 3,
   "cited_files": [
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-13",
@@ -268,21 +282,22 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8408,
-  "embed_ms": 236,
-  "retrieve_ms": 697,
-  "rerank_ms": 3389,
-  "generate_ms": 2654,
+  "total_ms": 13063,
+  "embed_ms": 815,
+  "retrieve_ms": 1979,
+  "rerank_ms": 6386,
+  "generate_ms": 2219,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.75,
+  "citation_coverage": 1.0,
   "n_citations": 3,
   "cited_files": [
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-14",
@@ -291,11 +306,11 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8566,
-  "embed_ms": 255,
-  "retrieve_ms": 848,
-  "rerank_ms": 2517,
-  "generate_ms": 2796,
+  "total_ms": 9758,
+  "embed_ms": 404,
+  "retrieve_ms": 699,
+  "rerank_ms": 4027,
+  "generate_ms": 2211,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
@@ -305,7 +320,8 @@
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "FAQ-15",
@@ -314,11 +330,11 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 21672,
-  "embed_ms": 256,
-  "retrieve_ms": 702,
-  "rerank_ms": 3593,
-  "generate_ms": 15768,
+  "total_ms": 10534,
+  "embed_ms": 470,
+  "retrieve_ms": 766,
+  "rerank_ms": 5025,
+  "generate_ms": 2741,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
@@ -327,7 +343,8 @@
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-16",
@@ -336,19 +353,20 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 11237,
-  "embed_ms": 221,
-  "retrieve_ms": 692,
-  "rerank_ms": 3183,
-  "generate_ms": 4943,
+  "total_ms": 9760,
+  "embed_ms": 178,
+  "retrieve_ms": 752,
+  "rerank_ms": 3146,
+  "generate_ms": 2522,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.75,
+  "citation_coverage": 1.0,
   "n_citations": 1,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "FAQ-17",
@@ -356,22 +374,23 @@
   "excluded": false,
   "doc_category": "faq",
   "route": "rag",
-  "no_answer": false,
-  "total_ms": 11693,
-  "embed_ms": 214,
-  "retrieve_ms": 642,
-  "rerank_ms": 3305,
-  "generate_ms": 5480,
+  "no_answer": true,
+  "total_ms": 9330,
+  "embed_ms": 219,
+  "retrieve_ms": 672,
+  "rerank_ms": 3618,
+  "generate_ms": 2705,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.417,
+  "citation_coverage": 0.455,
   "n_citations": 3,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": true
  },
  {
   "id": "FAQ-18",
@@ -380,20 +399,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7787,
-  "embed_ms": 233,
-  "retrieve_ms": 654,
-  "rerank_ms": 2981,
-  "generate_ms": 2432,
+  "total_ms": 9505,
+  "embed_ms": 277,
+  "retrieve_ms": 650,
+  "rerank_ms": 3187,
+  "generate_ms": 3888,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 1.0,
+  "citation_coverage": 0.75,
   "n_citations": 2,
   "cited_files": [
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-19",
@@ -402,21 +422,22 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 12729,
-  "embed_ms": 220,
-  "retrieve_ms": 676,
-  "rerank_ms": 3287,
-  "generate_ms": 7009,
+  "total_ms": 12517,
+  "embed_ms": 259,
+  "retrieve_ms": 3641,
+  "rerank_ms": 3274,
+  "generate_ms": 3317,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.769,
+  "citation_coverage": 0.5,
   "n_citations": 3,
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-20",
@@ -425,21 +446,23 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9441,
-  "embed_ms": 217,
-  "retrieve_ms": 636,
-  "rerank_ms": 2677,
-  "generate_ms": 1945,
+  "total_ms": 10275,
+  "embed_ms": 235,
+  "retrieve_ms": 660,
+  "rerank_ms": 2732,
+  "generate_ms": 2405,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.6,
-  "n_citations": 3,
+  "citation_coverage": 0.5,
+  "n_citations": 4,
   "cited_files": [
+   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-21",
@@ -448,21 +471,22 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 11726,
-  "embed_ms": 237,
-  "retrieve_ms": 664,
-  "rerank_ms": 3132,
-  "generate_ms": 7692,
+  "total_ms": 9468,
+  "embed_ms": 231,
+  "retrieve_ms": 626,
+  "rerank_ms": 3284,
+  "generate_ms": 5326,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.714,
+  "citation_coverage": 0.409,
   "n_citations": 3,
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-22",
@@ -471,14 +495,14 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9777,
-  "embed_ms": 229,
-  "retrieve_ms": 717,
-  "rerank_ms": 3734,
-  "generate_ms": 3814,
+  "total_ms": 12588,
+  "embed_ms": 222,
+  "retrieve_ms": 663,
+  "rerank_ms": 3146,
+  "generate_ms": 7081,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.818,
+  "citation_coverage": 0.833,
   "n_citations": 5,
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
@@ -487,7 +511,8 @@
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-23",
@@ -496,20 +521,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8062,
-  "embed_ms": 216,
-  "retrieve_ms": 624,
-  "rerank_ms": 3064,
-  "generate_ms": 2898,
+  "total_ms": 8751,
+  "embed_ms": 200,
+  "retrieve_ms": 1504,
+  "rerank_ms": 2834,
+  "generate_ms": 2726,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.8,
+  "citation_coverage": 0.667,
   "n_citations": 2,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-24",
@@ -518,21 +544,23 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7462,
-  "embed_ms": 237,
-  "retrieve_ms": 634,
-  "rerank_ms": 3339,
-  "generate_ms": 1849,
+  "total_ms": 8865,
+  "embed_ms": 225,
+  "retrieve_ms": 673,
+  "rerank_ms": 3143,
+  "generate_ms": 1880,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
-  "n_citations": 3,
+  "n_citations": 4,
   "cited_files": [
-   "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
+   "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
+   "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-25",
@@ -541,21 +569,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 11174,
-  "embed_ms": 219,
-  "retrieve_ms": 695,
-  "rerank_ms": 3421,
-  "generate_ms": 5220,
+  "total_ms": 12058,
+  "embed_ms": 195,
+  "retrieve_ms": 602,
+  "rerank_ms": 3966,
+  "generate_ms": 3380,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.714,
-  "n_citations": 3,
+  "n_citations": 2,
   "cited_files": [
-   "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-26",
@@ -564,19 +592,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6022,
-  "embed_ms": 254,
-  "retrieve_ms": 692,
-  "rerank_ms": 2724,
-  "generate_ms": 2350,
+  "total_ms": 5423,
+  "embed_ms": 243,
+  "retrieve_ms": 647,
+  "rerank_ms": 2620,
+  "generate_ms": 1912,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 1.0,
-  "n_citations": 1,
+  "n_citations": 2,
   "cited_files": [
+   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-27",
@@ -585,14 +615,14 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6547,
-  "embed_ms": 196,
-  "retrieve_ms": 606,
-  "rerank_ms": 3289,
-  "generate_ms": 2455,
+  "total_ms": 6352,
+  "embed_ms": 183,
+  "retrieve_ms": 173,
+  "rerank_ms": 3127,
+  "generate_ms": 2868,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.7,
+  "citation_coverage": 0.9,
   "n_citations": 5,
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
@@ -601,7 +631,8 @@
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-28",
@@ -610,11 +641,11 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 7563,
-  "embed_ms": 221,
-  "retrieve_ms": 710,
-  "rerank_ms": 3246,
-  "generate_ms": 2077,
+  "total_ms": 6961,
+  "embed_ms": 214,
+  "retrieve_ms": 642,
+  "rerank_ms": 3256,
+  "generate_ms": 1648,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.5,
@@ -623,7 +654,8 @@
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": true
  },
  {
   "id": "FAQ-29",
@@ -632,17 +664,18 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 5219,
-  "embed_ms": 193,
-  "retrieve_ms": 602,
-  "rerank_ms": 1070,
-  "generate_ms": 2022,
+  "total_ms": 4591,
+  "embed_ms": 183,
+  "retrieve_ms": 625,
+  "rerank_ms": 881,
+  "generate_ms": 1469,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "FAQ-30",
@@ -650,12 +683,12 @@
   "excluded": false,
   "doc_category": "faq",
   "route": "rag",
-  "no_answer": true,
-  "total_ms": 6202,
-  "embed_ms": 327,
-  "retrieve_ms": 234,
-  "rerank_ms": 3355,
-  "generate_ms": 2285,
+  "no_answer": false,
+  "total_ms": 5529,
+  "embed_ms": 209,
+  "retrieve_ms": 184,
+  "rerank_ms": 3200,
+  "generate_ms": 1934,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 0.5,
@@ -664,7 +697,8 @@
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": true
  },
  {
   "id": "FAQ-31",
@@ -673,20 +707,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9573,
-  "embed_ms": 241,
-  "retrieve_ms": 659,
-  "rerank_ms": 3282,
-  "generate_ms": 3596,
+  "total_ms": 9610,
+  "embed_ms": 211,
+  "retrieve_ms": 658,
+  "rerank_ms": 2931,
+  "generate_ms": 4366,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.667,
+  "citation_coverage": 1.0,
   "n_citations": 2,
   "cited_files": [
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-32",
@@ -695,20 +730,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 12289,
-  "embed_ms": 221,
-  "retrieve_ms": 701,
-  "rerank_ms": 2487,
-  "generate_ms": 4878,
+  "total_ms": 12265,
+  "embed_ms": 201,
+  "retrieve_ms": 678,
+  "rerank_ms": 2253,
+  "generate_ms": 5661,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.733,
+  "citation_coverage": 0.786,
   "n_citations": 2,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-33",
@@ -717,20 +753,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8277,
-  "embed_ms": 244,
-  "retrieve_ms": 803,
-  "rerank_ms": 3201,
-  "generate_ms": 2746,
+  "total_ms": 6723,
+  "embed_ms": 210,
+  "retrieve_ms": 605,
+  "rerank_ms": 2830,
+  "generate_ms": 1558,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.667,
+  "citation_coverage": 1.0,
   "n_citations": 2,
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-34",
@@ -739,20 +776,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7344,
-  "embed_ms": 204,
-  "retrieve_ms": 698,
-  "rerank_ms": 3342,
-  "generate_ms": 1710,
+  "total_ms": 6861,
+  "embed_ms": 202,
+  "retrieve_ms": 605,
+  "rerank_ms": 2969,
+  "generate_ms": 1677,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.5,
+  "citation_coverage": 0.667,
   "n_citations": 2,
   "cited_files": [
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-35",
@@ -761,22 +799,22 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8433,
-  "embed_ms": 206,
-  "retrieve_ms": 656,
-  "rerank_ms": 3391,
-  "generate_ms": 2909,
+  "total_ms": 9662,
+  "embed_ms": 217,
+  "retrieve_ms": 620,
+  "rerank_ms": 2927,
+  "generate_ms": 4521,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.667,
-  "n_citations": 4,
+  "citation_coverage": 0.8,
+  "n_citations": 3,
   "cited_files": [
-   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-36",
@@ -785,20 +823,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 5245,
-  "embed_ms": 249,
-  "retrieve_ms": 763,
-  "rerank_ms": 1896,
-  "generate_ms": 2335,
+  "total_ms": 5195,
+  "embed_ms": 207,
+  "retrieve_ms": 789,
+  "rerank_ms": 1743,
+  "generate_ms": 2455,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.786,
+  "citation_coverage": 0.769,
   "n_citations": 2,
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-37",
@@ -807,11 +846,11 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7631,
-  "embed_ms": 230,
-  "retrieve_ms": 799,
-  "rerank_ms": 2833,
-  "generate_ms": 1783,
+  "total_ms": 8978,
+  "embed_ms": 185,
+  "retrieve_ms": 625,
+  "rerank_ms": 2683,
+  "generate_ms": 2468,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.667,
@@ -820,7 +859,8 @@
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-38",
@@ -829,20 +869,21 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6194,
-  "embed_ms": 249,
-  "retrieve_ms": 677,
-  "rerank_ms": 3337,
-  "generate_ms": 1930,
+  "total_ms": 6665,
+  "embed_ms": 216,
+  "retrieve_ms": 672,
+  "rerank_ms": 3017,
+  "generate_ms": 2758,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.625,
+  "citation_coverage": 0.6,
   "n_citations": 2,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-39",
@@ -850,21 +891,22 @@
   "excluded": false,
   "doc_category": "faq",
   "route": "rag",
-  "no_answer": true,
-  "total_ms": 7843,
-  "embed_ms": 224,
-  "retrieve_ms": 668,
-  "rerank_ms": 3376,
-  "generate_ms": 2508,
+  "no_answer": false,
+  "total_ms": 7510,
+  "embed_ms": 198,
+  "retrieve_ms": 1403,
+  "rerank_ms": 2399,
+  "generate_ms": 2054,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.5,
+  "citation_coverage": 0.6,
   "n_citations": 2,
   "cited_files": [
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "FAQ-40",
@@ -873,14 +915,14 @@
   "doc_category": "faq",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7386,
-  "embed_ms": 227,
-  "retrieve_ms": 650,
-  "rerank_ms": 3252,
-  "generate_ms": 2063,
+  "total_ms": 8033,
+  "embed_ms": 229,
+  "retrieve_ms": 630,
+  "rerank_ms": 3584,
+  "generate_ms": 2318,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.5,
+  "citation_coverage": 0.571,
   "n_citations": 4,
   "cited_files": [
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx",
@@ -888,7 +930,8 @@
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb",
    "260128_(광양)설비기술부_포스위키 질문분류.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-01",
@@ -897,11 +940,11 @@
   "doc_category": "guideline",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9436,
-  "embed_ms": 230,
-  "retrieve_ms": 737,
-  "rerank_ms": 3222,
-  "generate_ms": 3630,
+  "total_ms": 7840,
+  "embed_ms": 254,
+  "retrieve_ms": 620,
+  "rerank_ms": 3016,
+  "generate_ms": 2497,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
@@ -910,7 +953,8 @@
    "자재규격서 관리지침(V7)_200901.pptx",
    "자재규격서 관리지침(V7)_200901.pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-02",
@@ -919,21 +963,21 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8607,
-  "embed_ms": 279,
-  "retrieve_ms": 680,
-  "rerank_ms": 3633,
-  "generate_ms": 2828,
+  "total_ms": 9739,
+  "embed_ms": 271,
+  "retrieve_ms": 658,
+  "rerank_ms": 3100,
+  "generate_ms": 3649,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.833,
-  "n_citations": 3,
+  "citation_coverage": 0.75,
+  "n_citations": 2,
   "cited_files": [
-   "설비자재구매실 필독서(전자책) (2).pdf",
    "설비자재구매실 필독서(전자책) (2).pdf",
    "설비자재구매실 필독서(전자책) (2).pdf"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-03",
@@ -942,21 +986,22 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7898,
-  "embed_ms": 236,
-  "retrieve_ms": 670,
-  "rerank_ms": 3347,
-  "generate_ms": 2401,
+  "total_ms": 8263,
+  "embed_ms": 218,
+  "retrieve_ms": 606,
+  "rerank_ms": 3105,
+  "generate_ms": 2741,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 1.0,
+  "citation_coverage": 0.875,
   "n_citations": 3,
   "cited_files": [
    "[매뉴얼] 계약전 사전입고 프로세스 안내 (공유용)-사본.pptx",
    "[매뉴얼] 계약전 사전입고 프로세스 안내 (공유용)-사본.pptx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-04",
@@ -965,19 +1010,20 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7151,
-  "embed_ms": 347,
-  "retrieve_ms": 746,
-  "rerank_ms": 3365,
-  "generate_ms": 2692,
+  "total_ms": 5934,
+  "embed_ms": 350,
+  "retrieve_ms": 630,
+  "rerank_ms": 3189,
+  "generate_ms": 1763,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.5,
+  "citation_coverage": 1.0,
   "n_citations": 1,
   "cited_files": [
    "250924_A3_설비자재구매실_포스코 표준하도급계약서(25.9월 개정Ver.).docx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-05",
@@ -986,20 +1032,22 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6869,
-  "embed_ms": 217,
-  "retrieve_ms": 614,
-  "rerank_ms": 2092,
-  "generate_ms": 2474,
+  "total_ms": 7968,
+  "embed_ms": 236,
+  "retrieve_ms": 2296,
+  "rerank_ms": 2032,
+  "generate_ms": 1925,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.571,
-  "n_citations": 2,
+  "n_citations": 3,
   "cited_files": [
    "물품구매계약 일반약관_260625.docx",
+   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-06",
@@ -1008,20 +1056,21 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 5035,
-  "embed_ms": 227,
-  "retrieve_ms": 636,
-  "rerank_ms": 2315,
-  "generate_ms": 1855,
+  "total_ms": 4722,
+  "embed_ms": 225,
+  "retrieve_ms": 448,
+  "rerank_ms": 2250,
+  "generate_ms": 1798,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.714,
+  "citation_coverage": 1.0,
   "n_citations": 2,
   "cited_files": [
    "240320_A3_설비자재구매실_사소간 자재이송 통합 메뉴얼-사본-사본.pptx",
    "포스코 물품반출입 전사통합시스템_사용자 매뉴얼(PC) (2).pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-07",
@@ -1030,19 +1079,20 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6046,
-  "embed_ms": 258,
-  "retrieve_ms": 196,
-  "rerank_ms": 3359,
-  "generate_ms": 2232,
+  "total_ms": 5912,
+  "embed_ms": 241,
+  "retrieve_ms": 326,
+  "rerank_ms": 3306,
+  "generate_ms": 2037,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.833,
+  "citation_coverage": 0.8,
   "n_citations": 1,
   "cited_files": [
    "250924_A3_설비자재구매실_포스코 표준하도급계약서(25.9월 개정Ver.).docx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-08",
@@ -1051,17 +1101,18 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 6327,
-  "embed_ms": 250,
-  "retrieve_ms": 678,
-  "rerank_ms": 3424,
-  "generate_ms": 1974,
+  "total_ms": 5627,
+  "embed_ms": 265,
+  "retrieve_ms": 686,
+  "rerank_ms": 3063,
+  "generate_ms": 1612,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 0.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "SYN-09",
@@ -1070,11 +1121,11 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7499,
-  "embed_ms": 226,
-  "retrieve_ms": 645,
-  "rerank_ms": 3827,
-  "generate_ms": 2800,
+  "total_ms": 6456,
+  "embed_ms": 209,
+  "retrieve_ms": 672,
+  "rerank_ms": 3318,
+  "generate_ms": 2255,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 1.0,
@@ -1083,7 +1134,8 @@
    "[개정]계약지침(251210).docx",
    "[개정]계약지침(251210).docx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-10",
@@ -1092,11 +1144,11 @@
   "doc_category": "guideline",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8476,
-  "embed_ms": 252,
-  "retrieve_ms": 722,
-  "rerank_ms": 3284,
-  "generate_ms": 2074,
+  "total_ms": 8467,
+  "embed_ms": 238,
+  "retrieve_ms": 596,
+  "rerank_ms": 3220,
+  "generate_ms": 2728,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.75,
@@ -1106,7 +1158,8 @@
    "20220216_A3_자재구매그룹_기자재반입센터 검사작업 지침(rev2).docx",
    "20220216_A3_자재구매그룹_기자재반입센터 검사작업 지침(rev2).docx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-11",
@@ -1115,19 +1168,20 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9113,
-  "embed_ms": 253,
-  "retrieve_ms": 694,
-  "rerank_ms": 3466,
-  "generate_ms": 2743,
+  "total_ms": 7528,
+  "embed_ms": 239,
+  "retrieve_ms": 716,
+  "rerank_ms": 3203,
+  "generate_ms": 1977,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.5,
+  "citation_coverage": 0.75,
   "n_citations": 1,
   "cited_files": [
    "물품구매계약 일반약관_260625.docx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-12",
@@ -1136,11 +1190,11 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8504,
-  "embed_ms": 234,
-  "retrieve_ms": 776,
-  "rerank_ms": 3318,
-  "generate_ms": 1527,
+  "total_ms": 15037,
+  "embed_ms": 243,
+  "retrieve_ms": 607,
+  "rerank_ms": 3238,
+  "generate_ms": 1847,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
@@ -1148,7 +1202,8 @@
   "cited_files": [
    "무재고품(일일공급,VMI,CONSIGNMENT) 교육용 자료_사본-사본-사본 (2).pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-13",
@@ -1157,17 +1212,18 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 6914,
-  "embed_ms": 268,
-  "retrieve_ms": 632,
-  "rerank_ms": 3328,
-  "generate_ms": 1450,
+  "total_ms": 7825,
+  "embed_ms": 230,
+  "retrieve_ms": 809,
+  "rerank_ms": 3279,
+  "generate_ms": 2091,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "SYN-14",
@@ -1176,17 +1232,18 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 9177,
-  "embed_ms": 256,
-  "retrieve_ms": 642,
-  "rerank_ms": 4468,
-  "generate_ms": 1634,
+  "total_ms": 8343,
+  "embed_ms": 241,
+  "retrieve_ms": 600,
+  "rerank_ms": 3797,
+  "generate_ms": 1704,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "SYN-15",
@@ -1195,11 +1252,11 @@
   "doc_category": "guideline",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7128,
-  "embed_ms": 313,
-  "retrieve_ms": 641,
-  "rerank_ms": 3561,
-  "generate_ms": 2611,
+  "total_ms": 6024,
+  "embed_ms": 242,
+  "retrieve_ms": 941,
+  "rerank_ms": 3032,
+  "generate_ms": 1808,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 1.0,
@@ -1208,7 +1265,8 @@
    "260630_설비자재구매실_자재입하 및 저장관리 지침(V45).pptx",
    "260630_설비자재구매실_자재입하 및 저장관리 지침(V45).pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-16",
@@ -1217,21 +1275,21 @@
   "doc_category": "guideline",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7704,
-  "embed_ms": 243,
-  "retrieve_ms": 628,
-  "rerank_ms": 3420,
-  "generate_ms": 3411,
+  "total_ms": 7669,
+  "embed_ms": 211,
+  "retrieve_ms": 613,
+  "rerank_ms": 3222,
+  "generate_ms": 3621,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.833,
-  "n_citations": 3,
+  "citation_coverage": 1.0,
+  "n_citations": 2,
   "cited_files": [
    "210809_A3_자재구매그룹_자재구매업무 통합 가이드북-사본-사본.pptx",
-   "자재공급사 평가관리지침_M10089 (V53_251001부).pptx",
    "자재공급사 평가관리지침_M10089 (V53_251001부).pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-17",
@@ -1240,11 +1298,11 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7764,
-  "embed_ms": 310,
-  "retrieve_ms": 935,
-  "rerank_ms": 3325,
-  "generate_ms": 1715,
+  "total_ms": 8580,
+  "embed_ms": 265,
+  "retrieve_ms": 625,
+  "rerank_ms": 3229,
+  "generate_ms": 2265,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
@@ -1252,7 +1310,8 @@
   "cited_files": [
    "210809_A3_자재구매그룹_자재구매업무 통합 가이드북-사본-사본.pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-18",
@@ -1261,11 +1320,11 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6102,
-  "embed_ms": 229,
-  "retrieve_ms": 756,
-  "rerank_ms": 3273,
-  "generate_ms": 1843,
+  "total_ms": 6100,
+  "embed_ms": 232,
+  "retrieve_ms": 810,
+  "rerank_ms": 3197,
+  "generate_ms": 1860,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 1.0,
@@ -1274,7 +1333,8 @@
    "[개정]입찰유의서(250818).docx",
    "[개정]입찰유의서(250818).docx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-19",
@@ -1283,21 +1343,22 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6645,
-  "embed_ms": 272,
-  "retrieve_ms": 748,
-  "rerank_ms": 2641,
-  "generate_ms": 2982,
+  "total_ms": 5580,
+  "embed_ms": 222,
+  "retrieve_ms": 1138,
+  "rerank_ms": 2155,
+  "generate_ms": 2063,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.571,
+  "citation_coverage": 1.0,
   "n_citations": 3,
   "cited_files": [
    "250311_A3_설비자재구매실_Smart 구매 시스템 (e-Pro 4.0) 매뉴얼 (사용부서용)-사본 (2).pptx",
    "250311_A3_설비자재구매실_Smart 구매 시스템 (e-Pro 4.0) 매뉴얼 (사용부서용)-사본 (2).pptx",
    "250311_A3_설비자재구매실_Smart 구매 시스템 (e-Pro 4.0) 매뉴얼 (사용부서용)-사본 (2).pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-20",
@@ -1306,17 +1367,18 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 8476,
-  "embed_ms": 220,
-  "retrieve_ms": 917,
-  "rerank_ms": 3800,
-  "generate_ms": 1396,
+  "total_ms": 7247,
+  "embed_ms": 204,
+  "retrieve_ms": 947,
+  "rerank_ms": 2685,
+  "generate_ms": 1841,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "SYN-21",
@@ -1325,17 +1387,18 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 6163,
-  "embed_ms": 227,
-  "retrieve_ms": 603,
-  "rerank_ms": 3059,
-  "generate_ms": 2272,
+  "total_ms": 5009,
+  "embed_ms": 192,
+  "retrieve_ms": 189,
+  "rerank_ms": 3120,
+  "generate_ms": 1507,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 0.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "SYN-22",
@@ -1344,11 +1407,11 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 5661,
-  "embed_ms": 228,
-  "retrieve_ms": 761,
-  "rerank_ms": 3132,
-  "generate_ms": 1539,
+  "total_ms": 7489,
+  "embed_ms": 225,
+  "retrieve_ms": 724,
+  "rerank_ms": 3172,
+  "generate_ms": 3366,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 1.0,
@@ -1356,7 +1419,8 @@
   "cited_files": [
    "컨사인먼트자재신청_사용자매뉴얼.pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-23",
@@ -1365,23 +1429,22 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7952,
-  "embed_ms": 225,
-  "retrieve_ms": 627,
-  "rerank_ms": 3154,
-  "generate_ms": 3945,
+  "total_ms": 8812,
+  "embed_ms": 222,
+  "retrieve_ms": 1738,
+  "rerank_ms": 3214,
+  "generate_ms": 3636,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.857,
-  "n_citations": 5,
+  "citation_coverage": 0.833,
+  "n_citations": 3,
   "cited_files": [
    "251001_A3_설비자재구매실_그룹자재표준화시스템(POS-Appia) 매뉴얼_20251217113921707 (1).pptx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
-   "251001_A3_설비자재구매실_그룹자재표준화시스템(POS-Appia) 매뉴얼_20251217113921707 (1).pptx",
-   "240926_A3_설비자재구매실_POS-Appia FAQ_2 (1).pptx",
    "251001_A3_설비자재구매실_그룹자재표준화시스템(POS-Appia) 매뉴얼_20251217113921707 (1).pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-24",
@@ -1390,19 +1453,22 @@
   "doc_category": "guideline",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7572,
-  "embed_ms": 243,
-  "retrieve_ms": 814,
-  "rerank_ms": 3239,
-  "generate_ms": 1714,
+  "total_ms": 7680,
+  "embed_ms": 248,
+  "retrieve_ms": 996,
+  "rerank_ms": 3092,
+  "generate_ms": 1828,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
-  "n_citations": 1,
+  "n_citations": 3,
   "cited_files": [
-   "업무지침) 공기구 관리지침 [P30231] (2).pptx"
+   "업무지침) 공기구 관리지침 [P30231] (2).pptx",
+   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
+   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-25",
@@ -1411,19 +1477,20 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6158,
-  "embed_ms": 338,
-  "retrieve_ms": 702,
-  "rerank_ms": 2118,
-  "generate_ms": 2999,
+  "total_ms": 6648,
+  "embed_ms": 264,
+  "retrieve_ms": 666,
+  "rerank_ms": 1723,
+  "generate_ms": 3994,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 1.0,
+  "citation_coverage": 0.667,
   "n_citations": 1,
   "cited_files": [
    "포스코 물품반출입 전사통합시스템_사용자 매뉴얼(PC) (2).pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-26",
@@ -1432,14 +1499,14 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7988,
-  "embed_ms": 218,
-  "retrieve_ms": 628,
-  "rerank_ms": 3245,
-  "generate_ms": 2695,
+  "total_ms": 8777,
+  "embed_ms": 232,
+  "retrieve_ms": 918,
+  "rerank_ms": 3119,
+  "generate_ms": 2726,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.75,
+  "citation_coverage": 1.0,
   "n_citations": 5,
   "cited_files": [
    "[개정]입찰유의서(250818).docx",
@@ -1448,7 +1515,8 @@
    "[개정]입찰유의서(250818).docx",
    "[개정]입찰유의서(250818).docx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-27",
@@ -1457,11 +1525,11 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 10662,
-  "embed_ms": 230,
-  "retrieve_ms": 1464,
-  "rerank_ms": 2834,
-  "generate_ms": 4987,
+  "total_ms": 10441,
+  "embed_ms": 195,
+  "retrieve_ms": 843,
+  "rerank_ms": 2803,
+  "generate_ms": 5034,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.714,
@@ -1470,7 +1538,8 @@
    "250901_A3_자재구매그룹_중고자재관리시스템 매뉴얼-사본.pptx",
    "260630_설비자재구매실_자재입하 및 저장관리 지침(V45).pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-28",
@@ -1479,11 +1548,11 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7673,
-  "embed_ms": 241,
-  "retrieve_ms": 635,
-  "rerank_ms": 2919,
-  "generate_ms": 2722,
+  "total_ms": 7220,
+  "embed_ms": 203,
+  "retrieve_ms": 608,
+  "rerank_ms": 2801,
+  "generate_ms": 2342,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 1.0,
@@ -1495,7 +1564,8 @@
    "251001_A3_설비자재구매실_그룹자재표준화시스템(POS-Appia) 매뉴얼_20251217113921707 (1).pptx",
    "251001_A3_설비자재구매실_그룹자재표준화시스템(POS-Appia) 매뉴얼_20251217113921707 (1).pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-29",
@@ -1504,21 +1574,21 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7880,
-  "embed_ms": 258,
-  "retrieve_ms": 1767,
-  "rerank_ms": 3181,
-  "generate_ms": 1436,
+  "total_ms": 7714,
+  "embed_ms": 233,
+  "retrieve_ms": 648,
+  "rerank_ms": 3719,
+  "generate_ms": 1710,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
-  "n_citations": 3,
+  "n_citations": 2,
   "cited_files": [
    "무재고품(일일공급,VMI,CONSIGNMENT) 교육용 자료_사본-사본-사본 (2).pptx",
-   "무재고품(일일공급,VMI,CONSIGNMENT) 교육용 자료_사본-사본-사본 (2).pptx",
-   "자재 및 구매업무 관리지침_V46 (26.1.26).pptx"
+   "무재고품(일일공급,VMI,CONSIGNMENT) 교육용 자료_사본-사본-사본 (2).pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-30",
@@ -1527,11 +1597,11 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8044,
-  "embed_ms": 248,
-  "retrieve_ms": 622,
-  "rerank_ms": 3100,
-  "generate_ms": 2433,
+  "total_ms": 7156,
+  "embed_ms": 209,
+  "retrieve_ms": 603,
+  "rerank_ms": 3108,
+  "generate_ms": 1810,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
@@ -1539,7 +1609,8 @@
   "cited_files": [
    "250909_A3_자재구매그룹_e-Pro 4.0 SCC 증량 요청 시스템 사용자 매뉴얼(게시용).pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-31",
@@ -1548,11 +1619,11 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6394,
-  "embed_ms": 229,
-  "retrieve_ms": 593,
-  "rerank_ms": 3248,
-  "generate_ms": 2322,
+  "total_ms": 6613,
+  "embed_ms": 202,
+  "retrieve_ms": 1424,
+  "rerank_ms": 3154,
+  "generate_ms": 1832,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 1.0,
@@ -1560,7 +1631,8 @@
   "cited_files": [
    "설비자재구매실 필독서(전자책) (2).pdf"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-32",
@@ -1569,19 +1641,20 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6886,
-  "embed_ms": 253,
-  "retrieve_ms": 1118,
-  "rerank_ms": 2934,
-  "generate_ms": 1405,
+  "total_ms": 6612,
+  "embed_ms": 204,
+  "retrieve_ms": 1157,
+  "rerank_ms": 2104,
+  "generate_ms": 1628,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.5,
+  "citation_coverage": 1.0,
   "n_citations": 1,
   "cited_files": [
    "新 설비관리시스템 매뉴얼 - 01. 설비관리시스템.pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-33",
@@ -1590,19 +1663,20 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7799,
-  "embed_ms": 281,
-  "retrieve_ms": 647,
-  "rerank_ms": 2850,
-  "generate_ms": 1915,
+  "total_ms": 9475,
+  "embed_ms": 244,
+  "retrieve_ms": 1203,
+  "rerank_ms": 2718,
+  "generate_ms": 3983,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.8,
+  "citation_coverage": 1.0,
   "n_citations": 1,
   "cited_files": [
    "알기쉬운 MRO e-Catalog 물품 소개 따라하기 매뉴얼 [사용부서용] (2).pptx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-34",
@@ -1611,19 +1685,21 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7298,
-  "embed_ms": 262,
-  "retrieve_ms": 632,
-  "rerank_ms": 3309,
-  "generate_ms": 1790,
+  "total_ms": 7466,
+  "embed_ms": 226,
+  "retrieve_ms": 663,
+  "rerank_ms": 3141,
+  "generate_ms": 2176,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 1.0,
-  "n_citations": 1,
+  "n_citations": 2,
   "cited_files": [
-   "컨사인먼트자재신청_사용자매뉴얼.pptx"
+   "컨사인먼트자재신청_사용자매뉴얼.pptx",
+   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-35",
@@ -1632,23 +1708,23 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9440,
-  "embed_ms": 245,
-  "retrieve_ms": 711,
-  "rerank_ms": 3242,
-  "generate_ms": 3829,
+  "total_ms": 8817,
+  "embed_ms": 221,
+  "retrieve_ms": 744,
+  "rerank_ms": 3129,
+  "generate_ms": 2735,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 0.833,
-  "n_citations": 5,
+  "n_citations": 4,
   "cited_files": [
-   "물품구매계약 일반약관_260625.docx",
    "자재공급사 평가관리지침_M10089 (V53_251001부).pptx",
    "물품구매계약 일반약관_260625.docx",
    "설비자재구매실 필독서(전자책) (2).pdf",
    "물품구매계약 일반약관_260625.docx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-36",
@@ -1656,18 +1732,21 @@
   "excluded": true,
   "doc_category": "guideline",
   "route": "rag",
-  "no_answer": true,
-  "total_ms": 7860,
-  "embed_ms": 262,
-  "retrieve_ms": 655,
-  "rerank_ms": 3217,
-  "generate_ms": 1628,
+  "no_answer": false,
+  "total_ms": 7440,
+  "embed_ms": 227,
+  "retrieve_ms": 964,
+  "rerank_ms": 3167,
+  "generate_ms": 1660,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.0,
-  "n_citations": 0,
-  "cited_files": [],
-  "hit": false
+  "citation_coverage": 1.0,
+  "n_citations": 1,
+  "cited_files": [
+   "251210_A3_설비자재구매실_포스코 거래상대방 선정에 관한 지침 (V28).docx"
+  ],
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-37",
@@ -1676,11 +1755,11 @@
   "doc_category": "guideline",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8191,
-  "embed_ms": 225,
-  "retrieve_ms": 852,
-  "rerank_ms": 3091,
-  "generate_ms": 2749,
+  "total_ms": 9402,
+  "embed_ms": 223,
+  "retrieve_ms": 1443,
+  "rerank_ms": 3788,
+  "generate_ms": 2065,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 1.0,
@@ -1689,7 +1768,8 @@
    "251210_A3_설비자재구매실_포스코 거래상대방 선정에 관한 지침 (V28).docx",
    "251210_A3_설비자재구매실_포스코 거래상대방 선정에 관한 지침 (V28).docx"
   ],
-  "hit": true
+  "hit": true,
+  "refused": false
  },
  {
   "id": "SYN-38",
@@ -1698,21 +1778,22 @@
   "doc_category": "manual",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7185,
-  "embed_ms": 276,
-  "retrieve_ms": 664,
-  "rerank_ms": 3777,
-  "generate_ms": 2466,
+  "total_ms": 6554,
+  "embed_ms": 238,
+  "retrieve_ms": 808,
+  "rerank_ms": 3388,
+  "generate_ms": 2118,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 1.0,
+  "citation_coverage": 0.833,
   "n_citations": 3,
   "cited_files": [
    "240320_A3_설비자재구매실_사소간 자재이송 통합 메뉴얼-사본-사본.pptx",
    "240320_A3_설비자재구매실_사소간 자재이송 통합 메뉴얼-사본-사본.pptx",
    "240320_A3_설비자재구매실_사소간 자재이송 통합 메뉴얼-사본-사본.pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "SYN-39",
@@ -1721,17 +1802,18 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 6555,
-  "embed_ms": 226,
-  "retrieve_ms": 643,
-  "rerank_ms": 3244,
-  "generate_ms": 1282,
+  "total_ms": 7252,
+  "embed_ms": 238,
+  "retrieve_ms": 1011,
+  "rerank_ms": 3136,
+  "generate_ms": 1506,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "SYN-40",
@@ -1740,20 +1822,22 @@
   "doc_category": "contract",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7706,
-  "embed_ms": 251,
-  "retrieve_ms": 645,
-  "rerank_ms": 3172,
-  "generate_ms": 2258,
+  "total_ms": 7861,
+  "embed_ms": 222,
+  "retrieve_ms": 735,
+  "rerank_ms": 3196,
+  "generate_ms": 2214,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 1.0,
-  "n_citations": 2,
+  "n_citations": 3,
   "cited_files": [
    "250924_A3_설비자재구매실_포스코 표준하도급계약서(25.9월 개정Ver.).docx",
-   "물품구매계약 일반약관_260625.docx"
+   "물품구매계약 일반약관_260625.docx",
+   "250924_A3_설비자재구매실_포스코 표준하도급계약서(25.9월 개정Ver.).docx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-01",
@@ -1762,17 +1846,18 @@
   "doc_category": "training",
   "route": "sql",
   "no_answer": true,
-  "total_ms": 1650,
+  "total_ms": 2082,
   "embed_ms": null,
   "retrieve_ms": null,
   "rerank_ms": null,
   "generate_ms": null,
-  "sql_ms": 16,
+  "sql_ms": 4,
   "route_source": "rule",
   "citation_coverage": 1.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "BIZ-02",
@@ -1781,26 +1866,7 @@
   "doc_category": "training",
   "route": "sql",
   "no_answer": true,
-  "total_ms": 2487,
-  "embed_ms": null,
-  "retrieve_ms": null,
-  "rerank_ms": null,
-  "generate_ms": null,
-  "sql_ms": 19,
-  "route_source": "rule",
-  "citation_coverage": 1.0,
-  "n_citations": 0,
-  "cited_files": [],
-  "hit": false
- },
- {
-  "id": "BIZ-03",
-  "type": "biz_scenario",
-  "excluded": false,
-  "doc_category": "training",
-  "route": "sql",
-  "no_answer": true,
-  "total_ms": 2447,
+  "total_ms": 1986,
   "embed_ms": null,
   "retrieve_ms": null,
   "rerank_ms": null,
@@ -1810,7 +1876,28 @@
   "citation_coverage": 1.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
+ },
+ {
+  "id": "BIZ-03",
+  "type": "biz_scenario",
+  "excluded": false,
+  "doc_category": "training",
+  "route": "sql",
+  "no_answer": true,
+  "total_ms": 1846,
+  "embed_ms": null,
+  "retrieve_ms": null,
+  "rerank_ms": null,
+  "generate_ms": null,
+  "sql_ms": 0,
+  "route_source": "rule",
+  "citation_coverage": 1.0,
+  "n_citations": 0,
+  "cited_files": [],
+  "hit": false,
+  "refused": true
  },
  {
   "id": "BIZ-04",
@@ -1819,22 +1906,21 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9810,
-  "embed_ms": 245,
-  "retrieve_ms": 803,
-  "rerank_ms": 3060,
-  "generate_ms": 3425,
+  "total_ms": 9160,
+  "embed_ms": 232,
+  "retrieve_ms": 946,
+  "rerank_ms": 3197,
+  "generate_ms": 3214,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 1.0,
-  "n_citations": 4,
+  "citation_coverage": 0.857,
+  "n_citations": 2,
   "cited_files": [
-   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
-   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-05",
@@ -1843,21 +1929,22 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7690,
-  "embed_ms": 182,
-  "retrieve_ms": 676,
-  "rerank_ms": 3722,
-  "generate_ms": 3108,
+  "total_ms": 7151,
+  "embed_ms": 159,
+  "retrieve_ms": 1233,
+  "rerank_ms": 3204,
+  "generate_ms": 2553,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.8,
+  "citation_coverage": 0.857,
   "n_citations": 3,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-06",
@@ -1866,14 +1953,14 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8735,
-  "embed_ms": 247,
-  "retrieve_ms": 766,
-  "rerank_ms": 2941,
-  "generate_ms": 3135,
+  "total_ms": 8205,
+  "embed_ms": 242,
+  "retrieve_ms": 603,
+  "rerank_ms": 2835,
+  "generate_ms": 2647,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.857,
+  "citation_coverage": 0.8,
   "n_citations": 4,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
@@ -1881,7 +1968,8 @@
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-07",
@@ -1890,17 +1978,18 @@
   "doc_category": "training",
   "route": "sql",
   "no_answer": true,
-  "total_ms": 2544,
+  "total_ms": 1784,
   "embed_ms": null,
   "retrieve_ms": null,
   "rerank_ms": null,
   "generate_ms": null,
-  "sql_ms": 1,
+  "sql_ms": 0,
   "route_source": "rule",
   "citation_coverage": 1.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "BIZ-08",
@@ -1909,11 +1998,11 @@
   "doc_category": "training",
   "route": "hybrid",
   "no_answer": false,
-  "total_ms": 7885,
-  "embed_ms": 264,
-  "retrieve_ms": 903,
-  "rerank_ms": 2924,
-  "generate_ms": 2359,
+  "total_ms": 8373,
+  "embed_ms": 224,
+  "retrieve_ms": 716,
+  "rerank_ms": 3109,
+  "generate_ms": 2652,
   "sql_ms": 0,
   "route_source": "llm",
   "citation_coverage": 0.333,
@@ -1923,7 +2012,8 @@
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-09",
@@ -1932,11 +2022,11 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8481,
-  "embed_ms": 179,
-  "retrieve_ms": 751,
-  "rerank_ms": 2681,
-  "generate_ms": 3629,
+  "total_ms": 8857,
+  "embed_ms": 158,
+  "retrieve_ms": 665,
+  "rerank_ms": 2856,
+  "generate_ms": 3796,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.889,
@@ -1946,7 +2036,8 @@
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "[매뉴얼] 계약전 사전입고 프로세스 안내 (공유용)-사본.pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-10",
@@ -1955,14 +2046,14 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9377,
-  "embed_ms": 217,
-  "retrieve_ms": 943,
-  "rerank_ms": 2946,
-  "generate_ms": 3202,
+  "total_ms": 8564,
+  "embed_ms": 238,
+  "retrieve_ms": 1032,
+  "rerank_ms": 2999,
+  "generate_ms": 2518,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.857,
+  "citation_coverage": 0.8,
   "n_citations": 4,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
@@ -1970,7 +2061,8 @@
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-11",
@@ -1979,21 +2071,21 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8651,
-  "embed_ms": 174,
-  "retrieve_ms": 792,
-  "rerank_ms": 3407,
-  "generate_ms": 4277,
+  "total_ms": 7281,
+  "embed_ms": 172,
+  "retrieve_ms": 796,
+  "rerank_ms": 3670,
+  "generate_ms": 2642,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.846,
-  "n_citations": 3,
+  "citation_coverage": 0.75,
+  "n_citations": 2,
   "cited_files": [
    "자재 및 구매업무 관리지침_V46 (26.1.26).pptx",
-   "250311_A3_설비자재구매실_Smart 구매 시스템 (e-Pro 4.0) 매뉴얼 (사용부서용)-사본 (2).pptx",
    "250311_A3_설비자재구매실_Smart 구매 시스템 (e-Pro 4.0) 매뉴얼 (사용부서용)-사본 (2).pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-12",
@@ -2002,19 +2094,20 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 10489,
-  "embed_ms": 231,
-  "retrieve_ms": 610,
-  "rerank_ms": 3336,
-  "generate_ms": 4239,
+  "total_ms": 10875,
+  "embed_ms": 219,
+  "retrieve_ms": 1106,
+  "rerank_ms": 3477,
+  "generate_ms": 4549,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.429,
+  "citation_coverage": 0.714,
   "n_citations": 1,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-13",
@@ -2023,21 +2116,21 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6814,
-  "embed_ms": 180,
-  "retrieve_ms": 701,
-  "rerank_ms": 2898,
-  "generate_ms": 3034,
+  "total_ms": 6809,
+  "embed_ms": 198,
+  "retrieve_ms": 830,
+  "rerank_ms": 3171,
+  "generate_ms": 2608,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.857,
-  "n_citations": 3,
+  "citation_coverage": 0.6,
+  "n_citations": 2,
   "cited_files": [
-   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-14",
@@ -2046,14 +2139,14 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7225,
-  "embed_ms": 207,
-  "retrieve_ms": 652,
-  "rerank_ms": 2924,
-  "generate_ms": 3441,
+  "total_ms": 6242,
+  "embed_ms": 210,
+  "retrieve_ms": 627,
+  "rerank_ms": 2894,
+  "generate_ms": 2510,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.75,
+  "citation_coverage": 0.833,
   "n_citations": 4,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
@@ -2061,7 +2154,8 @@
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260316_설비자재구매실_물품등록 오류설명_재신청 가이드_20260318081406728 (2).pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-15",
@@ -2070,22 +2164,23 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7450,
-  "embed_ms": 210,
-  "retrieve_ms": 1056,
-  "rerank_ms": 3253,
-  "generate_ms": 2929,
+  "total_ms": 7730,
+  "embed_ms": 203,
+  "retrieve_ms": 1373,
+  "rerank_ms": 3329,
+  "generate_ms": 2823,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.571,
+  "citation_coverage": 0.5,
   "n_citations": 4,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
-   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "251001_A3_설비자재구매실_그룹자재표준화시스템(POS-Appia) 매뉴얼_20251217113921707 (1).pptx",
-   "251001_A3_설비자재구매실_그룹자재표준화시스템(POS-Appia) 매뉴얼_20251217113921707 (1).pptx"
+   "251001_A3_설비자재구매실_그룹자재표준화시스템(POS-Appia) 매뉴얼_20251217113921707 (1).pptx",
+   "240926_A3_설비자재구매실_POS-Appia FAQ_2 (1).pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-16",
@@ -2094,12 +2189,12 @@
   "doc_category": "training",
   "route": "hybrid",
   "no_answer": false,
-  "total_ms": 6632,
-  "embed_ms": 220,
-  "retrieve_ms": 963,
-  "rerank_ms": 2028,
-  "generate_ms": 3416,
-  "sql_ms": 3,
+  "total_ms": 6102,
+  "embed_ms": 235,
+  "retrieve_ms": 710,
+  "rerank_ms": 2341,
+  "generate_ms": 2803,
+  "sql_ms": 10,
   "route_source": "rule",
   "citation_coverage": 0.3,
   "n_citations": 4,
@@ -2109,7 +2204,8 @@
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-17",
@@ -2118,20 +2214,20 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 9152,
-  "embed_ms": 822,
-  "retrieve_ms": 854,
-  "rerank_ms": 3155,
-  "generate_ms": 2725,
+  "total_ms": 11094,
+  "embed_ms": 223,
+  "retrieve_ms": 619,
+  "rerank_ms": 3276,
+  "generate_ms": 4934,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 1.0,
-  "n_citations": 2,
+  "citation_coverage": 0.75,
+  "n_citations": 1,
   "cited_files": [
-   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-18",
@@ -2140,17 +2236,21 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": true,
-  "total_ms": 5306,
-  "embed_ms": 222,
-  "retrieve_ms": 738,
-  "rerank_ms": 2850,
-  "generate_ms": 1494,
+  "total_ms": 7073,
+  "embed_ms": 519,
+  "retrieve_ms": 727,
+  "rerank_ms": 3109,
+  "generate_ms": 2716,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.0,
-  "n_citations": 0,
-  "cited_files": [],
-  "hit": false
+  "citation_coverage": 0.5,
+  "n_citations": 2,
+  "cited_files": [
+   "20220216_A3_자재구매그룹_기자재반입센터 검사작업 지침(rev2).docx",
+   "20220216_A3_자재구매그룹_기자재반입센터 검사작업 지침(rev2).docx"
+  ],
+  "hit": false,
+  "refused": true
  },
  {
   "id": "BIZ-19",
@@ -2159,11 +2259,11 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7610,
-  "embed_ms": 234,
-  "retrieve_ms": 627,
-  "rerank_ms": 3193,
-  "generate_ms": 2286,
+  "total_ms": 8732,
+  "embed_ms": 262,
+  "retrieve_ms": 667,
+  "rerank_ms": 3511,
+  "generate_ms": 2670,
   "sql_ms": null,
   "route_source": "llm",
   "citation_coverage": 0.857,
@@ -2174,7 +2274,8 @@
    "260630_설비자재구매실_자재입하 및 저장관리 지침(V45).pptx",
    "260630_설비자재구매실_자재입하 및 저장관리 지침(V45).pptx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-20",
@@ -2183,21 +2284,21 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7507,
-  "embed_ms": 181,
-  "retrieve_ms": 612,
-  "rerank_ms": 3158,
-  "generate_ms": 3554,
+  "total_ms": 7062,
+  "embed_ms": 197,
+  "retrieve_ms": 1038,
+  "rerank_ms": 3411,
+  "generate_ms": 2414,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.875,
-  "n_citations": 3,
+  "citation_coverage": 0.818,
+  "n_citations": 2,
   "cited_files": [
-   "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-21",
@@ -2206,17 +2307,18 @@
   "doc_category": "training",
   "route": "sql",
   "no_answer": true,
-  "total_ms": 1609,
+  "total_ms": 1916,
   "embed_ms": null,
   "retrieve_ms": null,
   "rerank_ms": null,
   "generate_ms": null,
-  "sql_ms": 0,
+  "sql_ms": 1,
   "route_source": "rule",
   "citation_coverage": 1.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "BIZ-22",
@@ -2225,17 +2327,18 @@
   "doc_category": "training",
   "route": "sql",
   "no_answer": true,
-  "total_ms": 4958,
+  "total_ms": 5051,
   "embed_ms": null,
   "retrieve_ms": null,
   "rerank_ms": null,
   "generate_ms": null,
-  "sql_ms": 1325,
+  "sql_ms": 1353,
   "route_source": "llm",
   "citation_coverage": 1.0,
   "n_citations": 0,
   "cited_files": [],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "BIZ-23",
@@ -2244,11 +2347,11 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7392,
-  "embed_ms": 204,
-  "retrieve_ms": 741,
-  "rerank_ms": 3381,
-  "generate_ms": 1712,
+  "total_ms": 7640,
+  "embed_ms": 206,
+  "retrieve_ms": 990,
+  "rerank_ms": 2628,
+  "generate_ms": 2133,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 0.5,
@@ -2256,7 +2359,8 @@
   "cited_files": [
    "260127_(광양)설비기술부_포스위키 생산관리분야 질문, 답변 리스트.xlsb"
   ],
-  "hit": false
+  "hit": false,
+  "refused": true
  },
  {
   "id": "BIZ-24",
@@ -2265,14 +2369,14 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 8119,
-  "embed_ms": 167,
-  "retrieve_ms": 1102,
-  "rerank_ms": 2319,
-  "generate_ms": 2682,
+  "total_ms": 9901,
+  "embed_ms": 153,
+  "retrieve_ms": 796,
+  "rerank_ms": 2294,
+  "generate_ms": 5007,
   "sql_ms": null,
   "route_source": "rule",
-  "citation_coverage": 0.667,
+  "citation_coverage": 0.75,
   "n_citations": 5,
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
@@ -2281,7 +2385,8 @@
    "250901_A3_자재구매그룹_중고자재관리시스템 매뉴얼-사본.pptx",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-25",
@@ -2290,23 +2395,22 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 10396,
-  "embed_ms": 225,
-  "retrieve_ms": 626,
-  "rerank_ms": 3394,
-  "generate_ms": 4404,
+  "total_ms": 8461,
+  "embed_ms": 202,
+  "retrieve_ms": 1360,
+  "rerank_ms": 3119,
+  "generate_ms": 2433,
   "sql_ms": null,
   "route_source": "llm",
-  "citation_coverage": 0.636,
-  "n_citations": 5,
+  "citation_coverage": 0.667,
+  "n_citations": 3,
   "cited_files": [
    "설비자재구매실 필독서(전자책) (2).pdf",
-   "설비자재구매실 필독서(전자책) (2).pdf",
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx",
-   "설비자재구매실 필독서(전자책) (2).pdf",
    "물품구매계약 일반약관_260625.docx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "BIZ-26",
@@ -2315,11 +2419,11 @@
   "doc_category": "training",
   "route": "rag",
   "no_answer": false,
-  "total_ms": 6178,
-  "embed_ms": 156,
-  "retrieve_ms": 893,
-  "rerank_ms": 3108,
-  "generate_ms": 2020,
+  "total_ms": 6198,
+  "embed_ms": 184,
+  "retrieve_ms": 629,
+  "rerank_ms": 3138,
+  "generate_ms": 2245,
   "sql_ms": null,
   "route_source": "rule",
   "citation_coverage": 0.833,
@@ -2327,7 +2431,8 @@
   "cited_files": [
    "260810_설비자재구매실_구매지원 Assistant 포스위키 질의응답 내용.xlsx"
   ],
-  "hit": false
+  "hit": false,
+  "refused": false
  },
  {
   "id": "NA-01",
@@ -2336,11 +2441,11 @@
   "doc_category": null,
   "route": "rag",
   "no_answer": true,
-  "total_ms": 6396,
-  "embed_ms": 200,
-  "retrieve_ms": 713,
-  "rerank_ms": 2717,
-  "generate_ms": 2764,
+  "total_ms": 5456,
+  "embed_ms": 186,
+  "retrieve_ms": 892,
+  "rerank_ms": 2472,
+  "generate_ms": 1904,
   "route_source": "rule",
   "citation_coverage": 0.0,
   "n_citations": 0,
@@ -2355,11 +2460,11 @@
   "doc_category": null,
   "route": "rag",
   "no_answer": true,
-  "total_ms": 7325,
-  "embed_ms": 165,
-  "retrieve_ms": 816,
-  "rerank_ms": 2959,
-  "generate_ms": 2191,
+  "total_ms": 6898,
+  "embed_ms": 152,
+  "retrieve_ms": 722,
+  "rerank_ms": 2757,
+  "generate_ms": 1751,
   "route_source": "llm",
   "citation_coverage": 0.0,
   "n_citations": 0,
@@ -2374,11 +2479,11 @@
   "doc_category": null,
   "route": "rag",
   "no_answer": true,
-  "total_ms": 7029,
-  "embed_ms": 199,
-  "retrieve_ms": 591,
-  "rerank_ms": 3492,
-  "generate_ms": 1546,
+  "total_ms": 7573,
+  "embed_ms": 182,
+  "retrieve_ms": 862,
+  "rerank_ms": 3108,
+  "generate_ms": 1905,
   "route_source": "rule",
   "citation_coverage": 0.0,
   "n_citations": 0,
@@ -2393,11 +2498,11 @@
   "doc_category": null,
   "route": "rag",
   "no_answer": true,
-  "total_ms": 7112,
-  "embed_ms": 193,
-  "retrieve_ms": 644,
-  "rerank_ms": 3523,
-  "generate_ms": 1476,
+  "total_ms": 7969,
+  "embed_ms": 183,
+  "retrieve_ms": 1179,
+  "rerank_ms": 2694,
+  "generate_ms": 2151,
   "route_source": "rule",
   "citation_coverage": 0.0,
   "n_citations": 0,
@@ -2412,11 +2517,11 @@
   "doc_category": null,
   "route": "rag",
   "no_answer": false,
-  "total_ms": 7503,
-  "embed_ms": 227,
-  "retrieve_ms": 598,
-  "rerank_ms": 2608,
-  "generate_ms": 2156,
+  "total_ms": 6964,
+  "embed_ms": 188,
+  "retrieve_ms": 611,
+  "rerank_ms": 2512,
+  "generate_ms": 2303,
   "route_source": "rule",
   "citation_coverage": 0.75,
   "n_citations": 4,
