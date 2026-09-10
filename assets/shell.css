@@ -679,23 +679,6 @@ td.num, th.num { text-align: right; }
 .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
 .modal-head h3 { font-size: 15px; font-weight: 700; }
 
-/* 둘러보기 · 여섯 화면 중 어디인지. 눌러서 그 화면으로 건너뛴다 ·
- * 진행 표시만 있으면 「몇 개 더 남았나」 는 알지만 「무엇을 볼 것인가」 는 모른다 */
-.tsteps { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 10px; }
-.tchip {
-  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line);
-  background: transparent; color: var(--muted); font-size: 10.5px; line-height: 1.4;
-  white-space: nowrap; cursor: pointer;
-}
-.tchip:hover { border-color: var(--line-2); color: var(--text-2); }
-.tchip.done { color: var(--text-2); border-color: var(--line-2); }
-.tchip.done::before { content: '✓ '; color: var(--ok); }
-.tchip.on {
-  background: var(--brand-weak); border-color: transparent;
-  color: var(--b1); font-weight: 600;
-}
-.tacts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
-.modal-head h3 { margin-top: 2px; }
 .modal-x { background: none; border: 0; font-size: 19px; color: var(--muted); line-height: 1; padding: 0 2px; }
 
 /* AI 가 정한 값 옆의 ? 버튼. 근거를 숨기지 않는 것이 이 서비스의 핵심이다 */
@@ -726,11 +709,11 @@ td.num, th.num { text-align: right; }
 }
 
 /* ---------------------------------------------------------------- 19. 떠 있는 버튼 */
-.chatbtn, .tourbtn {
+/* 하나만 뜬다 · 튜토리얼은 사이드바(side-links)로 옮겼다 · 왼쪽 아래에 버튼이 둘이면
+ * 화면 아래 양쪽이 다 막히고, 둘 중 무엇이 지금 할 일인지 알 수 없다 */
+.chatbtn {
   position: fixed; bottom: 20px; z-index: 45;
   border-radius: 999px; box-shadow: 0 10px 28px rgba(0, 0, 0, .6);
-}
-.chatbtn {
   right: 20px; height: 52px; padding: 0 20px; border: 0;
   background: var(--brand-deep); color: #FFFFFF;
   display: flex; align-items: center; gap: 9px;
@@ -748,8 +731,51 @@ td.num, th.num { text-align: right; }
   .chatbtn { padding: 0; width: 52px; justify-content: center; }
   .chatbtn .cbt { display: none; }
 }
-.tourbtn { left: 20px; padding: 9px 14px; border: 1px solid var(--line-2);
-  background: var(--surface-2); color: var(--text-2); font-size: 12px; }
+/* 튜토리얼 · 화면을 어둡게 덮고 설명할 곳만 밝게 남긴다.
+ *
+ * 구멍은 요소 하나 크기의 투명한 상자다 · 바깥 어둠은 그 상자의 아주 넓은 그림자다
+ * (판을 네 조각으로 자르지 않아도 되고, 구멍 모서리를 둥글게 둘 수 있다).
+ * 어두운 곳은 클릭을 먹는다 · 튜토리얼 중에 화면이 움직이면 구멍이 딴 데를 가리킨다 */
+.tour-layer { position: fixed; inset: 0; z-index: 85; }
+.tour-layer.full { background: rgba(4, 6, 12, .8); }
+.tspot {
+  position: absolute; border-radius: 14px; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--b3), 0 0 0 9999px rgba(4, 6, 12, .8);
+  transition: left .18s ease, top .18s ease, width .18s ease, height .18s ease;
+}
+.tcard {
+  position: absolute; width: min(340px, calc(100vw - 24px));
+  background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .7); padding: 16px 18px;
+}
+/* 구멍이 없는 걸음(첫 인사)은 가운데에 둔다 */
+.tour-layer.full .tcard { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.tcard-h { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.tcard .tnum {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10.5px; color: var(--muted);
+}
+.tcard .tdots { display: flex; gap: 4px; margin-right: auto; }
+.tcard .tdots i {
+  width: 5px; height: 5px; border-radius: 999px; background: var(--line-2); display: block;
+}
+.tcard .tdots i.done { background: var(--muted); }
+.tcard .tdots i.on { background: var(--b3); width: 14px; }
+.tcard h3 { font-size: 15px; font-weight: 700; letter-spacing: -.3px; }
+.tcard p { font-size: 12.5px; line-height: 1.7; color: var(--text-2); margin-top: 6px; }
+
+/* 여섯 화면 중 어디인지. 눌러서 그 화면으로 건너뛴다 */
+.tsteps { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 0; }
+.tchip {
+  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line);
+  background: transparent; color: var(--muted); font-size: 10px; line-height: 1.4;
+  white-space: nowrap; cursor: pointer;
+}
+.tchip:hover { border-color: var(--line-2); color: var(--text-2); }
+.tchip.done { color: var(--text-2); border-color: var(--line-2); }
+.tchip.done::before { content: '✓ '; color: var(--ok); }
+.tchip.on { background: var(--brand-weak); border-color: transparent; color: var(--b1); font-weight: 600; }
+.tacts { display: flex; gap: 6px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
 
 /* ---------------------------------------------------------------- 20. 로그인 (셸을 쓰지 않는다) */
 .login-wrap { max-width: 470px; margin: 0 auto; padding: 46px 18px 40px; }
@@ -930,7 +956,7 @@ td.num, th.num { text-align: right; }
 
 /* 인쇄 · 주간 리포트를 종이로 낼 때 */
 @media print {
-  .side, .overlay, .chatbtn, .tourbtn, .hamb { display: none !important; }
+  .side, .overlay, .chatbtn, .tour-layer, .hamb { display: none !important; }
   .layout { grid-template-columns: 1fr; }
   .card { box-shadow: none; border-color: var(--line-2); }
 }

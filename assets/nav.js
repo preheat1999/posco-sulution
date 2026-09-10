@@ -124,6 +124,8 @@
       '<div class="side-me-name">' + esc(me ? me.name + ' ' + me.rank : '담당자') + '</div>' +
       '<div class="side-me-dept">' + esc(me ? me.section : '') + '</div>' +
       '<div class="side-links">' +
+        /* 튜토리얼은 언제든 다시 볼 수 있어야 한다 · 처음(대시보드)부터 다시 돈다 */
+        '<button class="btn line sm" type="button" id="navtour">튜토리얼</button>' +
         '<a class="btn line sm" href="login.html">소속 변경</a>' +
         '<button class="btn line sm" type="button" id="navreset">시연 초기화</button>' +
         /* 로그아웃은 세션만 지운다. 판단 · 확정 · 반납 이력(3층)은 남는다 ·
@@ -132,6 +134,16 @@
       '</div></div>';
 
     side.innerHTML = html;
+
+    var tour = document.getElementById('navtour');
+    if (tour) {
+      tour.addEventListener('click', function () {
+        /* 이 화면에 tour.js 가 없으면(폰 화면) 대시보드로 보내고 거기서 뜨게 한다 */
+        if (window.TOUR) { TOUR.open(0); return; }
+        try { window.localStorage.setItem('mtrl.tour.pending', '1'); } catch (e) { /* 무시 */ }
+        window.location.href = 'main.html';
+      });
+    }
 
     var reset = document.getElementById('navreset');
     if (reset) {

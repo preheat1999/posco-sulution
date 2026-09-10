@@ -428,6 +428,9 @@
 
   goEl.addEventListener('click', function () {
     ORG.save({ section: secEl.value, part: partEl.value, name: perEl.value });
+    /* 대시보드에 들어가는 순간 튜토리얼이 한 번 뜨게 적어 둔다 ·
+     * 대시보드가 이 표시를 읽고 지운다 (tour.js) */
+    try { window.localStorage.setItem('mtrl.tour.pending', '1'); } catch (e) { /* 무시 */ }
     window.location.href = 'main.html';
   });
 })();
