@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>로그인 · AI 자재 솔루션</title>
+<link rel="stylesheet" href="assets/shell.css">
+<!-- 공통 셸을 쓰지 않는다. 사이드바도 상단 바도 없다.
+     사내 인증을 흉내 내는 화면이 아니라 「나는 어느 부서 누구인가」 를 고르는 화면이다.
+     여기서 고른 값이 모든 화면의 빵조각 · 리포트 수신자 · 담당 설비에 그대로 쓰인다 -->
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-head">
+    <div class="login-logo">자</div>
+    <div class="login-title">AI 자재 솔루션</div>
+    <div class="login-sub">스스로 수량을 자제하는 자재관리 플랫폼</div>
+  </div>
+
+  <section class="card">
+    <div class="field">
+      <label for="f-part">소속 파트</label>
+      <select class="select" id="f-part"></select>
+    </div>
+
+    <div class="grid2" style="gap:12px">
+      <div class="field">
+        <label for="f-section">섹션</label>
+        <select class="select" id="f-section"></select>
+      </div>
+      <div class="field">
+        <label for="f-person">담당자</label>
+        <select class="select" id="f-person"></select>
+      </div>
+    </div>
+
+    <div class="hr-box" id="hr">
+      <p class="gt"><span>✓ 인사 정보 확인</span></p>
+      <div id="hr-rows"></div>
+    </div>
+
+    <button class="btn block" type="button" id="go" style="min-height:44px">로그인</button>
+    <p class="note" id="guide" hidden></p>
+  </section>
+
+  <p class="login-foot">
+    사내망 폐쇄 환경을 가정한 시연용 화면입니다. 인사 DB 와 연동하지 않습니다.<br>
+    선택한 소속과 역할은 브라우저에만 저장되며 서버로 전송되지 않습니다.
+  </p>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/org.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var partEl = document.getElementById('f-part');
+  var secEl = document.getElementById('f-section');
+  var perEl = document.getElementById('f-person');
+  var rowsEl = document.getElementById('hr-rows');
+  var goEl = document.getElementById('go');
+  var guideEl = document.getElementById('guide');
+
+  var me = ORG.load();
+
+  function opt(value, text, disabled) {
+    var o = document.createElement('option');
+    o.value = value;
+    o.textContent = text;
+    if (disabled) { o.disabled = true; }
+    return o;
+  }
+
+  function fillParts() {
+    partEl.innerHTML = '';
+    ORG.parts().forEach(function (p) { partEl.appendChild(opt(p, p)); });
+    partEl.value = me.part;
+  }
+
+  /* 부서코드가 없는 섹션은 고를 수 없다.
+     없는 코드로 조회하면 화면이 빈 채로 뜨고 불변식 4 가 잡는다.
+     그래서 「없다」 고만 적지 않고 무엇을 하면 되는지 적는다 */
+  function fillSections() {
+    secEl.innerHTML = '';
+    var list = ORG.sections(partEl.value);
+    list.forEach(function (s) {
+      secEl.appendChild(opt(s.name, s.name + (s.dept ? '' : ' · 시연 데이터 준비 전'), !s.dept));
+    });
+    var live = list.filter(function (s) { return s.dept; });
+    if (live.length) {
+      secEl.value = live.some(function (s) { return s.name === me.section; }) ? me.section : live[0].name;
+    }
+    return live.length > 0;
+  }
+
+  function fillPeople() {
+    perEl.innerHTML = '';
+    var people = ORG.people(secEl.value);
+    people.forEach(function (p) {
+      perEl.appendChild(opt(p.name, p.name + ' ' + p.rank));
+    });
+    if (people.some(function (p) { return p.name === me.name; })) { perEl.value = me.name; }
+  }
+
+  function row(k, v) {
+    return '<div class="hr-row"><span class="hr-k">' + UI.esc(k) +
+           '</span><span class="hr-v">' + v + '</span></div>';
+  }
+
+  function paint() {
+    var hasLive = fillSectionsIfNeeded();
+    fillPeople();
+
+    var sec = ORG.section(secEl.value);
+    var per = ORG.person(secEl.value, perEl.value);
+
+    if (!hasLive || !sec || !sec.dept) {
+      rowsEl.innerHTML = '<div class="hr-row"><span class="hr-k">소속</span>' +
+        '<span class="hr-v">' + UI.esc(partEl.value) + '</span></div>';
+      guideEl.hidden = false;
+      guideEl.textContent = '이 시연 데이터에는 원료정비섹션(SEO26FF) 자재 743종만 들어 있습니다. ' +
+        '소속 파트를 「원료처리파트」 로 두고 「원료정비섹션」 을 선택하세요.';
+      goEl.disabled = true;
+      return;
+    }
+
+    guideEl.hidden = true;
+    goEl.disabled = false;
+
+    rowsEl.innerHTML =
+      row('부문', UI.esc(ORG.division)) +
+      row('소속', UI.esc(partEl.value + ' · ' + sec.name)) +
+      row('직급', UI.esc(per ? per.rank : '미확인')) +
+      row('역할', '<span class="badge plan">' + UI.esc(per ? per.role : '미확인') + '</span>') +
+      row('담당 설비군', UI.esc(sec.eqGroup || '미확인')) +
+      '<div class="hr-foot note">' +
+        (per && per.role === ORG.ROLE.LEAD
+          ? '부서 자재 현황을 주간 리포트로 받습니다 · 승인 대기 건을 확인할 수 있습니다'
+          : '내 담당 설비의 자재 현황 확인 · 구매신청 · 반납') +
+      '</div>';
+  }
+
+  /* 파트를 바꿀 때만 섹션 목록을 다시 만든다.
+     매번 다시 만들면 고르는 중에 선택이 초기화된다 */
+  var lastPart = null;
+  function fillSectionsIfNeeded() {
+    if (lastPart === partEl.value) { return ORG.sections(partEl.value).some(function (s) { return s.dept; }); }
+    lastPart = partEl.value;
+    return fillSections();
+  }
+
+  fillParts();
+  paint();
+
+  partEl.addEventListener('change', paint);
+  secEl.addEventListener('change', function () { me.section = secEl.value; paint(); });
+  perEl.addEventListener('change', paint);
+
+  goEl.addEventListener('click', function () {
+    ORG.save({ part: partEl.value, section: secEl.value, name: perEl.value });
+    window.location.href = 'main.html';
+  });
+})();
+</script>
+</body>
+</html>
