@@ -1,0 +1,112 @@
+======================================================================
+build_master_db.py · 생성 보고
+기준일 2026-09-03 · PK Qcode|DeptCode
+======================================================================
+
+만든 파일 23개
+    263130  assets/db-master.js
+    501000  assets/db-derived.js
+      5028  assets/db-biz.js
+     74663  assets/plan-data.js
+    346996  db/master.json
+    723485  db/derived.json
+      5037  db/biz.json
+    100123  db/plan.json
+      3399  db/spec.json
+      1060  db/summary.json
+      2997  db/schema.json
+       178  db/csv/01_부서.csv
+     93644  db/csv/02_자재_정본.csv
+      1564  db/csv/03_설비.csv
+     15618  db/csv/04_정비계획.csv
+     89740  db/csv/05_속성판정_파생.csv
+    150488  db/csv/06_적정재고_파생.csv
+     19363  db/csv/07_정체자재.csv
+      1030  db/csv/08_반납_거래상태.csv
+       574  db/csv/09_구매신청_거래상태.csv
+        38  db/csv/10_QR태그.csv
+       318  db/csv/11_연관자재.csv
+    753664  db/posco_mtrl.sqlite
+
+[1] 행 수
+  OK   자재 정본 743행 · 실제 743
+  OK   속성 판정 743행 · 실제 743
+  OK   적정재고 743행 · 실제 743
+  OK   정체 262행 · 실제 262
+  OK   부서 1행 · 실제 1
+  OK   설비 14행 · 실제 14
+  OK   정비계획 156행 · 실제 156
+
+[2] PK · 743 조합이 전체 모집단이다
+  OK   정본 PK 중복 없음 · distinct 743
+  OK   판정 의 PK 가 전부 정본 안에 있다
+  OK   적정재고 의 PK 가 전부 정본 안에 있다
+  OK   정체 의 PK 가 전부 정본 안에 있다
+
+[3] 요약을 행에서 다시 센다 · 요약만 고치고 행은 안 고치는 실수를 잡는다
+  OK   조치 재계산 {'발주': 120, '유지': 142, '감축': 481} · 요약 {'발주': 120, '유지': 142, '감축': 481}
+  OK   판정 재계산 {'배제-소모품': 111, '계획품': 294, '보험품': 285, '회색지대': 31, '배제-순환품': 22}
+  OK   need = max(0, target - stockDept) · 어긋난 행 0
+  OK   현행재고 Σ(price x stockDept) = 4974493448 · 요약 4974493448
+  OK   목표0 413 · 요약 413
+
+[4] 부서 · 신호 · 배제
+  OK   모든 dept 가 부서 표에 있다
+  OK   발주 신호 red · yellow · green 이 다 있다 · ['gray', 'green', 'red', 'yellow']
+  OK   QS 접두어 자재는 배제이거나 보험품(QS 확정) · 어긋난 건 0
+
+[5] 타입이 복원됐는가 · 「돌아간다」 와 「같은 값이 나온다」 는 다르다
+  OK   숫자 컬럼에 문자열이 남지 않았다 · 남은 것 0
+  OK   holdStd 가 숫자다 · 값이 있는 행 102
+  OK   trend 가 24개다 · 어긋난 행 0
+
+[6] 기준일이 한 곳에만 있는가
+  OK   config.js BASE_DATE 2026-09-03 == 명세 asof 2026-09-03
+
+[7] 정비계획 · 마감 초과가 나와야 시연이 된다
+  OK   WO 156건
+  OK   마감 초과 55건 (3건 이상이어야 「지금 할 일」 이 생긴다)
+  OK   마감일 없는 건이 「지금 신청」 으로 세어지지 않았다
+
+[8] 글쓰기 규칙 · 데이터에 금지 문자가 있는가
+  OK   em-dash · en-dash 가 데이터에 없다 · 있는 칸 0
+
+[9] 선언 PK 가 데이터에서 유일한가
+  OK   01_부서.csv · PK code 유일
+  OK   02_자재_정본.csv · PK q+dept 유일
+  OK   03_설비.csv · PK name 유일
+  주의  04_정비계획.csv · PK eq+kind+stopStart 가 12건 중복이다
+  OK   05_속성판정_파생.csv · PK q+dept 유일
+  OK   06_적정재고_파생.csv · PK q+dept 유일
+  OK   07_정체자재.csv · PK q+dept 유일
+  OK   08_반납_거래상태.csv · PK q 유일
+  OK   09_구매신청_거래상태.csv · PK q 유일
+  OK   10_QR태그.csv · PK q 유일
+  OK   11_연관자재.csv · PK q+rel 유일
+       -> 중복 표는 SQLite 에서 대리키(rid)로 받았다. 조인할 때 행이 불어난다.
+          알고리즘 담당은 이 표를 GROUP BY 없이 조인하면 안 된다
+
+[10] 반출 JSON 과 필드 단위 대조 · 리허설에서 holdStd 하나로 102행이 어긋났다
+  db-master.json.depts 1행 모든 필드 일치
+  db-master.json.materials 743행 모든 필드 일치
+  db-master.json.equipment 14행 모든 필드 일치
+  db-master.json.maintenance 156행 모든 필드 일치
+  db-derived.json.attr 743행 모든 필드 일치
+  db-derived.json.stock 743행 모든 필드 일치
+  db-derived.json.pool 262행 모든 필드 일치
+  db-biz.json.returns 10행 모든 필드 일치
+  db-biz.json.purchase 6행 모든 필드 일치
+  db-biz.json.tags 2행 모든 필드 일치
+  db-biz.json.sets 자재 2건 · 관계 3건 모든 필드 일치
+  OK   필드 불일치 0건
+
+======================================================================
+검산 통과 · 문제 0건
+======================================================================
+
+[인계] 알고리즘 담당에게 주는 것
+  db/README.md            규칙과 주고받을 것
+  db/posco_mtrl.sqlite    SQL · pandas 진입점
+  db/csv/ 11개            타입 복원된 CSV (UTF-8 BOM)
+  db/schema.json          컬럼별 타입 · PK · 허용값
+  validate_algorithm_csv.py  받은 CSV 를 넣기 전에 돌리는 검문소

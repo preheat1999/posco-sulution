@@ -1,0 +1,64 @@
+{
+ "items": 743,
+ "insItems": 382,
+ "plnItems": 361,
+ "nowAmt": 4974493448,
+ "tgtAmt": 5788775890,
+ "cutAmt": 2970514193,
+ "poolAmt": 946739938,
+ "poolItems": 262,
+ "financeDept": 36038738,
+ "financeAll": 18.5,
+ "verdict": {
+  "배제-소모품": 111,
+  "계획품": 294,
+  "보험품": 285,
+  "회색지대": 31,
+  "배제-순환품": 22
+ },
+ "path": {
+  "사전 배제": 133,
+  "시계열 점수": 607,
+  "Spare Part 확정": 1,
+  "QS 확정": 2
+ },
+ "conf": {
+  "HIGH": 709,
+  "LOW": 31,
+  "MEDIUM": 3
+ },
+ "action": {
+  "발주": 120,
+  "유지": 142,
+  "감축": 481
+ },
+ "grade": {
+  "C": 239,
+  "S": 118,
+  "B": 295,
+  "A": 91
+ },
+ "signal": {
+  "yellow": 59,
+  "gray": 488,
+  "green": 129,
+  "red": 67
+ },
+ "zeroTarget": 413,
+ "zeroTargetPct": 55.6,
+ "insNow": 2584282067,
+ "insTgt": 5761653025,
+ "plnNow": 2390211381,
+ "plnTgt": 27122865,
+ "zeroPln": 358,
+ "zeroPlnPct": 99.2,
+ "typeSource": {
+  "master.csv": 164,
+  "classification_result.csv": 579
+ },
+ "finance": 36038738,
+ "dueTotal": 56,
+ "dueOver": 56,
+ "dueOrder": 6,
+ "dueOrderAmt": 11490955
+}

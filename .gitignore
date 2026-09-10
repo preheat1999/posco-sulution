@@ -1,0 +1,26 @@
+# 생성물 중에서 "되돌릴 수 있는 것"만 뺀다.
+# assets/db-*.js 와 db/ 는 생성물이지만 올린다.
+# 화면이 정적 파일로 바로 돌아야 하고, 알고리즘 담당이 레포에서 DB 를 그대로 받아야 한다.
+
+__pycache__/
+*.pyc
+*.pyo
+
+# 검사 결과는 돌릴 때마다 달라진다. 기록이 필요하면 따로 커밋한다
+verify_report.txt
+runtime_report.txt
+
+# OS · 편집기
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+
+# 렌더 검사기용. 설치해도 레포에 올리지 않는다
+node_modules/
+package-lock.json
+
+# 빈 채로 남은 예전 분업 폴더 (한 세션에서 다 만들기로 바뀌었다)
+프론트엔드/
+백엔드/

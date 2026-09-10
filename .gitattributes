@@ -1,0 +1,23 @@
+# 줄바꿈을 저장소에서는 LF 로 통일한다.
+# Windows 에서 만들고 배포 호스팅(리눅스)에서 서비스하므로 섞이면 진단이 어려워진다.
+* text=auto eol=lf
+
+# 이진 파일은 손대지 않는다. sqlite 를 텍스트로 변환하면 파일이 깨진다
+*.sqlite binary
+*.db binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# CSV 는 UTF-8 BOM 이다. Excel 에서 열려야 하므로 내용을 건드리지 않는다
+*.csv -text
+
+# GitHub 언어 통계에서 반입 자료와 생성물을 빼면 무엇을 만든 프로젝트인지 잘 보인다
+db/** linguist-generated=true
+assets/db-master.js linguist-generated=true
+assets/db-derived.js linguist-generated=true
+assets/db-biz.js linguist-generated=true
+assets/plan-data.js linguist-generated=true
