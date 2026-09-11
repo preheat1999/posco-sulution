@@ -8,7 +8,8 @@ QR 에 담는 값 · <배포 주소>/material-view.html?code=Q0000000
 사용법 ·
     python -B make_qr.py                                  기본값으로 만든다
     python -B make_qr.py --code Q4046777                  자재 하나
-    python -B make_qr.py --base http://192.168.0.10:8130  사내망 · 노트북 주소
+    python -B make_qr.py --base https://192.168.0.10:8130 사내망 · 노트북 주소
+      (https 로 만든다 · 폰이 http 로 들어오면 그 화면에서 마이크가 막힌다)
     python -B make_qr.py --page mobile-return.html        반납 화면으로 바로 보내기
     python -B make_qr.py --all                             qr-items.js 에 등록된 전부
 
@@ -160,7 +161,13 @@ def draw_label(path, qr_png, code, item, url):
         y += 58 + (25 if len(lines) > 1 else 0)
 
     fu = font(15)
-    d.text((x, H - 44), wrap(d, 'QR 스캔 → ' + url, fu, W - 68, 1)[0], font=fu, fill='#555555')
+    d.text((x, H - 62), wrap(d, 'QR 스캔 → ' + url, fu, W - 68, 1)[0], font=fu, fill='#555555')
+    # https 로 들어와야 마이크가 열린다 · 자체 서명이라 처음 한 번은 경고를 넘겨야 한다.
+    # 라벨에 안 적으면 현장에서 「안 열린다」 는 말이 먼저 나온다
+    if url.startswith('https://') and '://localhost' not in url:
+        d.text((x, H - 40),
+               '처음 한 번 · 「연결이 비공개가 아닙니다」 → 고급 → 계속 (사내 시연용 인증서)',
+               font=fu, fill='#777777')
     im.save(path)
 
 
