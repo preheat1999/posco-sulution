@@ -165,7 +165,14 @@ DB.commitAttr();
 const afterMany = snap();
 ok(afterMany.pln === base.pln + 20 && afterMany.ins === base.ins - 20,
    '확정 뒤 속성 수가 20건 옮겨졌다 · 보험품 ' + afterMany.ins + ' 계획품 ' + afterMany.pln);
-ok(afterMany.staleN === 20, '목표를 다시 잡은 행이 20 이다');
+/* 20건 모두 계획품 목표를 쓰는지 본다.
+ * staleN 으로 세면 안 된다 · 06 의 목표가 이미 계획품으로 계산돼 있던 행은
+ * 확정해도 목표가 그대로라 「다시 잡은 행」 에 들지 않는다 (값은 맞다) */
+const usePln = many.every((r) => {
+  const x = DB.item(r.q, r.dept);
+  return Number(x.targetNow) === Number(x.targetPln);
+});
+ok(usePln, '20건 모두 계획품 목표를 쓴다 · 그중 다시 잡은 행 ' + afterMany.staleN);
 /* 목표는 엔진이 구운 계획품 값이어야 한다.
  * 「비핵심설비면 0」 은 정본 ceq 로 판단할 수 없다 · 엔진은 equipment_map 으로 핵심설비를
  * 다시 보고, 정본 ceq 와 어긋나는 행이 11건 있다 (db/FLOW_CHECK.md 에 적었다).

@@ -110,21 +110,28 @@ function run() {
   // 3 · 목록과 요약이 같은 값을 본다
   say();
   say('[3] DB.list 와 요약이 같은 값을 본다');
+  /* 목록과 요약은 같은 기준(확정 보유목적 · 없으면 정본)을 본다.
+   * 반출 요약(shipped)은 알고리즘 **판정** 기준이라 수가 다르다 · 대조용으로만 남긴다 */
   const shipped = DB.summary().shipped;
+  const s3 = DB.summary();
   const ins = DB.list({ type: '보험품' }).length;
   const pln = DB.list({ type: '계획품' }).length;
-  ok(ins === shipped.insItems, '보험품 ' + ins + ' · 요약 ' + shipped.insItems);
-  ok(pln === shipped.plnItems, '계획품 ' + pln + ' · 요약 ' + shipped.plnItems);
+  ok(ins === (s3.type['보험품'] || 0), '보험품 ' + ins + ' · 요약 ' + (s3.type['보험품'] || 0));
+  ok(pln === (s3.type['계획품'] || 0), '계획품 ' + pln + ' · 요약 ' + (s3.type['계획품'] || 0));
+  ok(ins + pln === 743, '둘을 더하면 전수다 · ' + (ins + pln));
+  say('     반출 요약(판정 기준) · 보험품 ' + shipped.insItems + ' 계획품 ' + shipped.plnItems);
   ok(DB.list().length === 743, '전체 ' + DB.list().length + '건');
   ok(DB.find('Hydraulic').length > 0, 'find(품명) 이 걸린다 · ' + DB.find('Hydraulic').length + '건');
 
   // 4 · 조치
   say();
-  say('[4] 요약의 조치가 발주 120 · 유지 142 · 감축 481 이다');
+  /* 사람이 아무것도 확정하지 않았을 때의 값이다 · 기준은 정본 보유목적이다.
+   * (판정 기준으로 세면 120 · 142 · 481 이 나온다 · 그건 「추천대로 다 바꿨을 때」 의 값이다) */
+  say('[4] 요약의 조치가 발주 135 · 유지 153 · 감축 455 이다');
   const s0 = DB.summary();
-  ok(s0.action['발주'] === 120, '발주 ' + s0.action['발주']);
-  ok(s0.action['유지'] === 142, '유지 ' + s0.action['유지']);
-  ok(s0.action['감축'] === 481, '감축 ' + s0.action['감축']);
+  ok(s0.action['발주'] === 135, '발주 ' + s0.action['발주']);
+  ok(s0.action['유지'] === 153, '유지 ' + s0.action['유지']);
+  ok(s0.action['감축'] === 455, '감축 ' + s0.action['감축']);
   ok(s0.nowAmt === shipped.nowAmt,
      '현행재고 ' + s0.nowAmt + ' · 요약 ' + shipped.nowAmt);
   say('       2차 버킷팅 ' + JSON.stringify(s0.bucket));
@@ -166,14 +173,14 @@ function run() {
   say();
   say('[6] 재고 3인 자재를 3개 불출하면 재고 0 · 조치 발주');
   const cand = DB.list(function () { return true; })
-    .filter((r) => r.stockSeed === 3 && Number(r.target) > 0)[0];
+    .filter((r) => r.stockSeed === 3 && Number(r.targetNow) > 0)[0];
   ok(!!cand, '재고 3 · 목표 있는 자재 · ' + (cand && cand.q) +
-     ' (목표 ' + (cand && cand.target) + ')');
+     ' (목표 ' + (cand && cand.targetNow) + ')');
   DB.txn({ q: cand.q, dept: cand.dept, type: '불출', qty: 3, note: '시험' });
   const c6 = DB.item(cand.q, cand.dept);
   ok(c6.stock === 0, '재고 ' + cand.stockSeed + ' -> ' + c6.stock);
   ok(c6.actionNow === '발주', '조치 ' + c6.actionNow);
-  ok(c6.needNow === Number(cand.target), '지금 필요 ' + c6.needNow);
+  ok(c6.needNow === Number(cand.targetNow), '지금 필요 ' + c6.needNow);
   ok(c6.need === cand.need, '알고리즘이 낸 need 는 그대로 · ' + c6.need);
 
   say();
@@ -216,7 +223,7 @@ function run() {
   DB.txn({ q: cand.q, dept: cand.dept, type: '불출', qty: 1 });
   DB.reset();
   const s9 = DB.summary();
-  ok(s9.action['발주'] === 120 && s9.action['유지'] === 142 && s9.action['감축'] === 481,
+  ok(s9.action['발주'] === 135 && s9.action['유지'] === 153 && s9.action['감축'] === 455,
      '조치가 처음 값으로 · ' + JSON.stringify(s9.action));
   ok(DB.item(gray.q, gray.dept).typeSrc === 'master', '승인 이력이 비었다');
   ok(DB.changes().attribute_overrides.length === 0, '3층이 비었다');

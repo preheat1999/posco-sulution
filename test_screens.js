@@ -185,7 +185,8 @@ console.log('');
 console.log('=== 실제 값이 실렸는가 ===');
 ok(/743/.test(seen.main || ''), 'main · 743품목');
 ok(/49\.7|4,974/.test(seen.main || ''), 'main · 보유 재고 49.7억원');
-ok(/3,604만원/.test(seen.main || ''), 'main · 금융비용 3,604만원');
+/* 정본 보유목적 기준의 값이다 · 사람이 확정하면 여기서 움직인다 */
+ok(/3,680만원/.test(seen.main || ''), 'main · 금융비용 3,680만원');
 /* attr 의 칸은 149 · 90 · 31 로 나뉜다. 239 는 그 둘을 합친 대시보드 값이다 */
 ok(/149/.test(seen.attr || '') && /90/.test(seen.attr || '') && /31/.test(seen.attr || ''),
    'attr · 칸 숫자 149 · 90 · 31');

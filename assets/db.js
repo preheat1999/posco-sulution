@@ -121,8 +121,13 @@
     var cm = commitRead();
     var applied = !!ov && Number(ov.seq) <= Number(cm.seq || 0);
     var type, src;
+    /* 순서 · 사람이 확정한 값 → 없으면 정본(1층 Type).
+     *
+     * 예전에는 가운데에 「알고리즘 판정(verdict)」 이 하나 더 있었다. 그러면
+     * 사람이 AI 추천을 그대로 확정해도 앞뒤 값이 같아 화면의 어떤 숫자도 움직이지 않는다
+     * (실측 · 30건을 확정해도 발주 120 · 감축 481 · 감축액 29.7억이 그대로였다).
+     * 판정은 「추천」 이고 재고를 정하는 것은 확정된 보유목적이다 · 그래서 뺐다 */
     if (applied) { type = ov.newType; src = 'override'; }
-    else if (CONFIRMED.indexOf(a.verdict) >= 0) { type = a.verdict; src = 'algorithm'; }
     else { type = m.type; src = 'master'; }
     var judged = ov ? ov.newType : null;
     var pending = (ov && !applied) ? ov : null;
@@ -144,10 +149,14 @@
      * 확정 속성이 06 의 속성과 다르면 구운 값을 쓴다. 같으면 06 값 그대로다 ·
      * 손대지 않은 행의 숫자는 반출 그대로 남는다 */
     var stockType = s.type || m.type;
-    var stale = applied && type !== stockType;
+    /* 06 의 target 이 어떤 속성으로 계산됐는지와 지금 속성이 다르면 구운 값을 쓴다 ·
+     * 사람이 손대기 전에도 그렇다 (정본이 기준이므로 판정으로 계산된 목표는 그대로 쓸 수 없다).
+     * stale 은 그중 **사람이 확정해서 바뀐 행** 만 가리킨다 · 화면의 「재계산됨」 표시가 이것이다 */
+    var rebased = type !== stockType;
+    var stale = applied && rebased;
     var targetNow = target, recalc = null;
     var reasonNow = s.reason, signalNow = s.signal, statusNow = s.status;
-    if (stale) {
+    if (rebased) {
       var baked = type === '보험품'
         ? { t: s.targetIns, why: s.reasonIns, sig: s.signalIns, st: s.statusIns }
         : { t: s.targetPln, why: s.reasonPln, sig: s.signalPln, st: s.statusPln };
@@ -170,6 +179,18 @@
                    rule: '엔진이 ' + type + ' 으로 계산한 목표입니다',
                    from: target, to: targetNow, why: reasonNow };
       }
+    }
+    /* 재계산 안내는 사람이 바꾼 행에만 붙인다 · 처음부터 정본으로 계산한 행은 안내할 일이 없다 */
+    if (!stale) { recalc = null; }
+
+    /* 사람이 손대지 않았다면 목표가 얼마였을까 (정본 속성의 목표).
+     * 「확정이 목표를 얼마나 내렸나」 를 재야 갈 곳 없어진 재고를 셀 수 있다 ·
+     * 공용화 회수 카드가 이 차이를 쓴다 */
+    var targetBase = targetNow;
+    if (applied && type !== m.type) {
+      var bb = m.type === '보험품' ? s.targetIns : s.targetPln;
+      targetBase = (m.type === stockType) ? target
+        : ((bb === undefined || bb === null || bb === '') ? target : (Number(bb) || 0));
     }
 
     return {
@@ -207,7 +228,8 @@
        * 반납하면 needNow 만 줄고 알고리즘 산출값은 그대로 남는다 */
       /* 적정재고가 어느 속성으로 계산됐는지 · 확정 속성과 다르면 stale.
        * stale 이어도 targetNow · reasonNow · signalNow 는 확정 속성 쪽 값이다 */
-      stockType: stockType, stale: stale, recalc: recalc, targetNow: targetNow,
+      stockType: stockType, stale: stale, rebased: rebased,
+      recalc: recalc, targetNow: targetNow, targetBase: targetBase,
       reasonNow: reasonNow, signalNow: signalNow, statusNow: statusNow,
       needNow: Math.max(0, targetNow - stock),
       actionNow: stock < targetNow ? '발주' : (stock === targetNow ? '유지' : '감축')
@@ -373,15 +395,29 @@
        * 전부 더하면 회수액이 11.45억원이 되어 금융비용 절감이 부풀려진다.
        * strong + medium 만 세면 요약의 9.47억원과 정확히 맞는다 */
       var poolAll = 0, poolGet = 0, poolN = 0, poolGetN = 0;
+      /* 사람의 확정으로 **새로 생긴** 과잉 · 이것도 공용화 대상이다.
+       * 예 · 보유 5 인 자재를 계획품으로 확정해 목표가 0 이 되면 5 만큼이 갈 곳이 없다.
+       * 2층 정체 판정(poolGrade)은 반출 시점 값이라 사람의 판단을 따라오지 못한다 ·
+       * 그 판정으로 이미 센 행은 두 번 세지 않는다 */
+      var poolNew = 0, poolNewN = 0;
       for (i = 0; i < rows.length; i++) {
         r = rows[i];
+        var graded = r.poolGrade === 'strong' || r.poolGrade === 'medium';
+        if (r.committed && !graded) {
+          // 목표가 내려간 만큼 · 그리고 실제로 남아 있는 만큼 · 둘 중 작은 쪽이 갈 곳 없는 재고다
+          var drop = Math.min((Number(r.targetBase) || 0) - (Number(r.targetNow) || 0),
+                              (Number(r.stock) || 0) - (Number(r.targetNow) || 0));
+          if (drop > 0) { poolNew += (Number(r.price) || 0) * drop; poolNewN += 1; }
+        }
         if (!r.poolGrade) { continue; }
         var sv = Number(r.staleValue) || 0;
         poolAll += sv; poolN += 1;
-        if (r.poolGrade === 'strong' || r.poolGrade === 'medium') {
-          poolGet += sv; poolGetN += 1;
-        }
+        if (graded) { poolGet += sv; poolGetN += 1; }
       }
+      poolAll += poolNew; poolN += poolNewN;
+      poolGet += poolNew; poolGetN += poolNewN;
+      out.poolNewAmt = Math.round(poolNew);   // 그중 사람의 확정이 만든 몫
+      out.poolNewItems = poolNewN;
       out.poolItems = poolN;               // 정체 종수
       out.poolAmt = Math.round(poolGet);   // 공용화로 회수 가능한 금액
       out.poolAmtAll = Math.round(poolAll);

@@ -206,11 +206,19 @@
      * 칸(전체 · 회색지대 …)과는 상관없다 · 확정은 목록이 아니라 판단 전체에 대한 일이다 */
     var cb = el('commit');
     cb.hidden = stage !== 'algo';
-    cb.disabled = !c.done;
-    cb.className = 'btn' + (c.waiting ? '' : ' line');
-    cb.textContent = c.waiting
-      ? ('담당자 확정 · ' + UI.num(c.waiting) + '건')
-      : (c.done ? '확정 완료 · ' + UI.num(cm.done) + '건' : '판단한 자재가 없습니다');
+    /* 규칙은 하나다 · **판단이 하나라도 있으면 누를 수 있다.**
+     * 지금 어느 칸(전체 · 회색지대 …)을 보고 있는지, 그 칸에 판단이 있는지는 상관없다.
+     *
+     * c.done 만 보면 잠기는 경우가 있다 · c 는 「손대야 하는 목록」 을 센 값이라
+     * 사전 배제 · 판정일치 행은 세지 않는다. 그 행을 챗봇 · 음성 · 튜토리얼이 판단하면
+     * 판단은 남았는데 버튼은 잠긴다. 그래서 DB 가 센 값(확정 대기 + 확정 완료)도 같이 본다 */
+    var waiting = c.waiting || Number(cm.waiting) || 0;
+    var judged = (c.done || 0) + Number(cm.total || 0);
+    cb.disabled = judged === 0;
+    cb.className = 'btn' + (waiting ? '' : ' line');
+    cb.textContent = waiting
+      ? ('담당자 확정 · ' + UI.num(waiting) + '건')
+      : (judged ? '확정 완료 · ' + UI.num(cm.done) + '건' : '판단한 자재가 없습니다');
     paintStamp(c);
   }
 
