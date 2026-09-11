@@ -293,12 +293,35 @@
     find: function (text, limit) {
       var t = String(text || '').trim().toLowerCase();
       if (!t) { return []; }
-      var out = allRows().filter(function (r) {
-        return (r.q || '').toLowerCase().indexOf(t) >= 0 ||
-               (r.name || '').toLowerCase().indexOf(t) >= 0 ||
-               (r.group || '').toLowerCase().indexOf(t) >= 0;
-      });
-      return limit ? out.slice(0, limit) : out;
+      function hit(s) {
+        var out = allRows().filter(function (r) {
+          return (r.q || '').toLowerCase().indexOf(s) >= 0 ||
+                 (r.name || '').toLowerCase().indexOf(s) >= 0 ||
+                 (r.group || '').toLowerCase().indexOf(s) >= 0;
+        });
+        return limit ? out.slice(0, limit) : out;
+      }
+      var out = hit(t);
+      /* 한 건도 없고 한글로 물었다면 한 번 더 · 품명은 영어라 「너트」 로는 한 글자도 안 겹친다.
+       * 음성이든 자판이든 여기로 들어온다 (ko-en.js 가 소리로 영어 낱말을 찾아 준다).
+       * 같은 것을 두 가지로 적은 품명도 있다 (Bearing 2건 · BRG 17건) · 둘 다 훑는다 */
+      if (!out.length && window.KOEN && /[가-힣]/.test(t)) {
+        var words = window.KOEN.terms(t);
+        if (!words.length) {
+          var en = window.KOEN.translate(t).text.trim().toLowerCase();
+          if (en && en !== t) { words = [en]; }
+        }
+        var seen = {};
+        out = [];
+        words.forEach(function (w) {
+          hit(String(w).toLowerCase()).forEach(function (r) {
+            if (!seen[r.key]) { seen[r.key] = 1; out.push(r); }
+          });
+        });
+        // 두 낱말을 훑었으니 여기서 다시 자른다 · 안 자르면 부른 쪽이 정한 수를 넘는다
+        if (limit) { out = out.slice(0, limit); }
+      }
+      return out;
     },
 
     dept: function (code) { return DEPTS[code || DEFAULT_DEPT] || null; },

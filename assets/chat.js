@@ -147,7 +147,15 @@
         },
         text: function (text, info) {
           voice.note = '';
-          ask(text, { voice: true, stt: info });
+          /* 음성은 한국어로 받아쓰는데 품명은 영어다 ·
+           * 「너트」 로는 품명 「Nut」 에 한 글자도 닿지 않는다 (ko-en.js 가 소리로 잇는다).
+           * 바꾼 말은 말풍선 아래에 그대로 적는다 · 무엇으로 찾았는지 보여야 한다 */
+          var say = text, pairs = [];
+          if (window.KOEN) {
+            var tr = KOEN.translate(text);
+            if (tr.changed) { pairs = tr.pairs; text = tr.text; }
+          }
+          ask(text, { voice: true, stt: info, said: say, koen: pairs });
         },
         error: function (why) { voice.note = why; paintMic(); }
       });
@@ -381,7 +389,14 @@
 
   // ---------------------------------------------------------------- 한 턴
   function turnHtml(t, i) {
-    var me = '<div class="chat-me">' + (t.voice ? '<span class="vmark" title="음성으로 인식한 문장">🎤</span> ' : '') + esc(t.q) + '</div>';
+    var koen = (t.koen && t.koen.length)
+      ? '<div class="chat-koen" title="음성은 한국어로 받아쓰고 품명은 영어라 소리로 이어 찾았습니다">' +
+          t.koen.map(function (p) {
+            return '<span><b>' + esc(p[0]) + '</b> → ' + esc(p[1]) + '</span>';
+          }).join('') + '<i>' + esc(t.koen[0][2] === '뜻' ? '뜻으로 옮김' : '소리로 옮김') + '</i></div>'
+      : '';
+    var me = '<div class="chat-me">' + (t.voice ? '<span class="vmark" title="음성으로 인식한 문장">🎤</span> ' : '') +
+      esc(t.said || t.q) + '</div>' + koen;
     if (t.steps && t.steps.length) {
       /* 실행 턴 · 단계마다 결과 · 문서 답이 뒤따르면 그 아래 붙는다 */
       return me + stepsHtml(t, i) +
@@ -649,7 +664,9 @@
     if (busy) { return; }
     opt = opt || {};
     var t = { q: qtext, status: 'run', stages: [], text: '', t0: Date.now(), route: null,
-              voice: !!opt.voice, stt: opt.stt || null };
+              voice: !!opt.voice, stt: opt.stt || null,
+              /* said · 사람이 말한 그대로 · koen · 영어로 바꾼 낱말 짝 */
+              said: opt.said || null, koen: opt.koen || null };
     turns.push(t);
     busy = true;
     /* 문장에 자재코드가 있으면 그것이 「이 자재」 다 */

@@ -2265,6 +2265,20 @@ td.num, th.num { text-align: right; }
   background: var(--brand); animation: blink .9s steps(2) infinite;
 }
 @keyframes blink { to { opacity: 0; } }
+/* 음성으로 들어온 한국어를 영어 품명으로 바꿔 찾았을 때 그 사실을 적는다 ·
+ * 조용히 바꾸면 「내가 말한 것과 다른 걸 찾았다」 로 읽힌다 */
+.chat-koen {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  margin: -2px 0 10px auto; justify-content: flex-end;
+  font-size: 10.5px; color: var(--muted);
+}
+.chat-koen span {
+  border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px;
+  background: var(--bg); white-space: nowrap;
+}
+.chat-koen span b { color: var(--ink); font-weight: 600; }
+.chat-koen i { font-style: normal; opacity: .7; }
+
 .chat-meta { font-size: 10px; color: var(--muted); margin-top: 8px; }
 .chat-rw {
   font-size: 10.5px; color: var(--b1); background: var(--brand-weak);

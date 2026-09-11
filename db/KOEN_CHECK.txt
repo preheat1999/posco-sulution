@@ -1,0 +1,84 @@
+======================================================================
+ko-en · 한국어 음성 → 영어 자재명
+======================================================================
+
+품명에서 모은 영어 낱말 93개 · 가장 많이 나오는 것 General(492) Machining(474) Hydraulic(226) Cylinder(134) Metal(120) Non(118) Fe(112) Casting(112)
+
+[1] 자재 단위 · 말한 대로 영어가 되는가
+  OK   밸브 → Valve (소리 · 뼈대 BLB=BLB)
+  OK   볼트 → Bolt (소리 · 뼈대 BLT=BLT)
+  OK   너트 → Nut (소리 · 뼈대 NT=NT)
+  OK   베어링 → Bearing (소리 · 뼈대 BLN=BLN)
+  OK   실린더 → Cylinder (소리 · 뼈대 SLNT=SLNTL)
+  OK   롤러 → Roller (뜻 · 뼈대 L=L)
+
+[2] 같은 방법으로 걸리는 다른 낱말들
+  OK   펌프 → Pump (기대 pump)
+  OK   모터 → Motor (기대 motor)
+  OK   커플링 → Coupling (기대 coupling)
+  OK   조인트 → Joint (기대 joint)
+  OK   필터 → Filter (기대 filter)
+  OK   씰 → Seal (기대 seal)
+  OK   패킹 → Packing (기대 packing)
+  OK   기어 → Gear (기대 gear)
+  OK   벨트 → Belt (기대 belt)
+  OK   체인 → Chain (기대 chain)
+  OK   유압 → Hydraulic (기대 hydraulic)
+  OK   공압 → Pneumatics (기대 pneumatics)
+  OK   전기 → Electrical (기대 electrical)
+  OK   고무 → Rubber (기대 rubber)
+  OK   금속 → Metal (기대 metal)
+  OK   구리 → Copper (기대 copper)
+
+[3] 업무 한국어는 그대로 둔다 (뼈대가 비슷해도)
+  OK   재고 은 그대로 (안 바뀐다)
+  OK   발주 은 그대로 (안 바뀐다)
+  OK   감축 은 그대로 (안 바뀐다)
+  OK   공용화 은 그대로 (안 바뀐다)
+  OK   반납 은 그대로 (안 바뀐다)
+  OK   구매 은 그대로 (안 바뀐다)
+  OK   신청 은 그대로 (안 바뀐다)
+  OK   목표 은 그대로 (안 바뀐다)
+  OK   적정 은 그대로 (안 바뀐다)
+  OK   보유 은 그대로 (안 바뀐다)
+  OK   금액 은 그대로 (안 바뀐다)
+  OK   부서 은 그대로 (안 바뀐다)
+  OK   설비 은 그대로 (안 바뀐다)
+  OK   정비 은 그대로 (안 바뀐다)
+  OK   오늘 은 그대로 (안 바뀐다)
+  OK   이번 은 그대로 (안 바뀐다)
+  OK   알려줘 은 그대로 (안 바뀐다)
+  OK   보여줘 은 그대로 (안 바뀐다)
+  OK   얼마 은 그대로 (안 바뀐다)
+  OK   현황 은 그대로 (안 바뀐다)
+
+[4] 문장을 바꾼다 · 자재 낱말만 영어가 된다
+  OK   「너트 재고 알려줘」 → 「Nut 재고 알려줘」
+  OK   「볼 베어링 몇 개 있어」 → 「Ball Bearing 몇 개 있어」
+  OK   「유압 실린더 발주 필요한 거 보여줘」 → 「Hydraulic Cylinder 발주 필요한 거 보여줘」
+  OK   「롤러 감축 가능 금액 얼마야」 → 「Roller 감축 가능 금액 얼마야」
+  OK   「오늘 할 일 알려줘」 → 「오늘 할 일 알려줘」
+
+[5] 바꾼 낱말로 자재가 실제로 걸린다
+  OK   밸브 → Valve · 24건
+  OK   볼트 → Bolt · 22건
+  OK   너트 → Nut · 22건
+  OK   베어링 → Bearing · 2건
+  OK   실린더 → Cylinder · 67건
+  OK   롤러 → Roller · 27건
+  OK   펌프 → Pump · 3건
+  OK   조인트 → Joint · 39건
+  OK   유압 → Hydraulic · 113건
+
+[6] DB.find 가 한국어로 들어와도 스스로 옮겨 찾는다
+  OK   너트 로 찾아 22건 (nut 만으로는 22건)
+  OK   밸브 로 찾아 24건 (valve 만으로는 24건)
+  OK   베어링 로 찾아 19건 (bearing 만으로는 2건)
+  OK   베어링 은 Bearing 과 BRG 를 함께 본다 · 19건
+  OK   없는 말은 그대로 0건이다
+
+[7] 흔한 우리말을 훑는다 · 자재명으로 둔갑하면 안 된다
+  OK   153개 중 잘못 바뀌는 말 0개
+
+======================================================================
+ko-en check PASS

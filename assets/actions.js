@@ -139,6 +139,14 @@ window.ACTIONS = (function () {
       if (!window.DB) { return unknown('데이터층이 아직 준비되지 않았습니다'); }
       var c = code(t);
       var rows = c ? [item(c)].filter(Boolean) : DB.find(t, 8);
+      /* 한국어로 물었는데 영어 품명이 걸렸다면 무엇으로 찾았는지 적는다 ·
+       * 「밸브 로 8건」 이라고만 하면 품명에 밸브라고 적혀 있는 줄 안다 */
+      var said = t;
+      if (!c && window.KOEN && /[가-힣]/.test(t) && rows.length) {
+        var words = KOEN.terms(t);
+        var en = words.length ? words.join(' · ') : KOEN.translate(t).text.trim();
+        if (en && en.toLowerCase() !== t.toLowerCase()) { said = t + ' → ' + en; }
+      }
       if (!rows.length) {
         return unknown('「' + t + '」 에 맞는 자재가 우리 부서 743품목에 없습니다' +
           (c ? ' · 코드가 맞는지 확인해 주세요' : ' · 코드 앞 몇 자리나 품명 일부로 찾아 보세요'));
@@ -150,7 +158,7 @@ window.ACTIONS = (function () {
           ? '**' + rows[0].name + ' · ' + rows[0].q + '** 를 찾았습니다 · ' + rows[0].type + ' ' +
             (rows[0].grade || '') + '등급 · 보유 ' + num(rows[0].stock) + ' → 목표 ' + num(rows[0].targetNow) +
             ' · ' + rows[0].actionNow
-          : '「' + t + '」 로 **' + num(rows.length) + '건** 찾았습니다 · 첫 건을 「이 자재」 로 둡니다.',
+          : '「' + said + '」 로 **' + num(rows.length) + '건** 찾았습니다 · 첫 건을 「이 자재」 로 둡니다.',
         table: rows.length === 1 ? null : {
           head: ['자재', '속성 · 등급', '보유 → 목표', '조치'],
           rows: rows.map(function (r) {
@@ -158,7 +166,9 @@ window.ACTIONS = (function () {
                     num(r.stock) + ' → ' + num(r.targetNow), r.actionNow || ''];
           })
         },
-        evidence: [['찾은 곳', 'DB.find() · 코드 · 품명 부분 일치'], ['기준일', asof() + ' 스냅샷']],
+        evidence: [['찾은 곳', 'DB.find() · 코드 · 품명 부분 일치' +
+                     (said !== t ? ' · 한국어는 소리로 영어 품명에 맞춥니다(ko-en)' : '')],
+                   ['기준일', asof() + ' 스냅샷']],
         link: { href: 'stock.html#q=' + encodeURIComponent(rows[0].q), label: '적정재고 화면에서 보기' },
         selectedCode: rows[0].q
       };

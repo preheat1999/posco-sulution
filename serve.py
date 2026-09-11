@@ -56,6 +56,15 @@ LLM = {'key': '', 'model': '', 'url': 'https://api.anthropic.com/v1/messages'}
 # 음성 → 글자. OpenAI 음성 인식(whisper) · 키는 .env 의 OPENAI_API_KEY · 브라우저로 내려가지 않는다.
 # 키가 없으면 화면은 브라우저 내장 음성 인식(Web Speech)으로 대신한다 (config.local.js 의 STT 가 비어 있다)
 STT = {'key': '', 'model': 'whisper-1', 'url': 'https://api.openai.com/v1/audio/transcriptions'}
+
+# 받아쓰기에 미리 알려 주는 말 · 이 낱말들이 나오면 영어 철자로 적으라는 뜻이다.
+# 우리 품명은 전부 영어인데 한국어로 받아쓰면 「밸브」 로 적힌다 · 그러면 품명에 닿지 않는다.
+# 화면 쪽(ko-en.js)이 소리로 이어 주기는 하지만, 여기서 애초에 영어로 적히면 그게 제일 정확하다.
+# 자재 행 · 금액 · 부서 같은 우리 데이터는 넣지 않는다 · 어느 공장에나 있는 부품 이름뿐이다.
+STT_PROMPT = ('설비 자재 재고 문의입니다. 부품 이름은 영어 철자로 적어 주세요: '
+              'Valve, Bolt, Nut, Bearing, Cylinder, Roller, Pump, Motor, Gear, Seal, '
+              'Packing, Coupling, Joint, Filter, Bushing, Shaft, Spindle, Impeller, '
+              'Hydraulic, Pneumatic, Hose, Gasket, Spring, Chain, Belt, Sensor.')
 PREFIX = '/rag/'
 LLM_PATH = '/llm/route'
 STT_PATH = '/stt'
@@ -124,6 +133,9 @@ class H(http.server.SimpleHTTPRequestHandler):
                           % (boundary, name, value)).encode('utf-8'))
         field('model', STT['model'])
         field('language', 'ko')
+        # 부품 이름은 영어로 적게 한다 · 「밸브」 대신 「Valve」 로 오면 바로 검색이 된다
+        if STT.get('prompt'):
+            field('prompt', STT['prompt'])
         field('response_format', 'json')
         parts.append(('--%s\r\nContent-Disposition: form-data; name="file"; filename="voice.%s"\r\n'
                       'Content-Type: %s\r\n\r\n' % (boundary, ext, ctype.split(';')[0])).encode('utf-8'))
@@ -538,6 +550,7 @@ def main():
     LLM['model'] = env.get('LLM_MODEL', '') or 'claude-haiku-4-5-20251001'
     STT['key'] = env.get('OPENAI_API_KEY', '')
     STT['model'] = env.get('STT_MODEL', '') or 'whisper-1'
+    STT['prompt'] = env.get('STT_PROMPT', '') or STT_PROMPT
     ip = lan_ip()
     base = 'http://%s:%d' % (ip, a.port)
     tls, tls_why = (None, None)
