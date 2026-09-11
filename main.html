@@ -35,7 +35,7 @@
          숫자는 아래 세 칸이 말한다 · 이 줄에는 숫자를 두지 않는다 -->
     <div class="ctxbar">
       <span class="ci">◑</span>
-      <span class="ct">AI가 재고보유목적을 스스로 재분류하고 적정재고량을 산출하여
+      <span class="ct">재고보유목적을 스스로 재분류하고 적정재고량을 산출하여
         설비강건화와 재고감축을 지원합니다.</span>
     </div>
 
@@ -142,7 +142,7 @@
   function paintAttrCard() {
     var d = A.donut(), s = A.summary();
     document.getElementById('d-attr').innerHTML =
-      dhead('<span class="ai">✦</span> AI 보유목적 분류', '', 'attr-why', 'attr.html') +
+      dhead('보유목적 분류', '', 'attr-why', 'attr.html') +
       '<div class="donutbox">' + donutSvg(d, true) + '</div>' +
       '<div class="tiles ctr">' +
         tile('plan', UI.num(d.change), '', '변경 제안') +
@@ -166,7 +166,7 @@
   function paintStockCard() {
     var w = A.money();
     document.getElementById('d-stock').innerHTML =
-      dhead('<span class="ai">✦</span> AI 적정재고 분석', '', 'stock-why', 'stock.html') +
+      dhead('적정재고 분석', '', 'stock-why', 'stock.html') +
       '<div class="tiles">' +
         tile('core', UI.num(w.orderItems), '품목', '발주 필요') +
         tile('ok', UI.wonShort(w.cutAmt), UI.wonShortUnit(w.cutAmt), '감축 가능') +
@@ -275,7 +275,7 @@
           '<span class="cmp-in right">100% 현행</span></div>' +
       '</div>' +
       '<div class="cmp-row">' +
-        '<div class="cmp-lab"><span>목표 <span class="badge plan">AI 제안</span></span>' +
+        '<div class="cmp-lab"><span>목표 <span class="badge plan">산출값</span></span>' +
           '<span><b class="cmp-v">' + UI.won(w.keepAmt) + '</b>' +
           /* 줄어드는 몫을 목표 옆에 붙인다 · 아래 빗금 칸이 그 몫이라는 것을 글자로도 잇는다 */
           '<span class="cmp-dv">(-' + UI.won(w.cutAmt) + ')</span></span></div>' +
@@ -309,7 +309,7 @@
   function attrWhy(btn) {
     var d = A.donut(), s = A.summary();
     POP.show(btn, {
-      title: 'AI 보유목적 분류 · ' + UI.num(d.total) + '품목 6갈래',
+      title: '보유목적 분류 · ' + UI.num(d.total) + '품목 6갈래',
       rows: d.segs.map(function (x) { return [x.label, UI.num(x.n) + '품목']; }),
       note: s.waitingN
         ? '담당자가 판단한 ' + UI.num(s.waitingN) + '품목이 확정 대기입니다. 보유목적 판단에서 ' +
