@@ -266,4 +266,7 @@ def main():
     print('\nqr/ 에 냈다. 스캔해서 화면이 열리는지 확인하면 된다')
 
 
-main()
+# 다른 스크립트가 font · wrap 만 가져다 쓴다 (make_open_qr.py) ·
+# 그때 여기가 같이 돌면 그쪽 인자를 이 파일의 argparse 가 먹어 버린다
+if __name__ == '__main__':
+    main()

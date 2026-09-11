@@ -85,4 +85,5 @@ def main():
     print('  %s' % out)
 
 
-main()
+if __name__ == '__main__':
+    main()

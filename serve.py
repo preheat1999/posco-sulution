@@ -496,11 +496,29 @@ class Server(http.server.ThreadingHTTPServer):
         http.server.ThreadingHTTPServer.handle_error(self, request, client_address)
 
     def finish_request(self, request, client_address):
+        """한 포트에서 http 와 https 를 **둘 다** 받는다.
+
+        왜 · 마이크는 https 에서만 열린다. 그래서 https 를 8443 에 따로 두었더니
+        「마이크 쓰려면 포트를 바꿔 다시 들어오세요」 가 됐다 · 시연에서 그 말을 하고 싶지 않다.
+
+        어떻게 · 들어온 첫 바이트를 **엿본다**(MSG_PEEK · 읽어 버리지 않는다).
+        TLS 악수는 반드시 0x16(handshake)으로 시작한다 · 그러면 감싸고, 아니면 그냥 평문이다.
+        그래서 https://주소:8130 도 http://주소:8130 도 같은 자리에서 열린다.
+        """
         if self.ctx is not None:
             try:
-                request = self.ctx.wrap_socket(request, server_side=True)
+                request.settimeout(8)
+                head = request.recv(1, socket.MSG_PEEK)
+                request.settimeout(None)
             except OSError:
-                return          # 악수가 깨진 연결 하나를 버린다 · 서버는 계속 산다
+                return
+            if head[:1] == b'':
+                try:
+                    request = self.ctx.wrap_socket(request, server_side=True)
+                except OSError:
+                    return      # 악수가 깨진 연결 하나를 버린다 · 서버는 계속 산다
+            elif not head:
+                return          # 아무것도 안 보내고 끊은 연결
         self.RequestHandlerClass(request, client_address, self)
 
 
@@ -556,7 +574,8 @@ def main():
     tls, tls_why = (None, None)
     if a.https:
         tls, tls_why = ensure_cert(ip)
-    sbase = 'https://%s:%d' % (ip, a.sport) if tls else None
+    sbase = 'https://%s:%d' % (ip, a.port) if tls else None      # 같은 포트의 https
+    salt = 'https://%s:%d' % (ip, a.sport) if tls else None      # 예전에 안내한 주소
     # 인증서를 만든 뒤에 써야 https 주소를 같이 내려 줄 수 있다
     local = write_local_config(env, sbase)
 
@@ -566,8 +585,9 @@ def main():
     if sbase:
         print()
         print('=' * 66)
-        print('  마이크를 쓰려면 이 주소로 들어간다 (같은 Wi-Fi)')
+        print('  마이크를 쓰려면 주소 앞에 s 만 붙인다 · 포트는 그대로다')
         print('    %s/main.html' % sbase)
+        print('    (예전 주소 %s/main.html 도 그대로 열린다)' % salt)
         print()
         print('  처음 한 번 · 「연결이 비공개가 아닙니다」 → 고급 → 계속 (이 컴퓨터가 만든 인증서다)')
         print('  그 뒤부터 마이크 · 음성 인식이 열린다 (http 로는 브라우저가 막는다)')
@@ -605,8 +625,10 @@ def main():
 
     os.chdir(ROOT)
     if tls:
-        # HTTP 는 뒤에서 돌리고 HTTPS 를 앞에서 돌린다 · 둘 다 같은 파일 · 같은 프록시를 쓴다
-        t = threading.Thread(target=serve_forever, args=(a.host, a.port), daemon=True)
+        # 두 포트 모두 http · https 를 가리지 않고 받는다 ·
+        # 8130 으로 들어와도 https 로 오면 마이크가 열린다 (포트를 바꿀 일이 없다).
+        # 8443 은 전에 안내한 주소라 그대로 남겨 둔다
+        t = threading.Thread(target=serve_forever, args=(a.host, a.port, tls), daemon=True)
         t.start()
         serve_forever(a.host, a.sport, tls)
     else:
