@@ -1162,9 +1162,11 @@ td.num, th.num { text-align: right; }
 .auth-brand {
   position: relative;
   overflow: hidden;
+  /* 포스터와 같은 보라 · 왼쪽 위에서 빛이 들어온다 (그림의 음영 방향과 맞춘다) */
   background:
-    radial-gradient(900px 560px at 18% -4%, var(--auth-2) 0%, rgba(110, 139, 255, 0) 58%),
-    linear-gradient(150deg, var(--auth-1) 0%, #2A3C9A 52%, var(--auth-3) 100%);
+    radial-gradient(760px 520px at 12% -6%, rgba(255, 255, 255, .30) 0%, rgba(255, 255, 255, 0) 56%),
+    radial-gradient(680px 520px at 96% 8%, rgba(196, 168, 255, .55) 0%, rgba(196, 168, 255, 0) 60%),
+    linear-gradient(158deg, #9B7BE8 0%, #7C4FE0 46%, #5F32C4 100%);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -1182,7 +1184,7 @@ td.num, th.num { text-align: right; }
   content: '';
   position: absolute; left: 0; right: 0; bottom: 0; height: 66%;
   background: linear-gradient(180deg,
-    rgba(19, 26, 61, 0) 0%, rgba(19, 26, 61, .52) 52%, rgba(9, 12, 30, .84) 100%);
+    rgba(52, 24, 110, 0) 0%, rgba(48, 22, 104, .46) 52%, rgba(30, 12, 72, .82) 100%);
   pointer-events: none;
 }
 .brand-copy { position: relative; z-index: 1; margin-top: auto; }
@@ -1194,26 +1196,19 @@ td.num, th.num { text-align: right; }
   font-size: 38px; font-weight: 800; line-height: 1.22;
   letter-spacing: -1px; margin-top: 6px;
 }
-.brand-team {
-  margin-top: 22px; font-size: 12.5px; line-height: 1.7;
-  color: rgba(255, 255, 255, .8);
+/* 팀 서명 · 포스터 아래쪽과 같은 자리, 같은 순서다 (마크 → 이름) */
+.brand-team { margin-top: 26px; }
+.team-mark {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 15px; font-weight: 800; letter-spacing: .02em; color: #fff;
 }
-.brand-team b { display: block; font-size: 13px; color: #fff; font-weight: 700; }
+.team-mark .tm-ico { width: 30px; height: 16px; color: #fff; opacity: .92; flex: none; }
+.team-names {
+  margin-top: 5px; font-size: 13.5px; font-weight: 700; line-height: 1.6;
+  color: rgba(255, 255, 255, .92); letter-spacing: -.2px;
+}
+.team-names span { font-weight: 500; color: rgba(255, 255, 255, .72); }
 .hl { color: var(--auth-hl); }
-
-/* 실제 값을 보여 주는 떠 있는 카드.
- * 숫자를 여기 적어 두지 않는다. DB 에서 읽어 넣고, DB 가 없으면 카드를 지운다.
- * 표지에 가짜 숫자를 적으면 시연 첫 화면부터 거짓이 된다 */
-.stat-float {
-  position: relative; z-index: 1;
-  display: inline-flex; gap: 22px; flex-wrap: wrap;
-  background: rgba(255, 255, 255, .14);
-  border: 1px solid rgba(255, 255, 255, .22);
-  border-radius: 14px; padding: 14px 18px;
-  backdrop-filter: blur(6px);
-}
-.stat-float .sv { font-size: 19px; font-weight: 800; letter-spacing: -.5px; }
-.stat-float .sk { font-size: 11px; color: rgba(255, 255, 255, .78); white-space: nowrap; }
 
 /* 오른쪽 · 입력 패널 */
 .auth-form { display: flex; align-items: center; justify-content: center; padding: 40px 32px; }
@@ -1275,9 +1270,11 @@ td.num, th.num { text-align: right; }
   .auth-brand { padding: 26px 22px 22px; min-height: 250px; }
   .brand-title { font-size: 27px; }
   .brand-eyebrow { font-size: 13px; }
+  .brand-team { margin-top: 16px; }
+  .team-mark { font-size: 13px; }
+  .team-names { font-size: 12px; }
   .auth-form { padding: 28px 22px 40px; }
   .auth-inner { max-width: 460px; margin: 0 auto; }
-  .stat-float { display: none; }   /* 띠가 길어지면 입력칸이 화면 밖으로 밀린다 */
 
   /* 띠가 짧아지면 그림과 글자가 반드시 겹친다. 막을 진하게 해도 금속 부품이
    * 제목을 지나간다. 그래서 겹치지 않게 나눈다 · 글자 왼쪽 · 그림 오른쪽.
