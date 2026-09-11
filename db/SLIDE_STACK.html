@@ -61,14 +61,14 @@ body {
 /* ① 머리 · 띄운 순간 규모가 먼저 읽히게 숫자를 오른쪽에 크게 둔다 */
 .head {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 3cqw;
-  padding: 2.6cqw 3.4cqw 1.9cqw; border-bottom: .22cqw solid var(--ink);
+  padding: 2.1cqw 3.4cqw 1.5cqw; border-bottom: .22cqw solid var(--ink);
 }
 .kicker {
   font-size: 1.02cqw; letter-spacing: .17em; font-weight: 700; color: var(--dim);
   text-transform: none;
 }
 .head h1 {
-  margin: .9cqw 0 .35cqw; font-size: 3.05cqw; line-height: 1.14;
+  margin: .75cqw 0 .3cqw; font-size: 2.8cqw; line-height: 1.14;
   letter-spacing: -.055em; font-weight: 800;
 }
 .head h1 em { font-style: normal; color: var(--blue); }
@@ -76,7 +76,7 @@ body {
 .stats { display: flex; gap: 2.5cqw; flex: 0 0 auto; padding-bottom: .3cqw; }
 .stat { text-align: right; }
 .stat b {
-  display: block; font-size: 3.1cqw; line-height: 1; letter-spacing: -.05em;
+  display: block; font-size: 2.8cqw; line-height: 1; letter-spacing: -.05em;
   font-weight: 800; color: var(--copper); font-variant-numeric: tabular-nums;
 }
 .stat span { display: block; font-size: .95cqw; color: var(--dim); margin-top: .45cqw; font-weight: 600; }
@@ -84,16 +84,16 @@ body {
 /* ② 흐름 · 청중이 구조를 먼저 잡는 자리다 */
 .flow {
   display: flex; align-items: stretch; gap: 0;
-  padding: 1.7cqw 3.4cqw 1.5cqw; background: var(--bg2); border-bottom: .08cqw solid var(--line);
+  padding: 1.15cqw 3.4cqw .85cqw; background: var(--bg2); border-bottom: .08cqw solid var(--line);
 }
-.step { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .7cqw; }
+.step { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .5cqw; }
 .badge {
-  width: 3.9cqw; height: 3.9cqw; border-radius: 50%;
+  width: 3.3cqw; height: 3.3cqw; border-radius: 50%;
   display: grid; place-items: center;
   background: var(--bg); border: .16cqw solid var(--blue); color: var(--blue);
   box-shadow: var(--shadow);
 }
-.badge svg { width: 2.1cqw; height: 2.1cqw; }
+.badge svg { width: 1.8cqw; height: 1.8cqw; }
 .step.act .badge { background: var(--blue); color: var(--bg); }
 .step b { font-size: 1.16cqw; letter-spacing: -.03em; font-weight: 700; }
 .step span { font-size: .88cqw; color: var(--dim); line-height: 1.45; max-width: 13cqw; }
@@ -101,32 +101,44 @@ body {
 .arrow { flex: 0 0 auto; display: grid; place-items: center; padding: 0 .3cqw; margin-top: 1.6cqw; }
 .arrow svg { width: 1.7cqw; height: 1.1cqw; color: var(--line); }
 
+/* 전 구간에 얹히는 층 · 흐름 아래 얇은 띠 하나로 적는다 ·
+ * 챗봇과 음성은 한 단계가 아니라 모든 단계에 붙기 때문이다 */
+.layer {
+  display: flex; align-items: center; gap: .8cqw;
+  margin: 0 3.4cqw; padding: .55cqw 1.1cqw;
+  border: .09cqw dashed var(--blue); border-radius: .55cqw;
+  background: color-mix(in srgb, var(--blue) 7%, transparent);
+}
+.layer svg { width: 1.5cqw; height: 1.5cqw; color: var(--blue); flex: 0 0 auto; }
+.layer b { font-size: 1.02cqw; letter-spacing: -.02em; font-weight: 800; }
+.layer span { font-size: .88cqw; color: var(--dim); }
+
 /* ③ 트랙 표 · 오른쪽 열의 숫자만 구리색이다 · 「주장이 아니라 측정값」 이 표로 보인다 */
-.tracks { flex: 1 1 auto; padding: 1.5cqw 3.4cqw 1cqw; display: flex; align-items: center; }
+.tracks { flex: 1 1 auto; padding: .8cqw 3.4cqw .6cqw; display: flex; align-items: center; }
 .tracks table { align-self: center; }
 table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; vertical-align: top; padding: .66cqw .9cqw; }
+th, td { text-align: left; vertical-align: top; padding: .4cqw .9cqw; }
 thead th {
   font-size: .92cqw; letter-spacing: .09em; color: var(--dim); font-weight: 700;
   border-bottom: .1cqw solid var(--line); padding-bottom: .5cqw;
 }
 tbody tr + tr td { border-top: .08cqw solid var(--line2); }
 td.trk { width: 14%; }
-td.trk b { display: block; font-size: 1.32cqw; letter-spacing: -.03em; font-weight: 800; }
+td.trk b { display: block; font-size: 1.14cqw; letter-spacing: -.03em; font-weight: 800; }
 td.trk span { display: block; font-size: .82cqw; color: var(--dim); margin-top: .18cqw; }
-td.tech { width: 52%; font-size: .96cqw; color: var(--ink2); line-height: 1.6; }
+td.tech { width: 54%; font-size: .88cqw; color: var(--ink2); line-height: 1.55; }
 td.tech code {
   font-family: Consolas, 'Courier New', monospace; font-size: .88cqw;
   background: var(--bg2); border: .06cqw solid var(--line2); border-radius: .25cqw;
   padding: .05cqw .3cqw; color: var(--ink);
 }
-td.out { font-size: .96cqw; line-height: 1.6; }
+td.out { font-size: .88cqw; line-height: 1.55; }
 td.out b { color: var(--copper); font-weight: 800; font-variant-numeric: tabular-nums; }
 
 /* ④ 차별점 띠 */
 .diff {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5cqw;
-  padding: 1.35cqw 3.4cqw 1.7cqw; background: var(--bg2); border-top: .08cqw solid var(--line);
+  padding: 1.05cqw 3.4cqw 1.3cqw; background: var(--bg2); border-top: .08cqw solid var(--line);
   flex: 0 0 auto;
 }
 .dif { display: flex; gap: .85cqw; align-items: flex-start; }
@@ -205,6 +217,14 @@ td.out b { color: var(--copper); font-weight: 800; font-variant-numeric: tabular
     <path d="M12.2 11V6.2a1.6 1.6 0 0 1 3.2 0V11"/>
     <path d="M15.4 11.4V8.6a1.6 1.6 0 0 1 3.2 0v6.2c0 3.4-2.6 6.2-6 6.2h-1.2c-1.5 0-2.9-.7-3.8-1.9L4.4 14.6a1.6 1.6 0 0 1 2.4-2.1L9 14.6V11"/>
   </g>
+  <g id="i-cart" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.6 3.5h2.6l2.3 11.2a1.6 1.6 0 0 0 1.6 1.3h8.2a1.6 1.6 0 0 0 1.6-1.25L20.6 7.4H6.1"/>
+    <circle cx="9.6" cy="20" r="1.4"/><circle cx="17.6" cy="20" r="1.4"/>
+  </g>
+  <g id="i-chat" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.2c0 4.2-4 7.6-9 7.6-1.1 0-2.2-.17-3.2-.48L3.4 21l1.3-3.9A7 7 0 0 1 3 12.2C3 8 7 4.6 12 4.6s9 3.4 9 7.6z"/>
+    <path d="M8.6 11.6h6.8M8.6 14.4h4.2"/>
+  </g>
   <g id="i-arrow" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M2 8h18m-5.5-5.2L20.5 8l-6 5.2"/>
   </g>
@@ -217,7 +237,7 @@ td.out b { color: var(--copper); font-weight: 800; font-variant-numeric: tabular
     <div>
       <div class="kicker">2026 POSCO 스마트 자재관리 해커톤 · 본선</div>
       <h1>스스로 수량을 자제하는 <em>AI 자재 솔루션</em></h1>
-      <div class="sub">세 갈래를 한 서비스로 · 산출 알고리즘 · 웹앱 · 사내문서 RAG 챗봇</div>
+      <div class="sub">프런트엔드 · 백엔드 · 데이터 알고리즘 · RAG · 음성까지 한 저장소 안에서</div>
     </div>
     <div class="stats">
       <div class="stat"><b>743</b><span>자재 전수 · 표본 아님</span></div>
@@ -226,37 +246,44 @@ td.out b { color: var(--copper); font-weight: 800; font-variant-numeric: tabular
     </div>
   </header>
 
-  <!-- ② 흐름 · 원천에서 화면까지 한 줄 -->
+  <!-- ② 흐름 · 실제 서비스 순서다 (메뉴 순서와 같다) -->
   <div class="flow">
     <div class="step">
       <div class="badge"><svg viewBox="0 0 24 24"><use href="#i-db"/></svg></div>
-      <b>원천 데이터</b>
-      <span>정본 <i>743</i>자재 · 14설비 · 156정비계획<br>읽기 전용 1층</span>
+      <b>원천 적재</b>
+      <span>3층 스키마 · 정본 <i>743</i>자재<br>1층은 읽기 전용</span>
     </div>
     <div class="arrow"><svg viewBox="0 0 22 16"><use href="#i-arrow"/></svg></div>
     <div class="step">
       <div class="badge"><svg viewBox="0 0 24 24"><use href="#i-scale"/></svg></div>
-      <b>보유목적 제안</b>
-      <span>7요인 가중 · 회색지대 <i>31</i>건은<br>「모르겠다」 고 남긴다</span>
+      <b>AI 보유목적 분류</b>
+      <span>7요인 가중 · 회색지대 <i>31</i>건은<br>판정하지 않고 남긴다</span>
     </div>
     <div class="arrow"><svg viewBox="0 0 22 16"><use href="#i-arrow"/></svg></div>
     <div class="step act">
       <div class="badge"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div>
       <b>담당자 확정</b>
-      <span>시퀀스 커밋 게이트<br>넘긴 판단만 서비스에 반영</span>
+      <span>시퀀스 커밋 게이트<br>넘긴 판단만 하류로 흐른다</span>
     </div>
     <div class="arrow"><svg viewBox="0 0 22 16"><use href="#i-arrow"/></svg></div>
     <div class="step">
       <div class="badge"><svg viewBox="0 0 24 24"><use href="#i-box"/></svg></div>
-      <b>적정재고 산출</b>
-      <span>μ<sub>LT</sub> + SS · 보험품 · 계획품<br>목표 <i>2벌</i>을 미리 구워 둔다</span>
+      <b>적정재고 · 구매시점</b>
+      <span>μ<sub>LT</sub> + SS · 속성별 목표 <i>2벌</i><br>WO 기준 발주 D-day</span>
     </div>
     <div class="arrow"><svg viewBox="0 0 22 16"><use href="#i-arrow"/></svg></div>
     <div class="step">
-      <div class="badge"><svg viewBox="0 0 24 24"><use href="#i-monitor"/></svg></div>
-      <b>화면 · 대화</b>
-      <span><i>11</i>화면 · RAG 챗봇 · 음성<br>같은 숫자를 같은 입구에서</span>
+      <div class="badge"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg></div>
+      <b>실행</b>
+      <span>구매신청(PR) · QR 반납<br>공용 전환까지 한 화면에서</span>
     </div>
+  </div>
+
+  <!-- 전 구간에 얹히는 층 · 위 다섯 칸 어디서든 같은 데이터로 붙는다 -->
+  <div class="layer">
+    <svg viewBox="0 0 24 24"><use href="#i-chat"/></svg>
+    <b>RAG 챗봇 · 음성(STT) · Action Registry</b>
+    <span>다섯 단계 어디서나 같은 데이터로 묻고, 말로 실행한다</span>
   </div>
 
   <!-- ③ 트랙 표 -->
@@ -267,25 +294,42 @@ td.out b { color: var(--copper); font-weight: 800; font-variant-numeric: tabular
       </thead>
       <tbody>
         <tr>
-          <td class="trk"><b>알고리즘</b><span>산출 파이프라인</span></td>
-          <td class="tech">Python · μ<sub>LT</sub>+SS 안전재고 · 리드타임창 <b>부트스트랩 400회</b> 관측상한 ·
-            7요인 가중합 백분위 등급(S/A/B/C) · 회색지대 분리</td>
-          <td class="out"><b>743/743</b> 기준 재현 일치<br>속성별 목표 <b>2벌</b> 사전 산출</td>
+          <td class="trk"><b>프런트엔드</b><span>Client</span></td>
+          <td class="tech">Vanilla JavaScript(ES5) · <b>빌드리스 MPA</b> 11화면 · CSS 변수 디자인 토큰 ·
+            <code>localStorage</code> append-only 이벤트 소싱 · 인라인 SVG·CSS 시각화(스쿼리파이 트리맵 자체 구현) ·
+            반응형 드로어 · 차트·UI 라이브러리 없음</td>
+          <td class="out">의존 패키지 <b>0</b> · <b>11</b>화면<br>손으로 쓴 <b>15,654</b>줄</td>
         </tr>
         <tr>
-          <td class="trk"><b>웹앱</b><span>화면 · 서버 · 음성</span></td>
-          <td class="tech">빌드·번들러 없는 순수 HTML+CSS+ES5 · 3층 데이터(정본/파생/사람)와
-            <code>localStorage</code> 추가전용 기록 · Python 표준 라이브러리 서버(한 포트에 http·https 동시 수용) ·
-            <code>MediaRecorder</code>·Web Speech 음성 + 한국어를 영어 품명으로 잇는 음소 매칭 ·
-            라이브러리 없이 짠 스쿼리파이 트리맵</td>
-          <td class="out">손으로 쓴 <b>15,654</b>줄 · <b>11</b>화면<br>의존 패키지 <b>0</b> · 검사 <b>458</b>항목 통과</td>
+          <td class="trk"><b>백엔드</b><span>Server · Infra</span></td>
+          <td class="tech">Python 표준 라이브러리 <code>ThreadingHTTPServer</code> ·
+            <b>단일 포트에서 TLS·평문 동시 수용</b>(first-byte sniffing) · 자체서명 인증서 자동 발급(SAN) ·
+            리버스 프록시 <code>/rag</code> <code>/llm/route</code> <code>/stt</code> ·
+            HTTP/1.1 keep-alive · 시크릿은 서버 <code>.env</code> 보관</td>
+          <td class="out">외부 패키지 <b>0</b> · 프로세스 <b>1</b>개<br>동시 <b>64</b>요청 전부 200</td>
         </tr>
         <tr>
-          <td class="trk"><b>RAG 챗봇</b><span>사내문서 · 현장 암묵지</span></td>
-          <td class="tech">FastAPI · <b>BGE-M3</b> 1024차원 로컬 임베딩 · Qdrant 벡터DB ·
-            Kiwi 형태소 BM25 · RRF 융합 + 문서수준 dense 게이트 · 크로스인코더 리랭커 ·
-            SQLite 정형 라우팅(SQL·RAG·hybrid 3경로) · 답변 토큰 스트리밍</td>
-          <td class="out">사내문서 <b>6,901</b>청크 색인<br><b>111</b>문항 평가 · 응답 중앙 <b>7.7</b>초</td>
+          <td class="trk"><b>데이터 · 알고리즘</b><span>Domain</span></td>
+          <td class="tech">3층 스키마(정본/파생/사람) · μ<sub>LT</sub>+SS 안전재고 ·
+            리드타임창 <b>부트스트랩 400회</b> 관측상한 · 7요인 가중합 백분위 등급(S/A/B/C) ·
+            시퀀스 커밋 게이트 · 속성별 목표 <b>precompute</b></td>
+          <td class="out"><b>743/743</b> 기준 재현 일치<br>자동 검사 <b>458</b>항목 통과</td>
+        </tr>
+        <tr>
+          <td class="trk"><b>RAG 챗봇</b><span>Retrieval · LLM</span></td>
+          <td class="tech">FastAPI · <b>BGE-M3</b> 1024d 로컬 임베딩 · Qdrant 벡터DB ·
+            Kiwi 형태소 <b>BM25</b> · <b>RRF 하이브리드</b> + 문서수준 dense 게이트 ·
+            Cross-encoder 리랭커 · Text-to-SQL 라우팅(SQLite) · SSE 토큰 스트리밍 ·
+            인용 강제 · 무근거 시 거절</td>
+          <td class="out">사내문서 <b>6,901</b>청크 색인<br><b>111</b>문항 평가 · 중앙 <b>7.7</b>초</td>
+        </tr>
+        <tr>
+          <td class="trk"><b>음성 · 에이전트</b><span>STT · Tool-calling</span></td>
+          <td class="tech"><code>MediaRecorder</code> → <b>Whisper STT</b> 서버 프록시(API Key 비노출) ·
+            Web Speech 폴백 · 도메인 프롬프트 바이어싱 ·
+            <b>한글 음차 → 영어 품명 음소 매칭</b>(자모 로마자화 · 자음 뼈대 · 편집거리) ·
+            LLM 툴콜링 + <b>Action Registry</b>(조회 13 · 실행 14) · 변경 액션 확인 게이트</td>
+          <td class="out">음소 매칭 <b>62</b>항목 통과<br>오검출 <b>0</b> / 우리말 <b>153</b>개</td>
         </tr>
       </tbody>
     </table>
@@ -301,7 +345,7 @@ td.out b { color: var(--copper); font-weight: 800; font-variant-numeric: tabular
     <div class="dif">
       <svg viewBox="0 0 24 24"><use href="#i-lock"/></svg>
       <div><b>데이터가 나가지 않는다</b>
-        <span>임베딩까지 <i>사내 로컬</i> · 밖으로는 질문 문장만, 자재 행·금액은 싣지 않는다</span></div>
+        <span>임베딩까지 <i>사내 로컬</i> · 밖으로는 질문 문장만 · 자재 수치는 싣지 않는다</span></div>
     </div>
     <div class="dif">
       <svg viewBox="0 0 24 24"><use href="#i-flow"/></svg>
@@ -343,6 +387,11 @@ td.out b { color: var(--copper); font-weight: 800; font-variant-numeric: tabular
       <dd>사내문서(가이드북·지침·계약·포스위키 FAQ)를 <b>6,901청크</b>로 색인했고,
         FAQ 재질문·문서합성·업무시나리오·답변불가 <b>111문항</b>으로 평가했습니다.
         근거를 못 찾으면 지어내지 않고 <b>「찾을 수 없습니다」</b> 로 답하도록 막아 두었습니다.</dd>
+      <dt>음성(STT)은 어떻게 처리하나요?</dt>
+      <dd>브라우저가 <b>MediaRecorder</b> 로 녹음해 서버 프록시를 거쳐 <b>Whisper</b> 로 보냅니다 ·
+        API Key 는 서버에만 있고 화면으로 내려가지 않습니다. 받아쓴 한국어는
+        <b>음소 매칭</b>(자모 로마자화 → 자음 뼈대 → 편집거리)으로 영어 품명에 붙입니다 ·
+        「너트」 라고 말하면 <b>Nut</b> 를 찾습니다.</dd>
       <dt>의존 패키지 0개라면서 웹폰트는?</dt>
       <dd>실행에 필요한 <b>npm 패키지·빌드 도구가 0</b> 이라는 뜻입니다.
         아이콘 글꼴 하나만 CDN에서 받고, 끊겨도 화면은 그대로 동작합니다.</dd>
