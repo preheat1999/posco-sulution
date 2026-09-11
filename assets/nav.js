@@ -244,6 +244,13 @@
     try { window.localStorage.setItem(FOLD_KEY, on ? '1' : '0'); } catch (e) { /* 무시 */ }
   }
 
+  /* 한 번만 묶는다.
+   *
+   * wire() 는 여러 번 불린다 · 처음 한 번 · 아이콘 글꼴이 늦게 왔을 때 · 3층이 바뀔 때마다.
+   * 그때마다 클릭 리스너를 또 달면 단추 한 번에 두 번 토글돼 **제자리로 돌아온다** ·
+   * 폰에서 햄버거를 눌러도 서랍이 안 열리던 것이 이 때문이다 (열었다가 그 자리에서 닫혔다) */
+  var wired = false;
+
   function wire() {
     var side = document.getElementById('side');
     var hamb = document.getElementById('hamb');
@@ -261,6 +268,8 @@
       side.classList.toggle('on', on);
       over.classList.toggle('on', on);
       hamb.setAttribute('aria-expanded', on ? 'true' : 'false');
+      /* 서랍이 떠 있는 동안 뒤 본문이 따라 스크롤되면 손가락이 어디를 미는지 알 수 없다 */
+      document.body.classList.toggle('drawer', on);
     }
     function fold(on) {
       layout.classList.toggle('folded', on);
@@ -270,16 +279,28 @@
     }
 
     if (foldRead()) { layout.classList.add('folded'); }
+    else { layout.classList.remove('folded'); }
     hamb.setAttribute('aria-label', foldRead() ? '메뉴 넓게' : '메뉴 좁게');
+
+    if (wired) { return; }        // 상태만 다시 맞추고 끝낸다 · 리스너는 이미 달려 있다
+    wired = true;
 
     hamb.addEventListener('click', function () {
       if (narrow()) { overlay(!side.classList.contains('on')); return; }
       fold(!layout.classList.contains('folded'));
     });
     over.addEventListener('click', function () { overlay(false); });
+    /* 서랍에서 메뉴를 고르면 닫는다 · 같은 화면으로 가는 경우(제자리)에도 서랍은 치워야 한다 */
+    side.addEventListener('click', function (e) {
+      if (narrow() && e.target.closest && e.target.closest('a')) { overlay(false); }
+    });
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') { return; }
       if (side.classList.contains('on')) { overlay(false); }
+    });
+    /* 폰을 가로로 돌리거나 창을 넓히면 서랍은 뜻이 없어진다 · 열린 채로 남기지 않는다 */
+    window.addEventListener('resize', function () {
+      if (!narrow() && side.classList.contains('on')) { overlay(false); }
     });
   }
 

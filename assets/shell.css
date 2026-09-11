@@ -226,6 +226,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: none;
 }
 .overlay.on { display: block; }
+/* 서랍이 열린 동안 뒤 본문은 멈춘다 (폰) */
+body.drawer { overflow: hidden; }
 
 /* ---------------------------------------------------------------- 4. 사이드바 */
 .side {
