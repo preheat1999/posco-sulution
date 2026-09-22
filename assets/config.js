@@ -74,6 +74,6 @@
     // 안 뜨면 화면이 시연 모드로 떨어진다
     /* 사내 RAG 서버 · 같은 Wi-Fi 에서만 닿는다. 토큰은 여기 두지 않는다(저장소가 공개다) ·
      * 서랍에서 한 번 넣으면 이 브라우저의 localStorage 에만 남는다 */
-    CHAT_API: 'https://unshaven-mowing-habitable.ngrok-free.dev'
+    CHAT_API: 'https://146-190-103-77.sslip.io'
   };
 })();
