@@ -196,7 +196,7 @@
   /* /api/health 는 토큰이 없어도 열린다. 서버가 떠 있는지, 모델이 올라왔는지만 본다 */
   function ping(repaint) {
     if (!API || typeof fetch !== 'function') { health = { ok: false, why: 'noapi' }; dot(); return; }
-    fetch(API + '/api/health').then(function (r) { return r.json(); }).then(function (j) {
+    fetch(API + '/api/health', { headers: { 'ngrok-skip-browser-warning': 'true' } }).then(function (r) { return r.json(); }).then(function (j) {
       health = { ok: j && j.status === 'ok' && j.models_loaded === true, raw: j };
       dot(); if (repaint && open) { paint(); }
     }).catch(function (e) {
@@ -937,8 +937,8 @@
     return fetch(API + '/api/chat/stream', {
       method: 'POST',
       headers: PROXY
-        ? { 'Content-Type': 'application/json' }
-        : { 'Content-Type': 'application/json', 'X-API-Token': token() },
+        ? { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' }
+        : { 'Content-Type': 'application/json', 'X-API-Token': token(), 'ngrok-skip-browser-warning': 'true' },
       body: JSON.stringify({ question: question, category: null, history: history })
     }).then(function (res) {
       if (!res.ok) { throw new Error('HTTP ' + res.status); }
