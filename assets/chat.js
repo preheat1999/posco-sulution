@@ -877,12 +877,127 @@
     }
     var history = turns.slice(0, -1).filter(function (x) { return x.status === 'done' && x.res; })
       .slice(-4).map(function (x) { return { question: x.q, answer: x.res.answer || '' }; });
-    stream(question, history, t).then(function () {
+    streamPreferPGPT(question, history, t).then(function () {
       finish(t);
     }).catch(function (e) {
       t.status = 'error';
       t.err = friendly(e);
       finish(t);
+    });
+  }
+
+  /* P-GPT(사내망 직접) 를 먼저 시도하고, 안 되면 기존 서버 경로(OpenRouter)로 넘어간다.
+   * 사내망 밖 · CORS 미허용 · Mixed-Content 차단 등 어떤 이유로든 실패하면 여기서 잡아서
+   * 화면엔 아무 티도 안 내고 조용히 기존 경로로 대체한다(사용자에게는 그냥 답이 늦게 온 것처럼 보인다). */
+  function streamPreferPGPT(question, history, t) {
+    return tryPGPT(question, history, t).catch(function () {
+      t.text = ''; t.stages = []; t.route = null;   // P-GPT 시도 흔적을 지우고 처음부터
+      return stream(question, history, t);
+    });
+  }
+
+  function pgptToken() {
+    var cred = { apiKey: CFG.PGPT_API_KEY, empNo: CFG.PGPT_EMP_NO, compNo: CFG.PGPT_COMP_NO };
+    return window.btoa(JSON.stringify(cred));
+  }
+
+  /* [n] 인용 중 실제 존재하는 번호만 뽑는다 (백엔드 answer.py 의 parse_citations 와 동일 규칙). */
+  function parseCitationsPGPT(answer, chunks) {
+    var used = [], out = [], m, re = /\[(\d{1,2})\]/g;
+    while ((m = re.exec(answer))) {
+      var n = parseInt(m[1], 10);
+      if (n >= 1 && n <= chunks.length && used.indexOf(n) === -1) { used.push(n); }
+    }
+    used.sort(function (a, b) { return a - b; });
+    used.forEach(function (n) {
+      var c = chunks[n - 1];
+      out.push({ index: n, chunk_id: c.chunk_id, file_name: c.file_name,
+                 source: c.source, date: c.date, snippet: c.snippet, score: c.score });
+    });
+    return out;
+  }
+
+  /* P-GPT SSE 스트림. `data:` 뒤 공백 유무 모두 처리, 최상위 response 필드를 delta 로 쓴다
+   * (src/answer.py 의 _pgpt_stream 과 동일 규격). 전체 텍스트를 모아 반환한다. */
+  function streamPGPT(system, user, onDelta) {
+    if (!CFG.PGPT_API_KEY || !CFG.PGPT_STREAM_URL) { return Promise.reject(new Error('PGPT_DISABLED')); }
+    return fetch(CFG.PGPT_STREAM_URL, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + pgptToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: CFG.PGPT_MODEL,
+        messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
+      })
+    }).then(function (res) {
+      if (!res.ok) { throw new Error('PGPT_HTTP_' + res.status); }
+      if (!res.body || !res.body.getReader) { throw new Error('PGPT_NO_STREAM'); }
+      var reader = res.body.getReader();
+      var dec = new TextDecoder('utf-8');
+      var buf = '', text = '';
+      function onRawLine(line) {
+        line = line.trim();
+        if (!line || line.indexOf('data:') !== 0) { return; }
+        var payload = line.slice(5).trim();
+        if (payload === '[DONE]') { return; }
+        var ev;
+        try { ev = JSON.parse(payload); } catch (e) { return; }
+        var piece = ev.response;
+        if (piece == null && ev.choices && ev.choices[0]) {
+          piece = ev.choices[0].delta && ev.choices[0].delta.content;
+        }
+        if (piece) { text += piece; onDelta(piece); }
+      }
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) { if (buf.trim()) { onRawLine(buf); } return text; }
+          buf += dec.decode(r.value, { stream: true });
+          var lines = buf.split('\n');
+          buf = lines.pop();
+          lines.forEach(onRawLine);
+          return pump();
+        });
+      }
+      return pump();
+    });
+  }
+
+  /* 검색·리랭킹은 백엔드(/api/rag/prepare)가 하고, 답변 생성만 브라우저가 P-GPT 로 직접 한다.
+   * 실패하면(사내망 아님 · CORS 차단 · SQL/하이브리드 경로 등) 예외를 던져 streamPreferPGPT 가
+   * 기존 /api/chat/stream 경로로 대체하게 한다. */
+  function tryPGPT(question, history, t) {
+    if (!CFG.PGPT_API_KEY) { return Promise.reject(new Error('PGPT_DISABLED')); }
+    return fetch(API + '/api/rag/prepare', {
+      method: 'POST',
+      headers: PROXY
+        ? { 'Content-Type': 'application/json' }
+        : { 'Content-Type': 'application/json', 'X-API-Token': token() },
+      body: JSON.stringify({ question: question, category: null, history: history })
+    }).then(function (r) {
+      if (!r.ok) { throw new Error('PREPARE_HTTP_' + r.status); }
+      return r.json();
+    }).then(function (prep) {
+      if (prep.fallback) { throw new Error('PGPT_FALLBACK_' + prep.reason); }
+      if (prep.no_answer) {
+        onLine(JSON.stringify({ type: 'result', question: prep.question,
+          rewritten_question: prep.rewritten_question, answer: prep.answer,
+          no_answer: true, citations: [], metrics: {}, route: 'rag', visual: null }), t);
+        return;
+      }
+      var chunks = prep.chunks || [];
+      return streamPGPT(prep.system, prep.user, function (piece) {
+        onLine(JSON.stringify({ type: 'delta', text: piece }), t);
+      }).then(function (fullText) {
+        var answer = String(fullText || '').trim();
+        if (!answer) { throw new Error('PGPT_EMPTY'); }
+        var noAns = !!(prep.no_answer_message &&
+          answer.indexOf(String(prep.no_answer_message).slice(0, 20)) !== -1);
+        var citations = noAns ? [] : parseCitationsPGPT(answer, chunks);
+        onLine(JSON.stringify({
+          type: 'result', question: prep.question, rewritten_question: prep.rewritten_question,
+          answer: answer, no_answer: noAns, citations: citations,
+          metrics: {}, route: 'rag', visual: prep.visual || null
+        }), t);
+      });
     });
   }
 

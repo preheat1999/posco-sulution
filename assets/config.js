@@ -74,6 +74,17 @@
     // 안 뜨면 화면이 시연 모드로 떨어진다
     /* 사내 RAG 서버 · 같은 Wi-Fi 에서만 닿는다. 토큰은 여기 두지 않는다(저장소가 공개다) ·
      * 서랍에서 한 번 넣으면 이 브라우저의 localStorage 에만 남는다 */
-    CHAT_API: 'https://146-190-103-77.sslip.io'
+    CHAT_API: 'https://146-190-103-77.sslip.io',
+
+    /* P-GPT 사내망 직접 호출 · DigitalOcean 백엔드는 pgpt.posco.com 에 네트워크로
+     * 닿지 않아(사내 전용 DNS) 브라우저가 사내망에 있을 때만 여기로 직접 쏜다.
+     * 사외망이면 DNS/CORS/Mixed-Content 로 곧바로 실패하고 CHAT_API(OpenRouter)로 자동 대체된다.
+     * ★ 키를 공개 저장소에 그대로 둔다 — 팀 결정. 월 한도(10만원)로 과금 리스크를 막고,
+     *   사내망 밖에서는 이 주소 자체가 안 열려 있어 유출돼도 즉시 악용되진 않는다. */
+    PGPT_API_KEY: 'aaea0470-3eff-4a14-a46c-2a01fd952b45',
+    PGPT_EMP_NO: '636079',
+    PGPT_COMP_NO: '30',
+    PGPT_MODEL: 'gpt-5.6-luna',
+    PGPT_STREAM_URL: 'http://pgpt.posco.com/s0la01-gpt/gptApi/personalApiStream'
   };
 })();
