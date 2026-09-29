@@ -34,6 +34,12 @@ class ChatRequest(BaseModel):
     history: list | None = None
 
 
+class PrepareRequest(BaseModel):
+    question: str
+    category: str | None = None
+    history: list | None = None
+
+
 @app.on_event("startup")
 def startup():
     t0 = time.time()
@@ -304,3 +310,57 @@ def chat(request: Request, req: ChatRequest,
             "citations": res["citations"], "metrics": metrics,
             "route": route_name, "route_reason": decision, "trace": trace,
             "visual": out_visual}
+
+
+@app.post("/api/rag/prepare")
+def rag_prepare(request: Request, req: PrepareRequest,
+                x_api_token: str | None = Header(default=None)):
+    """검색·리랭킹만 백엔드에서 하고, LLM 은 부르지 않은 채 system/user 프롬프트를 그대로 준다.
+
+    ★ 왜 있는가: 브라우저가 사내망에 있을 때 P-GPT 를 '직접' 호출하기 위한 준비 단계다
+      (dev/assets/chat.js 의 streamPGPT). 백엔드(DigitalOcean)는 pgpt.posco.com 에 네트워크로
+      닿지 않는다(DNS 실패, 실측 확인) — 그래서 이 엔드포인트는 LLM 호출을 대신 해주지 않고
+      "질문에 필요한 재료(프롬프트+근거청크)"만 만들어 돌려준다. 실제 생성은 브라우저가 한다.
+    ★ SQL/하이브리드 경로는 다루지 않는다 — 복잡한 정형조회 로직까지 이중 구현하면 두 곳이
+      갈릴 위험이 크다. 그런 질문이면 fallback:true 로 알려 기존 /api/chat/stream(OpenRouter)
+      으로 넘긴다."""
+    q = _guard(request, req, x_api_token)
+
+    search_q = q
+    rewritten = None
+    if answer_mod.needs_rewrite(q, req.history):
+        search_q = answer_mod.rewrite_followup(q, req.history)
+        if search_q != q:
+            rewritten = search_q
+
+    decision = router.route(search_q)
+    route_name = decision["route"]
+    if route_name in ("sql", "hybrid"):
+        it = intent.resolve(search_q)
+        if it is not None:
+            return {"fallback": True, "reason": "sql_or_hybrid_route"}
+        route_name = "rag"
+
+    qv = None
+    if STATE["searcher"].mode == "hybrid" and STATE["embedder"]:
+        qv = STATE["embedder"].encode(search_q)
+    candidates, _dropped = STATE["searcher"].retrieve(search_q, qv)
+    if not candidates:
+        return {"route": "rag", "question": q, "rewritten_question": rewritten,
+                "no_answer": True, "answer": cfg.get("workflow.no_answer_message"),
+                "chunks": []}
+
+    top = (STATE["reranker"].rerank(search_q, candidates) if STATE["reranker"]
+           else candidates[:cfg.get("retrieval.top_k")])
+    system, user, _context, n_used = answer_mod.build_rag_prompt(search_q, top, req.history)
+    used_chunks = top[:n_used]
+    chunks_meta = [{"index": i + 1, "chunk_id": c["chunk_id"],
+                    "file_name": c["metadata"]["file_name"], "source": c["source"],
+                    "date": c["metadata"].get("date"), "snippet": c["raw_text"][:200],
+                    "score": round(c.get("score", c.get("fuse_score", 0.0)), 4)}
+                   for i, c in enumerate(used_chunks)]
+
+    return {"route": "rag", "question": q, "rewritten_question": rewritten,
+            "no_answer": False, "system": system, "user": user, "chunks": chunks_meta,
+            "no_answer_message": cfg.get("workflow.no_answer_message"),
+            "visual": visuals.detect(search_q)}

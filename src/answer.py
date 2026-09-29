@@ -78,8 +78,52 @@ def build_history(history):
     return prompts.HISTORY_BLOCK.format(turns="\n".join(turns))
 
 
-def call_llm(system, user, model=None):
-    """OpenRouter. 429/5xx 재시도, 404/410 은 모델 폴백."""
+def _pgpt_headers():
+    """apiKey/empNo/compNo JSON 을 Base64 로 감싼 Bearer 토큰 (P-GPT 인증 규격)."""
+    import base64
+    auth = {
+        "apiKey": os.environ["PGPT_API_KEY"],
+        "empNo": os.environ["PGPT_EMP_NO"],
+        "compNo": os.environ.get("PGPT_COMP_NO", "30"),
+    }
+    token = base64.b64encode(json.dumps(auth).encode()).decode()
+    return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+
+def _call_pgpt(system, user, model=None):
+    """P-GPT 일반 API. 429/5xx 재시도만 한다(모델 폴백 없음).
+
+    ★ 백엔드(DigitalOcean)는 pgpt.posco.com 에 네트워크로 닿지 않는다(DNS 실패, 실측 확인).
+      그래서 이 함수는 운영 경로에서는 호출되지 않고, provider 를 로컬에서 "p-gpt" 로
+      바꿔 사내망 PC에서 직접 테스트할 때만 쓴다. 실제 브라우저 직접 호출 경로는
+      /api/rag/prepare + dev/assets/chat.js 의 streamPGPT() 다."""
+    m = model or cfg.get("llm.pgpt_model")
+    last = None
+    for attempt in range(cfg.get("llm.max_retries")):
+        try:
+            r = httpx.post(cfg.get("llm.pgpt_endpoint"),
+                           headers=_pgpt_headers(),
+                           json={"model": m,
+                                 "messages": [{"role": "system", "content": system},
+                                              {"role": "user", "content": user}],
+                                 "need_origin": bool(cfg.get("llm.need_origin", True))},
+                           timeout=cfg.get("llm.timeout_seconds"))
+            if r.status_code in (429,) or r.status_code >= 500:
+                time.sleep(2 ** attempt)
+                last = f"{r.status_code} {m}"
+                continue
+            r.raise_for_status()
+            d = r.json()
+            return (d["choices"][0]["message"]["content"] or "",
+                    d.get("usage", {}), m)
+        except httpx.HTTPError as e:
+            last = str(e)
+            time.sleep(2 ** attempt)
+    raise RuntimeError(f"P-GPT 호출 실패: {last}")
+
+
+def _call_openrouter(system, user, model=None):
+    """OpenRouter 백업 경로. 429/5xx 재시도, 404/410 은 모델 폴백."""
     models = [model or cfg.get("llm.model")] + list(cfg.get("llm.fallback_models") or [])
     key = os.environ["OPENROUTER_API_KEY"]
     last = None
@@ -112,59 +156,116 @@ def call_llm(system, user, model=None):
     raise RuntimeError(f"LLM 호출 실패: {last}")
 
 
+def call_llm(system, user, model=None):
+    """provider 설정에 따라 P-GPT 또는 OpenRouter 로 라우팅한다."""
+    if cfg.get("llm.provider") == "p-gpt":
+        return _call_pgpt(system, user, model)
+    return _call_openrouter(system, user, model)
+
+
+def _pgpt_stream(system, user, model=None):
+    """P-GPT SSE 스트리밍. `data:` 뒤 공백 유무를 모두 처리하고 최상위 `response` 를 delta 로 쓴다.
+
+    OpenAI 호환 choices[].delta.content 도 보조 fallback 으로 처리한다(문서 형식이 바뀔 경우 대비)."""
+    m = model or cfg.get("llm.pgpt_model")
+    text, usage = "", {}
+    with httpx.stream("POST", cfg.get("llm.pgpt_stream_endpoint"),
+                      headers=_pgpt_headers(),
+                      json={"model": m,
+                            "messages": [{"role": "system", "content": system},
+                                         {"role": "user", "content": user}]},
+                      timeout=cfg.get("llm.timeout_seconds")) as r:
+        r.raise_for_status()
+        for line in r.iter_lines():
+            if not line or not line.startswith("data:"):
+                continue
+            payload = line[len("data:"):].strip()
+            if payload == "[DONE]":
+                break
+            try:
+                d = json.loads(payload)
+            except ValueError:
+                continue
+            if d.get("usage"):
+                usage = d["usage"]
+            piece = d.get("response")
+            if piece is None:
+                for ch in d.get("choices") or []:
+                    piece = (ch.get("delta") or {}).get("content")
+                    if piece:
+                        break
+            if piece:
+                text += piece
+                yield ("delta", piece)
+    yield ("done", (text, usage, m))
+
+
 def call_llm_stream(system, user, model=None):
-    """OpenRouter SSE 스트리밍 제너레이터.
+    """provider 설정에 따라 P-GPT 또는 OpenRouter 스트림으로 라우팅한다.
 
     ("delta", 조각) 을 **도착하는 즉시** 흘리고 마지막에 ("done", (본문, usage, 모델)).
     ★ 조각을 모아뒀다가 한꺼번에 내보내면 진행표시로서 의미가 없다(실측으로 확인).
 
     폴백이 있는 이유: 스트리밍은 제공사·프록시 사정으로 끊길 수 있는데,
-    시연 중 답변이 통째로 사라지는 것보다 조금 늦게 한 번에 나오는 편이 낫다."""
-    m = model or cfg.get("llm.model")
-    key = os.environ["OPENROUTER_API_KEY"]
-    text, usage = "", {}
+    시연 중 답변이 통째로 사라지는 것보다 조금 늦게 한 번에 나오는 편이 낫다.
+    ★ P-GPT 스트림이 실패했을 때는 call_llm() 이 같은 provider(P-GPT)로 재시도한다 —
+      OpenRouter 자동 전환은 과금을 유발할 수 있어 사용자 승인 없이 하지 않는다."""
+    stream_fn = _pgpt_stream if cfg.get("llm.provider") == "p-gpt" else _openrouter_stream
+    text, usage, m = "", {}, model or cfg.get("llm.model")
     try:
-        with httpx.stream("POST", "https://openrouter.ai/api/v1/chat/completions",
-                          headers={"Authorization": f"Bearer {key}",
-                                   "Content-Type": "application/json"},
-                          json={"model": m,
-                                "messages": [{"role": "system", "content": system},
-                                             {"role": "user", "content": user}],
-                                "temperature": cfg.get("llm.temperature"),
-                                "max_tokens": cfg.get("llm.max_tokens"),
-                                "stream": True,
-                                "stream_options": {"include_usage": True}},
-                          timeout=cfg.get("llm.timeout_seconds")) as r:
-            r.raise_for_status()
-            for line in r.iter_lines():
-                if not line or line.startswith(":"):
-                    continue
-                if not line.startswith("data: "):
-                    continue
-                payload = line[6:].strip()
-                if payload == "[DONE]":
-                    break
-                try:
-                    d = json.loads(payload)
-                except ValueError:
-                    continue
-                if d.get("usage"):
-                    usage = d["usage"]
-                for ch in d.get("choices") or []:
-                    piece = (ch.get("delta") or {}).get("content") or ""
-                    if piece:
-                        text += piece
-                        yield ("delta", piece)
+        for kind, payload in stream_fn(system, user, model):
+            if kind == "delta":
+                yield ("delta", payload)
+            else:
+                text, usage, m = payload
         if text.strip():
             yield ("done", (text, usage, m))
             return
     except Exception:
         pass
-    # 폴백 (모델 폴백·재시도 포함). 조각으로 나눠 흘릴 수 없으므로 완성본을 한 번에 준다.
-    text, usage, m = call_llm(system, user)
+    # 폴백 (재시도 포함, 동일 provider). 조각으로 나눠 흘릴 수 없으므로 완성본을 한 번에 준다.
+    text, usage, m = call_llm(system, user, model)
     if text:
         yield ("delta", text)
     yield ("done", (text, usage, m))
+
+
+def _openrouter_stream(system, user, model=None):
+    m = model or cfg.get("llm.model")
+    key = os.environ["OPENROUTER_API_KEY"]
+    with httpx.stream("POST", "https://openrouter.ai/api/v1/chat/completions",
+                      headers={"Authorization": f"Bearer {key}",
+                               "Content-Type": "application/json"},
+                      json={"model": m,
+                            "messages": [{"role": "system", "content": system},
+                                         {"role": "user", "content": user}],
+                            "temperature": cfg.get("llm.temperature"),
+                            "max_tokens": cfg.get("llm.max_tokens"),
+                            "stream": True,
+                            "stream_options": {"include_usage": True}},
+                      timeout=cfg.get("llm.timeout_seconds")) as r:
+        r.raise_for_status()
+        text, usage = "", {}
+        for line in r.iter_lines():
+            if not line or line.startswith(":"):
+                continue
+            if not line.startswith("data: "):
+                continue
+            payload = line[6:].strip()
+            if payload == "[DONE]":
+                break
+            try:
+                d = json.loads(payload)
+            except ValueError:
+                continue
+            if d.get("usage"):
+                usage = d["usage"]
+            for ch in d.get("choices") or []:
+                piece = (ch.get("delta") or {}).get("content") or ""
+                if piece:
+                    text += piece
+                    yield ("delta", piece)
+        yield ("done", (text, usage, m))
 
 
 def parse_citations(answer, chunks):
@@ -191,14 +292,22 @@ def sentence_citation_coverage(answer):
     return sum(1 for s in sents if CITE_RE.search(s)) / len(sents)
 
 
-def generate_iter(question, chunks, history=None):
-    """generate() 의 스트리밍판. ("delta", 조각) 을 흘리다가 ("result", dict) 로 끝난다."""
+def build_rag_prompt(question, chunks, history=None):
+    """RAG 시스템/유저 프롬프트 조립. /api/rag/prepare(브라우저 P-GPT 직접호출)와
+    generate()/generate_iter() 가 공유한다 — 프롬프트가 두 곳에서 갈리면 안 된다."""
     no_answer = cfg.get("workflow.no_answer_message")
     context, n_used = build_context(chunks)
     system = prompts.RAG_SYSTEM.format(no_answer=no_answer)
     user = prompts.RAG_USER.format(context=mask_pii(context),
                                    history=build_history(history),
                                    question=question)
+    return system, user, context, n_used
+
+
+def generate_iter(question, chunks, history=None):
+    """generate() 의 스트리밍판. ("delta", 조각) 을 흘리다가 ("result", dict) 로 끝난다."""
+    no_answer = cfg.get("workflow.no_answer_message")
+    system, user, context, n_used = build_rag_prompt(question, chunks, history)
     answer, usage, model = "", {}, cfg.get("llm.model")
     for kind, payload in call_llm_stream(system, user):
         if kind == "delta":
@@ -228,11 +337,7 @@ def generate_iter(question, chunks, history=None):
 
 def generate(question, chunks, history=None):
     no_answer = cfg.get("workflow.no_answer_message")
-    context, n_used = build_context(chunks)
-    system = prompts.RAG_SYSTEM.format(no_answer=no_answer)
-    user = prompts.RAG_USER.format(context=mask_pii(context),
-                                   history=build_history(history),
-                                   question=question)
+    system, user, context, n_used = build_rag_prompt(question, chunks, history)
     answer, usage, model = call_llm(system, user)
     answer = answer.strip()
 
